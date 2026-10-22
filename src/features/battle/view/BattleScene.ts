@@ -6,7 +6,15 @@ import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE } from '../../../shared/palette';
 import { parseSeedParam } from '../../../shared/seedParam';
 import { arcSectorAt } from '../logic/arena';
-import { createBattle, isThreatening, playTurn, selectWeapon } from '../logic/battle';
+import {
+  createBattle,
+  isGameCleared,
+  isThreatening,
+  levelAt,
+  nextLevelIndex,
+  playTurn,
+  selectWeapon,
+} from '../logic/battle';
 import { BATTLE_CONFIG } from '../logic/battleConfig';
 import type { BattleState, Monster } from '../logic/battleTypes';
 import {
@@ -32,14 +40,14 @@ export interface BattleSnapshot {
   readonly arcSector: number;
   /** Thời gian vùng xanh đã quay trong trận này (ms) — để test tính trước lúc nó tới một lát. */
   readonly arcElapsedMs: number;
-  /** Màn kết quả đã hiện đủ lâu để chạm chơi lại (chống chạm nhầm). */
+  /** Màn kết quả đã hiện đủ lâu để chạm đi tiếp — sang màn sau hoặc chơi lại (chống chạm nhầm). */
   readonly canRestart: boolean;
   readonly battle: BattleState;
 }
 
 const GAME_WIDTH = 360;
 const GAME_HEIGHT = 640;
-/** Hành vi giao diện, không phải luật chơi: màn kết quả chờ chút mới nhận chạm "chơi lại". */
+/** Hành vi giao diện, không phải luật chơi: màn kết quả chờ chút mới nhận chạm đi tiếp. */
 const RESTART_DELAY_MS = 500;
 const MOVE_TWEEN_MS = 180;
 
@@ -63,6 +71,7 @@ export class BattleScene extends Scene {
 
   private zone!: GameObjects.Graphics;
   private turnsText!: GameObjects.Text;
+  private levelText!: GameObjects.Text;
   private heroHpText!: GameObjects.Text;
   private monstersText!: GameObjects.Text;
   /** F04: dấu "!" trên đầu quái sắp đánh, theo id quái. */
@@ -70,6 +79,7 @@ export class BattleScene extends Scene {
   private resultLayer!: GameObjects.Container;
   private resultTitle!: GameObjects.Text;
   private resultDetail!: GameObjects.Text;
+  private resultHint!: GameObjects.Text;
   private readonly monsterSprites = new Map<number, GameObjects.Image>();
   private spriteKeys!: Record<keyof typeof BATTLE_SPRITES, string>;
   private readonly weaponButtons: {
@@ -98,7 +108,7 @@ export class BattleScene extends Scene {
     const clearSnapshot = setSnapshotProvider(() => this.snapshot());
     this.events.once(Scenes.Events.SHUTDOWN, clearSnapshot);
 
-    this.startBattle();
+    this.startLevel(0);
   }
 
   override update(_time: number, delta: number): void {
@@ -113,14 +123,15 @@ export class BattleScene extends Scene {
 
   // ---------- Luồng chơi ----------
 
-  private startBattle(): void {
+  /** F06: mở màn `level`. Có `?seed=` thì màn nào cũng dùng seed đó để ván lặp lại y hệt. */
+  private startLevel(level: number): void {
     const seed = this.fixedSeed ?? Math.floor(Math.random() * 2 ** 32);
-    this.battle = createBattle(seed, this.config);
+    this.battle = createBattle(seed, this.config, level);
     this.arcElapsedMs = 0;
     this.arcSector = 0;
     this.endedAtMs = null;
 
-    // Trận mới: bỏ hết hình cũ (kể cả hiệu ứng đang chạy) rồi vẽ lại từ state.
+    // Màn mới: bỏ hết hình cũ (kể cả hiệu ứng đang chạy) rồi vẽ lại từ state.
     for (const sprite of this.monsterSprites.values()) {
       this.tweens.killTweensOf(sprite);
       sprite.destroy();
@@ -134,10 +145,13 @@ export class BattleScene extends Scene {
     this.updateHud();
   }
 
-  /** Chạm vào nút vũ khí thì đổi vũ khí; chạm vào chỗ khác là chém. Màn kết quả: chạm để chơi lại. */
+  /**
+   * Chạm vào nút vũ khí thì đổi vũ khí; chạm vào chỗ khác là chém. Màn kết quả: chạm để sang màn
+   * sau hoặc chơi lại — màn nào do luật quyết (nextLevelIndex).
+   */
   private handleTap(x: number, y: number): void {
     if (this.battle.phase !== 'playing') {
-      if (this.canRestart()) this.startBattle();
+      if (this.canRestart()) this.startLevel(nextLevelIndex(this.battle, this.config));
       return;
     }
     const button = weaponButtonAt(x, y, this.config.weapons.length, WEAPON_BAR);
@@ -286,8 +300,8 @@ export class BattleScene extends Scene {
 
   private spawnMonster(monster: Monster, point: Point): void {
     const sprite = this.add
-      .image(point.x, point.y, this.spriteKeys.slime)
-      .setScale(SPRITE_SCALE.slime)
+      .image(point.x, point.y, this.spriteKeys[monster.kind])
+      .setScale(SPRITE_SCALE[monster.kind])
       .setDepth(DEPTH.monster);
     this.monsterSprites.set(monster.id, sprite);
   }
@@ -324,9 +338,14 @@ export class BattleScene extends Scene {
 
   private createHud(): void {
     this.turnsText = this.add.text(16, 16, '', { ...TEXT, fontSize: '20px' }).setDepth(DEPTH.hud);
+    // F06: số lượt có thể 2 chữ số ("Lượt: 12/12") nên thanh trên chia 2 hàng, mỗi hàng chỉ 2 ô
+    // ở hai mép — không ô nào đè ô nào.
     this.heroHpText = this.add
-      .text(GAME_WIDTH / 2, 16, '', { ...TEXT, fontSize: '20px', color: PALETTE.lime })
-      .setOrigin(0.5, 0)
+      .text(GAME_WIDTH - 16, 46, '', { ...TEXT, fontSize: '20px', color: PALETTE.lime })
+      .setOrigin(1, 0)
+      .setDepth(DEPTH.hud);
+    this.levelText = this.add
+      .text(16, 46, '', { ...TEXT, fontSize: '20px', color: PALETTE.sand })
       .setDepth(DEPTH.hud);
     this.monstersText = this.add
       .text(GAME_WIDTH - 16, 16, '', { ...TEXT, fontSize: '20px' })
@@ -343,7 +362,9 @@ export class BattleScene extends Scene {
   }
 
   private updateHud(): void {
-    this.turnsText.setText(`Lượt: ${this.battle.turnsLeft}/${this.config.turnLimit}`);
+    const { turnLimit } = levelAt(this.battle.level, this.config);
+    this.turnsText.setText(`Lượt: ${this.battle.turnsLeft}/${turnLimit}`);
+    this.levelText.setText(`Màn ${this.battle.level + 1}/${this.config.levels.length}`);
     this.heroHpText.setText(`Máu: ${this.battle.heroHp}/${this.config.hero.hp}`);
     this.monstersText.setText(`Quái: ${this.battle.monsters.length}`);
   }
@@ -399,29 +420,32 @@ export class BattleScene extends Scene {
     this.resultDetail = this.add
       .text(GAME_WIDTH / 2, 310, '', { ...TEXT, fontSize: '16px' })
       .setOrigin(0.5);
-    const hint = this.add
-      .text(GAME_WIDTH / 2, 380, 'Chạm để chơi lại', {
-        ...TEXT,
-        fontSize: '18px',
-        color: PALETTE.sand,
-      })
+    this.resultHint = this.add
+      .text(GAME_WIDTH / 2, 380, '', { ...TEXT, fontSize: '18px', color: PALETTE.sand })
       .setOrigin(0.5);
     this.resultLayer = this.add
-      .container(0, 0, [backdrop, this.resultTitle, this.resultDetail, hint])
+      .container(0, 0, [backdrop, this.resultTitle, this.resultDetail, this.resultHint])
       .setDepth(DEPTH.result)
       .setVisible(false);
   }
 
   private showResult(state: BattleState): void {
     this.endedAtMs = this.time.now;
-    if (state.phase === 'won') {
+    const next = nextLevelIndex(state, this.config) + 1;
+    if (isGameCleared(state, this.config)) {
+      this.resultTitle.setText('PHÁ ĐẢO!').setColor(PALETTE.sand);
+      this.resultDetail.setText(`Diệt sạch quái, còn dư ${state.turnsLeft} lượt`);
+      this.resultHint.setText(`Chạm để chơi lại từ màn ${next}`);
+    } else if (state.phase === 'won') {
       this.resultTitle.setText('THẮNG!').setColor(PALETTE.lime);
       this.resultDetail.setText(`Diệt sạch quái, còn dư ${state.turnsLeft} lượt`);
+      this.resultHint.setText(`Chạm để sang màn ${next}`);
     } else {
       this.resultTitle.setText('THUA').setColor(PALETTE.orange);
       this.resultDetail.setText(
         state.lossReason === 'heroDefeated' ? 'Bạn đã gục' : 'Hết lượt mà quái vẫn còn',
       );
+      this.resultHint.setText(`Chạm để chơi lại màn ${next}`);
     }
     this.resultLayer.setVisible(true);
   }

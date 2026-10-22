@@ -74,4 +74,18 @@ Phạm vi chủ dự án chốt: luật như đề xuất, mức tối thiểu, 
 - [x] Mô phỏng 500 ván: ngắm chuẩn thắng 100% dư ~2,36 lượt; chém bừa thắng 0,2%
 - [x] E2E: Cung kéo quái vào đúng 1 vòng, giữ lát
 - [x] FEATURE_MAP (F05), DEBT-009
-- [ ] `npm run check`, mở PR #6, CI xanh, chủ dự án duyệt → gộp
+- [x] `npm run check`, mở PR #6, CI xanh, chủ dự án duyệt → gộp (23/10/2026)
+
+## Đợt 5 — F06 Màn chơi nối tiếp + trùm (23/10/2026)
+
+Phạm vi chủ dự án chốt: luật như đề xuất, mức tối thiểu; không luật trùm riêng, không bản đồ màn,
+không lưu tiến trình, không phần thưởng.
+
+- [x] Chốt luật: 3 màn (4 slime/8 lượt · 6 slime/10 lượt · Slime Vua + 2 slime/12 lượt); Slime Vua 6 máu đánh 2; thua chơi lại màn đó; màn nào cũng đầy máu, cầm Kiếm
+- [x] Test trước (đỏ) → code (xanh): loại quái + danh sách màn trong cấu hình, `nextLevelIndex`, `isGameCleared`
+- [x] Hình Slime Vua (lưới ký tự, tạm như DEBT-007)
+- [x] Mô phỏng 500 ván mỗi màn: ngắm chuẩn thắng 100% / 99,8% / 100%; màn trùm dư nhiều lượt nhất → báo chủ dự án
+- [x] Hiển thị: "Màn x/3", màn kết quả ghi rõ chạm để làm gì, "PHÁ ĐẢO!"; sửa thanh trên đè chữ khi số lượt có 2 chữ số
+- [x] E2E: đi liền 3 màn tới phá đảo rồi về màn 1; thua ở màn 2 thì chơi lại màn 2
+- [x] FEATURE_MAP (F06), DEBT-007, DEBT-009
+- [ ] `npm run check`, mở PR #7, CI xanh, chủ dự án duyệt → gộp

@@ -1,4 +1,4 @@
-// Phần điều khiển riêng của tính năng "battle" (F01, F02): đổi vũ khí, ngắm vùng xanh, chém.
+// Phần điều khiển riêng của tính năng "battle" (F01–F06): đổi vũ khí, ngắm vùng xanh, chém.
 import type { BattleSnapshot } from '../../src/features/battle';
 import { isInZone } from '../../src/features/battle/logic/arena';
 import { BATTLE_CONFIG } from '../../src/features/battle/logic/battleConfig';
@@ -99,11 +99,17 @@ export function bestMove(snapshot: BattleSnapshot): Move {
   return best;
 }
 
-/** Người chơi chém trượt bằng vũ khí đang cầm: một lát không trúng con quái nào. */
+/**
+ * Người chơi chém trượt: một lát không trúng con quái nào — ưu tiên vũ khí đang cầm; quái phủ kín
+ * vùng của nó (màn đông quái) thì đổi sang vũ khí khác.
+ */
 export function missMove(snapshot: BattleSnapshot): Move {
-  const { weaponIndex } = snapshot.battle;
-  for (let sector = 0; sector < BATTLE_CONFIG.sectorCount; sector++) {
-    if (hitIds(snapshot, { weaponIndex, sector }).length === 0) return { weaponIndex, sector };
+  const current = snapshot.battle.weaponIndex;
+  const weapons = BATTLE_CONFIG.weapons.map((_, i) => i);
+  for (const weaponIndex of [current, ...weapons.filter((i) => i !== current)]) {
+    for (let sector = 0; sector < BATTLE_CONFIG.sectorCount; sector++) {
+      if (hitIds(snapshot, { weaponIndex, sector }).length === 0) return { weaponIndex, sector };
+    }
   }
   throw new Error('Không còn lát trống để chém trượt');
 }
