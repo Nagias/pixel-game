@@ -20,6 +20,13 @@ export interface MonsterConfig {
   readonly hp: number;
   /** Xác suất mỗi lượt quái tiến vào 1 vòng; còn lại nó đi ngang 1 lát (đi lung tung). */
   readonly advanceChance: number;
+  /** F04: số máu nhân vật mất mỗi lần một con quái áp sát (vòng 0) đánh. */
+  readonly attack: number;
+}
+
+export interface HeroConfig {
+  /** F04: máu ban đầu của nhân vật. */
+  readonly hp: number;
 }
 
 export interface BattleConfig {
@@ -34,6 +41,7 @@ export interface BattleConfig {
   /** Các vũ khí trên thanh nút ở đáy màn hình, theo thứ tự từ trái sang phải. */
   readonly weapons: readonly WeaponConfig[];
   readonly monster: MonsterConfig;
+  readonly hero: HeroConfig;
   readonly spawn: {
     readonly count: number;
     /** Quái xuất hiện thành cụm trong khoảng ±spread lát quanh một lát ngẫu nhiên. */
@@ -66,13 +74,15 @@ export interface AttackRecord {
 }
 
 export type BattlePhase = 'playing' | 'won' | 'lost';
-export type LossReason = 'outOfTurns' | 'reachedHero';
+export type LossReason = 'outOfTurns' | 'heroDefeated';
 
 export interface BattleState {
   /** Seed ban đầu — đủ để tái hiện nguyên trận. */
   readonly seed: number;
   readonly rng: RngState;
   readonly turnsLeft: number;
+  /** F04: máu còn lại của nhân vật. */
+  readonly heroHp: number;
   /** Vũ khí đang cầm: chỉ số trong config.weapons. */
   readonly weaponIndex: number;
   readonly monsters: readonly Monster[];

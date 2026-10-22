@@ -1,5 +1,6 @@
 // F01 + F02 — Trận đấu: mở game → đổi vũ khí → chạm sân để chém → thắng/thua → chơi lại.
 import { expect, test } from '@playwright/test';
+import { isThreatening } from '../src/features/battle/logic/battle';
 import { BATTLE_CONFIG } from '../src/features/battle/logic/battleConfig';
 import { BattleDriver, bestMove, hitIds, missMove } from './support/battleDriver';
 
@@ -103,19 +104,31 @@ test('ngắm chuẩn và đổi vũ khí đúng lúc thì thắng; màn thắng 
   expect(restarted.battle.monsters).toHaveLength(BATTLE_CONFIG.spawn.count);
 });
 
-test('chém trượt mọi lượt thì thua, có lý do thua, rồi chơi lại được', async ({ page }) => {
+test('chém trượt mọi lượt: quái áp sát đánh mất máu đúng số con, rồi thua và chơi lại được', async ({
+  page,
+}) => {
   const game = new BattleDriver(page);
   await game.openBattle(SEED);
 
+  // F04: chém trượt thì không con nào chết → mỗi lượt máu giảm đúng (số quái đang áp sát × sức đánh).
+  let tookDamage = false;
   for (let turn = 0; turn < BATTLE_CONFIG.turnLimit; turn++) {
-    const snapshot = await game.snapshot();
-    if (snapshot.battle.phase !== 'playing') break;
-    await game.play(missMove(snapshot));
+    const before = await game.snapshot();
+    if (before.battle.phase !== 'playing') break;
+    const attackers = before.battle.monsters.filter(isThreatening).length;
+    await game.play(missMove(before));
+
+    const after = await game.snapshot();
+    const expected = Math.max(0, before.battle.heroHp - attackers * BATTLE_CONFIG.monster.attack);
+    expect(after.battle.heroHp).toBe(expected);
+    tookDamage ||= attackers > 0;
   }
+  // Ván này phải có lúc quái áp sát và đánh, nếu không luật F04 chưa được thử.
+  expect(tookDamage).toBe(true);
 
   const lost = await game.snapshot();
   expect(lost.battle.phase).toBe('lost');
-  expect(['outOfTurns', 'reachedHero']).toContain(lost.battle.lossReason);
+  expect(['outOfTurns', 'heroDefeated']).toContain(lost.battle.lossReason);
   expect(lost.battle.monsters.length).toBeGreaterThan(0);
   await game.advance(300);
   await page.screenshot({ path: test.info().outputPath('4-thua.png') });

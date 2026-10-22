@@ -10,6 +10,7 @@
 | F01 | Trận đấu tối thiểu (walking skeleton, khuôn mẫu) | ✅ Xong    | `src/features/battle/`               | `src/features/battle/**/*.test.ts`, `e2e/battle.spec.ts` |
 | F02 | Thanh 3 nút vũ khí theo tầm (gần / vừa / xa)     | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 | F03 | Combo gom cụm 100% / 200% / 300%                 | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
+| F04 | Máu nhân vật + dấu "!" báo quái sắp đánh         | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -27,7 +28,7 @@ chạm tới mình thì thắng.
    máu thì biến mất.
 5. Sau nhát chém, từng con quái còn sống (theo thứ tự id): 60% tiến vào 1 vòng, 40% đi ngang 1 lát
    ("đi lung tung"); không đi vào ô đã có quái khác.
-6. Hết quái → **thắng**. Quái tiến vào từ vòng 0 → **thua** ("Quái đã chạm tới bạn").
+6. Hết quái → **thắng**. Nhân vật hết máu → **thua** ("Bạn đã gục") — xem F04.
    Hết lượt mà còn quái → **thua** ("Hết lượt mà quái vẫn còn"). Nhát cuối vừa diệt hết quái thì vẫn thắng.
 7. Cấu hình sai (vd. vùng đánh rộng số chẵn lát, tầm vũ khí vượt sân, không có vũ khí) bị từ chối ngay
    lúc mở trận.
@@ -120,11 +121,45 @@ thắng 0,2%. Seed 42 thắng, dư 4 lượt.
 
 **Nợ liên quan:** DEBT-009.
 
+## F04 — Máu nhân vật + dấu "!" báo quái sắp đánh
+
+**Người chơi thấy và làm gì:** đầu màn hình hiện "Máu: 5/5". Quái lọt vào sát người (vòng 0) có dấu
+"!" đỏ trên đầu: nếu không diệt nó bằng nhát chém tới thì nó sẽ đánh. Người chơi không thua ngay khi
+một con lọt vào, mà phải cân nhắc chém con nào trước — Kiếm (vòng 0–1) là vũ khí để dọn chúng.
+
+**Luật** (nguồn sự thật: `logic/battle.ts` + `logic/battle.test.ts`, mục F04; chủ dự án duyệt ngày
+22/10/2026; **thay** luật cũ "quái chạm tới là thua ngay"):
+
+1. Nhân vật có 5 máu khi mở trận.
+2. Quái ở vòng 0 không di chuyển nữa (không tiến, không đi ngang, không tung số ngẫu nhiên) mà đánh:
+   sau mỗi nhát chém, mỗi con còn sống ở vòng 0 trừ 1 máu nhân vật.
+3. Quái vừa tiến vào vòng 0 trong lượt này chưa đánh ngay — lượt sau mới đánh (đúng những con đã có
+   dấu "!" trước khi người chơi chém). Quái bị diệt trong nhát chém thì không kịp đánh.
+4. Hết máu → **thua** ("Bạn đã gục"); cùng lúc hết máu và hết lượt thì báo hết máu.
+5. `isThreatening` (vòng 0) là nguồn duy nhất quyết định con nào có dấu "!".
+
+**Hành vi giao diện:** dấu "!" đỏ trên đầu quái sắp đánh; ô "Máu" giữa thanh trên cùng. Không thêm
+hiệu ứng mới.
+
+**Con số:** `hero.hp`, `monster.attack` trong `src/features/battle/logic/battleConfig.ts`.
+
+**Kiểm chứng tự động:**
+
+- Unit: đầy máu khi mở trận; quái vòng 0 đứng yên và đánh đúng sức đánh; không đi ngang; vừa vào vòng 0
+  chưa đánh; bị diệt thì không đánh; sức đánh theo cấu hình; không tung số ngẫu nhiên; hết máu thì thua;
+  chặn cấu hình 0 máu / 0 sức đánh.
+- E2E: trong ván chém trượt, mỗi lượt máu giảm đúng (số quái áp sát × sức đánh), có ít nhất một lượt bị
+  đánh; ảnh `4-thua.png` thấy "Máu: 0/5", dấu "!" và "Bạn đã gục".
+
+**Cân bằng (mô phỏng 500 ván):** ngắm chuẩn vẫn thắng 100%, dư ~2,2 lượt (không đổi); chém bừa thắng
+0,2% — giờ thua chủ yếu vì hết lượt (427 ván) thay vì bị chạm là thua ngay; 72 ván thua vì hết máu.
+
+**Nợ liên quan:** DEBT-008 (quái áp sát đứng chồng hình nhau), DEBT-009.
+
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
 | Mã  | Tính năng                                                  | Ghi chú                                                     |
 | --- | ---------------------------------------------------------- | ----------------------------------------------------------- |
-| F04 | Dấu "!" báo quái sắp đánh + máu nhân vật                   | Thay luật "chạm là thua" bằng mất máu                       |
 | F05 | Đẩy quái theo vũ khí (knockback)                           |                                                             |
 | F06 | Màn chơi nối tiếp + trùm                                   |                                                             |
 | F07 | Kho vũ khí (rìu và vũ khí khác) + chọn 3 món mang vào trận | Chủ dự án nêu ngày 22/10; rìu có thể cần hình vùng đánh mới |

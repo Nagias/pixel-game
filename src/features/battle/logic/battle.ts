@@ -27,6 +27,8 @@ function validateBattleConfig(config: BattleConfig): void {
   }
   if (turnLimit < 1) problems.push('phải có ít nhất 1 lượt');
   if (monster.hp < 1) problems.push('quái phải có ít nhất 1 máu');
+  if (monster.attack < 1) problems.push('quái phải có sức đánh ít nhất 1');
+  if (config.hero.hp < 1) problems.push('nhân vật phải có ít nhất 1 máu');
   if (monster.advanceChance < 0 || monster.advanceChance > 1) {
     problems.push('xác suất tiến vào phải trong [0, 1]');
   }
@@ -65,6 +67,7 @@ export function createBattle(seed: number, config: BattleConfig): BattleState {
     seed,
     rng,
     turnsLeft: config.turnLimit,
+    heroHp: config.hero.hp,
     weaponIndex: 0,
     monsters,
     phase: 'playing',
@@ -126,11 +129,23 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
     return { ...state, turnsLeft, monsters: [], phase: 'won', lossReason: null, lastAttack };
   }
 
-  const moved = moveMonsters(survivors, state.rng, config);
-  const base = { ...state, turnsLeft, monsters: moved.monsters, rng: moved.rng, lastAttack };
+  // F04: quái đang áp sát (còn sống sau nhát chém) đánh trước; quái vừa tiến vào vòng 0 lượt này
+  // chỉ đánh từ lượt sau — đúng những con người chơi đã thấy dấu "!" trước khi chém.
+  const attackers = survivors.filter(isThreatening).length;
+  const heroHp = Math.max(0, state.heroHp - attackers * config.monster.attack);
 
-  if (moved.monsters.some((m) => m.ring < 0)) {
-    return { ...base, phase: 'lost', lossReason: 'reachedHero' };
+  const moved = moveMonsters(survivors, state.rng, config);
+  const base = {
+    ...state,
+    turnsLeft,
+    heroHp,
+    monsters: moved.monsters,
+    rng: moved.rng,
+    lastAttack,
+  };
+
+  if (heroHp <= 0) {
+    return { ...base, phase: 'lost', lossReason: 'heroDefeated' };
   }
   if (turnsLeft <= 0) {
     return { ...base, phase: 'lost', lossReason: 'outOfTurns' };
@@ -138,9 +153,15 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
   return { ...base, phase: 'playing', lossReason: null };
 }
 
+/** F04: quái đang áp sát nhân vật (vòng 0) sẽ đánh sau nhát chém tới — view hiện dấu "!" cho nó. */
+export function isThreatening(monster: Monster): boolean {
+  return monster.ring === 0;
+}
+
 /**
  * Quái "đi lung tung": mỗi con tiến vào 1 vòng với xác suất advanceChance, còn lại đi ngang 1 lát.
- * Xét lần lượt theo id; không đi vào ô đang có quái khác (đứng yên). Vòng -1 = đã chạm nhân vật.
+ * Xét lần lượt theo id; không đi vào ô đang có quái khác (đứng yên). Quái áp sát (vòng 0) đứng yên
+ * đánh, không di chuyển và không tung số ngẫu nhiên.
  */
 function moveMonsters(
   monsters: readonly Monster[],
@@ -153,6 +174,7 @@ function moveMonsters(
   const positions = new Map(monsters.map((m) => [m.id, m]));
 
   for (const monster of [...monsters].sort((a, b) => a.id - b.id)) {
+    if (isThreatening(monster)) continue;
     let roll: number;
     [roll, rng] = nextFloat(rng);
 
@@ -167,10 +189,10 @@ function moveMonsters(
       };
     }
 
-    if (target.ring >= 0 && occupied.has(key(target.sector, target.ring))) continue;
+    if (occupied.has(key(target.sector, target.ring))) continue;
 
     occupied.delete(key(monster.sector, monster.ring));
-    if (target.ring >= 0) occupied.add(key(target.sector, target.ring));
+    occupied.add(key(target.sector, target.ring));
     positions.set(monster.id, { ...monster, ...target });
   }
 

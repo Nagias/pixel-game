@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { seedRng } from '../../../shared/random';
-import { createBattle, playTurn, selectWeapon } from './battle';
+import { createBattle, isThreatening, playTurn, selectWeapon } from './battle';
 import { BATTLE_CONFIG } from './battleConfig';
 import type { BattleConfig, BattleState, Monster, WeaponConfig } from './battleTypes';
 
@@ -22,7 +22,8 @@ const CONFIG: BattleConfig = {
   turnLimit: 5,
   arcPeriodMs: 2_400,
   weapons: [ALL_REACH],
-  monster: { name: 'Slime thử', hp: 2, advanceChance: 1 },
+  monster: { name: 'Slime thử', hp: 2, advanceChance: 1, attack: 1 },
+  hero: { hp: 5 },
   spawn: { count: 4, spread: 2 },
 };
 
@@ -54,6 +55,7 @@ function stateWith(monsters: Monster[], overrides: Partial<BattleState> = {}): B
     seed: 1,
     rng: seedRng(1),
     turnsLeft: 5,
+    heroHp: 5,
     weaponIndex: 0,
     monsters,
     phase: 'playing',
@@ -144,6 +146,8 @@ describe('createBattle — chặn cấu hình sai trước khi mở trận', () 
     ['quái không có máu', monsterRule({ hp: 0 })],
     ['xác suất tiến vào lớn hơn 1', monsterRule({ advanceChance: 1.5 })],
     ['xác suất tiến vào âm', monsterRule({ advanceChance: -0.1 })],
+    ['nhân vật không có máu', { ...CONFIG, hero: { hp: 0 } }],
+    ['quái không có sức đánh', monsterRule({ attack: 0 })],
   ])('từ chối: %s', (_label, config) => {
     expect(() => createBattle(1, config)).toThrow(RangeError);
   });
@@ -353,9 +357,9 @@ describe('playTurn — thắng / thua', () => {
     expect(after.rng).toBe(before.rng);
   });
 
-  it('quái đang ở vòng 0 tiến thêm là chạm nhân vật → thua', () => {
-    const after = playTurn(stateWith([monster(1, 0, 0)]), 12, withAdvanceChance(1));
-    expect(after).toMatchObject({ phase: 'lost', lossReason: 'reachedHero' });
+  it('F04: máu nhân vật về 0 → thua vì gục', () => {
+    const after = playTurn(stateWith([monster(1, 12, 0)], { heroHp: 1 }), 0, CONFIG);
+    expect(after).toMatchObject({ phase: 'lost', lossReason: 'heroDefeated', heroHp: 0 });
   });
 
   it('dùng hết lượt mà còn quái → thua vì hết lượt', () => {
@@ -368,10 +372,59 @@ describe('playTurn — thắng / thua', () => {
     expect(after).toMatchObject({ phase: 'won', turnsLeft: 0 });
   });
 
-  it('cùng lúc hết lượt và bị chạm thì báo lý do bị chạm', () => {
-    const before = stateWith([monster(1, 12, 0)], { turnsLeft: 1 });
+  it('cùng lúc hết lượt và hết máu thì báo lý do hết máu', () => {
+    const before = stateWith([monster(1, 12, 0)], { turnsLeft: 1, heroHp: 1 });
     const after = playTurn(before, 0, withAdvanceChance(1));
-    expect(after).toMatchObject({ phase: 'lost', lossReason: 'reachedHero' });
+    expect(after).toMatchObject({ phase: 'lost', lossReason: 'heroDefeated' });
+  });
+});
+
+describe('F04 — máu nhân vật và quái áp sát đánh', () => {
+  it('trận mới: nhân vật đầy máu theo cấu hình', () => {
+    expect(createBattle(1, CONFIG).heroHp).toBe(5);
+  });
+
+  it('quái ở vòng 0 không tiến nữa mà đứng yên đánh: mỗi con trừ đúng sức đánh của nó', () => {
+    const before = stateWith([monster(1, 12, 0), monster(2, 13, 0), monster(3, 20, 5)]);
+    const after = playTurn(before, 6, withAdvanceChance(1));
+    expect(after.heroHp).toBe(3);
+    expect(byId(after, 1)).toMatchObject({ sector: 12, ring: 0 });
+    expect(byId(after, 2)).toMatchObject({ sector: 13, ring: 0 });
+    expect(after.phase).toBe('playing');
+  });
+
+  it('quái áp sát cũng không đi ngang (luật luôn đi ngang vẫn đứng yên)', () => {
+    const after = playTurn(stateWith([monster(1, 12, 0)]), 6, withAdvanceChance(0));
+    expect(byId(after, 1)).toMatchObject({ sector: 12, ring: 0 });
+  });
+
+  it('quái vừa tiến vào vòng 0 trong lượt này chưa đánh ngay — lượt sau mới đánh', () => {
+    const after = playTurn(stateWith([monster(1, 12, 1)]), 6, withAdvanceChance(1));
+    expect(byId(after, 1)?.ring).toBe(0);
+    expect(after.heroHp).toBe(5);
+  });
+
+  it('quái áp sát bị diệt trong nhát chém thì không kịp đánh', () => {
+    const before = stateWith([monster(1, 0, 0, 1), monster(2, 12, 5)]);
+    const after = playTurn(before, 0, CONFIG);
+    expect(byId(after, 1)).toBeUndefined();
+    expect(after.heroHp).toBe(5);
+  });
+
+  it('sức đánh lấy từ cấu hình quái', () => {
+    const hard = { ...CONFIG, monster: { ...CONFIG.monster, attack: 2 } };
+    const after = playTurn(stateWith([monster(1, 12, 0)]), 6, hard);
+    expect(after.heroHp).toBe(3);
+  });
+
+  it('quái đang đánh không tung số ngẫu nhiên (chỉ quái di chuyển mới tung)', () => {
+    const before = stateWith([monster(1, 12, 0)]);
+    expect(playTurn(before, 6, withAdvanceChance(0.5)).rng).toBe(before.rng);
+  });
+
+  it('isThreatening: chỉ quái ở vòng 0 là sắp đánh (để hiện dấu "!")', () => {
+    expect(isThreatening(monster(1, 12, 0))).toBe(true);
+    expect(isThreatening(monster(1, 12, 1))).toBe(false);
   });
 });
 
