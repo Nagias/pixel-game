@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { zoneSectors } from '../logic/arena';
 import {
+  ARENA_LAYOUT,
   cellToPoint,
   polarToPoint,
   ringCenterRadius,
+  ringInnerRadius,
   sectorCenterAngle,
+  WEAPON_BAR,
+  weaponButtonAt,
+  weaponButtonRects,
   zoneArc,
   zoneRadii,
   type ArenaLayout,
+  type WeaponBarLayout,
 } from './battleLayout';
 
 const LAYOUT: ArenaLayout = { centerX: 100, centerY: 100, heroRadius: 34, ringWidth: 21 };
@@ -84,5 +90,43 @@ describe('zoneRadii — hình nêm xanh phủ đúng các vòng vũ khí với t
       const inside = radius > radii.inner && radius < radii.outer;
       expect(inside).toBe(ring >= 1 && ring <= 2);
     }
+  });
+});
+
+describe('thanh nút vũ khí ở đáy màn hình (F02)', () => {
+  // Thanh rộng 324 px từ x = 18, 3 nút cách nhau 12 px → mỗi nút rộng (324 − 2·12) / 3 = 100 px.
+  const BAR: WeaponBarLayout = { left: 18, top: 520, width: 324, height: 72, gap: 12 };
+
+  it('chia 3 nút đều nhau, có khe giữa các nút', () => {
+    expect(weaponButtonRects(3, BAR)).toEqual([
+      { x: 18, y: 520, width: 100, height: 72 },
+      { x: 130, y: 520, width: 100, height: 72 },
+      { x: 242, y: 520, width: 100, height: 72 },
+    ]);
+  });
+
+  it.each([
+    [68, 556, 0],
+    [180, 556, 1],
+    [292, 556, 2],
+    [18, 520, 0], // mép trên-trái của nút đầu vẫn tính là chạm nút
+    [341.9, 591.9, 2],
+  ])('chạm (%f, %f) → nút %i', (x, y, expected) => {
+    expect(weaponButtonAt(x, y, 3, BAR)).toBe(expected);
+  });
+
+  it.each([
+    [124, 556], // khe giữa nút 1 và 2
+    [180, 300], // giữa sân
+    [180, 519], // ngay trên thanh
+    [180, 592], // ngay dưới thanh
+    [10, 556], // lề trái
+  ])('chạm (%f, %f) → không trúng nút nào (là chạm vào sân)', (x, y) => {
+    expect(weaponButtonAt(x, y, 3, BAR)).toBeNull();
+  });
+
+  it('thanh nút không đè lên sân tròn', () => {
+    const arenaBottom = ARENA_LAYOUT.centerY + ringInnerRadius(6, ARENA_LAYOUT);
+    expect(WEAPON_BAR.top).toBeGreaterThan(arenaBottom);
   });
 });

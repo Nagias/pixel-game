@@ -1,11 +1,9 @@
-// Cách DUY NHẤT để test E2E điều khiển game: chạm/bấm phím như người chơi, đọc trạng thái qua
-// window.__PIXEL_GAME__.snapshot(), và tự cầm đồng hồ ảo để kết quả lặp lại 100%.
+// Cách DUY NHẤT để test E2E điều khiển game: chạm màn hình như người chơi trên điện thoại, đọc
+// trạng thái qua window.__PIXEL_GAME__.snapshot(), và tự cầm đồng hồ ảo để kết quả lặp lại 100%.
 // Phần chung cho mọi tính năng ở đây; phần riêng của từng tính năng ở e2e/support/<f>Driver.ts.
-// E2E chỉ được import kiểu (import type) từ index.ts và hàm thuần từ logic/ — không import view.
+// E2E chỉ được import kiểu (import type) từ index.ts và file thuần không dùng Phaser
+// (logic/, view/<f>Layout.ts) — không import scene.
 import type { Page } from '@playwright/test';
-
-/** Nhịp phím tự lặp khi giữ phím trên Windows/macOS (khoảng 30–35 ms). */
-const KEY_REPEAT_MS = 35;
 
 export class GameDriver {
   constructor(protected readonly page: Page) {}
@@ -33,24 +31,26 @@ export class GameDriver {
     await this.page.clock.runFor(ms);
   }
 
-  /** Chạm giữa màn hình bằng ngón tay (cảm ứng), như trên điện thoại. */
-  async tap(): Promise<void> {
-    const box = await this.page.locator('canvas').boundingBox();
+  /**
+   * Chạm bằng ngón tay vào điểm (x, y) tính theo tọa độ của game (khung 360×640), dù màn hình
+   * thật to nhỏ thế nào — game co giãn vừa màn hình nên phải đổi sang tọa độ trang.
+   */
+  async tapAt(gameX: number, gameY: number): Promise<void> {
+    const canvas = this.page.locator('canvas');
+    const box = await canvas.boundingBox();
     if (!box) throw new Error('Không thấy canvas của game');
-    await this.page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    const size = await canvas.evaluate((el: HTMLCanvasElement) => [el.width, el.height] as const);
+    await this.page.touchscreen.tap(
+      box.x + (gameX * box.width) / size[0],
+      box.y + (gameY * box.height) / size[1],
+    );
   }
 
-  /**
-   * Giữ một phím: lần nhấn đầu là thật, các lần sau là phím tự lặp (repeat) như khi giữ tay.
-   * Giữa các lần lặp cho thời gian trôi đúng nhịp lặp phím của hệ điều hành; bấm dồn cùng một
-   * khoảnh khắc thì Phaser coi là trùng lặp và gộp lại — không giống tay người.
-   */
-  async holdKey(key: string, presses: number): Promise<void> {
-    for (let i = 0; i < presses; i++) {
-      await this.page.keyboard.down(key);
-      await this.advance(KEY_REPEAT_MS);
-    }
-    await this.page.keyboard.up(key);
+  /** Chạm giữa màn hình — trúng sân đấu, không trúng nút nào. */
+  async tap(): Promise<void> {
+    const canvas = this.page.locator('canvas');
+    const size = await canvas.evaluate((el: HTMLCanvasElement) => [el.width, el.height] as const);
+    await this.tapAt(size[0] / 2, size[1] / 2);
   }
 
   /** Dừng đồng hồ ở một mốc ngay phía trước. Máy bận có thể làm mốc đó trôi qua → thử lại. */

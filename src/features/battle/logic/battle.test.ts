@@ -1,19 +1,39 @@
 import { describe, expect, it } from 'vitest';
 import { seedRng } from '../../../shared/random';
-import { createBattle, playTurn } from './battle';
+import { createBattle, playTurn, selectWeapon } from './battle';
 import { BATTLE_CONFIG } from './battleConfig';
-import type { BattleConfig, BattleState, Monster } from './battleTypes';
+import type { BattleConfig, BattleState, Monster, WeaponConfig } from './battleTypes';
 
 // Cấu hình riêng cho test: con số cố định để kỳ vọng tính tay được,
 // không gãy khi chỉnh cân bằng trong battleConfig.ts.
+// Một vũ khí với tới cả sân — để các test luật đánh/di chuyển không phụ thuộc chuyện đổi vũ khí.
+const ALL_REACH: WeaponConfig = {
+  name: 'Kiếm thử',
+  rangeLabel: 'cả sân',
+  widthSectors: 3,
+  minRing: 0,
+  maxRing: 5,
+  damage: 1,
+};
+
 const CONFIG: BattleConfig = {
   sectorCount: 24,
   ringCount: 6,
   turnLimit: 5,
   arcPeriodMs: 2_400,
-  weapon: { name: 'Kiếm thử', widthSectors: 3, minRing: 0, maxRing: 5, damage: 1 },
+  weapons: [ALL_REACH],
   monster: { name: 'Slime thử', hp: 2, advanceChance: 1 },
   spawn: { count: 4, spread: 2 },
+};
+
+/** Ba vũ khí theo tầm như F02: gần (vòng 0–1), vừa (2–3), xa (4–5). */
+const THREE_WEAPONS: BattleConfig = {
+  ...CONFIG,
+  weapons: [
+    { name: 'Kiếm', rangeLabel: 'gần', widthSectors: 5, minRing: 0, maxRing: 1, damage: 1 },
+    { name: 'Giáo', rangeLabel: 'vừa', widthSectors: 3, minRing: 2, maxRing: 3, damage: 1 },
+    { name: 'Cung', rangeLabel: 'xa', widthSectors: 1, minRing: 4, maxRing: 5, damage: 1 },
+  ],
 };
 
 /** Quái luôn tiến (advanceChance 1) hoặc luôn đi ngang (0) để kết quả đoán trước được. */
@@ -34,6 +54,7 @@ function stateWith(monsters: Monster[], overrides: Partial<BattleState> = {}): B
     seed: 1,
     rng: seedRng(1),
     turnsLeft: 5,
+    weaponIndex: 0,
     monsters,
     phase: 'playing',
     lossReason: null,
@@ -78,6 +99,7 @@ describe('createBattle — mở trận', () => {
     expect(battle).toMatchObject({
       seed: 123,
       turnsLeft: 5,
+      weaponIndex: 0,
       phase: 'playing',
       lossReason: null,
       lastAttack: null,
@@ -96,9 +118,10 @@ describe('createBattle — mở trận', () => {
 });
 
 describe('createBattle — chặn cấu hình sai trước khi mở trận', () => {
-  const weapon = (patch: Partial<BattleConfig['weapon']>): BattleConfig => ({
+  // Vũ khí sai nằm ở vị trí thứ 2 để chắc mọi vũ khí đều được kiểm, không chỉ vũ khí đầu.
+  const weapon = (patch: Partial<WeaponConfig>): BattleConfig => ({
     ...CONFIG,
-    weapon: { ...CONFIG.weapon, ...patch },
+    weapons: [ALL_REACH, { ...ALL_REACH, ...patch }],
   });
   const monsterRule = (patch: Partial<BattleConfig['monster']>): BattleConfig => ({
     ...CONFIG,
@@ -116,6 +139,7 @@ describe('createBattle — chặn cấu hình sai trước khi mở trận', () 
     ['vòng trong của vũ khí lớn hơn vòng ngoài', weapon({ minRing: 3, maxRing: 2 })],
     ['vòng trong của vũ khí âm', weapon({ minRing: -1 })],
     ['vũ khí không gây sát thương', weapon({ damage: 0 })],
+    ['không có vũ khí nào', { ...CONFIG, weapons: [] }],
     ['không có lượt nào', { ...CONFIG, turnLimit: 0 }],
     ['quái không có máu', monsterRule({ hp: 0 })],
     ['xác suất tiến vào lớn hơn 1', monsterRule({ advanceChance: 1.5 })],
@@ -126,6 +150,48 @@ describe('createBattle — chặn cấu hình sai trước khi mở trận', () 
 
   it('cấu hình thật của game hợp lệ', () => {
     expect(() => createBattle(1, BATTLE_CONFIG)).not.toThrow();
+  });
+});
+
+describe('selectWeapon — đổi vũ khí (F02)', () => {
+  it('trận mới cầm vũ khí đầu tiên trong danh sách', () => {
+    expect(createBattle(1, THREE_WEAPONS).weaponIndex).toBe(0);
+  });
+
+  it('đổi vũ khí không tốn lượt, quái không di chuyển, không tung số ngẫu nhiên', () => {
+    const before = stateWith([monster(1, 12, 5)]);
+    expect(selectWeapon(before, 2, THREE_WEAPONS)).toEqual({ ...before, weaponIndex: 2 });
+  });
+
+  it('nhát chém dùng vùng của vũ khí đang cầm: cung trúng quái ở rìa, kiếm trúng quái sát người', () => {
+    // Quái 1 ở rìa sân (vòng 5), quái 2 sát người (vòng 1), cùng lát 0.
+    const monsters = [monster(1, 0, 5), monster(2, 0, 1)];
+    const withSword = playTurn(stateWith(monsters, { weaponIndex: 0 }), 0, THREE_WEAPONS);
+    const withBow = playTurn(stateWith(monsters, { weaponIndex: 2 }), 0, THREE_WEAPONS);
+    expect(withSword.lastAttack?.hits.map((hit) => hit.monsterId)).toEqual([2]);
+    expect(withBow.lastAttack?.hits.map((hit) => hit.monsterId)).toEqual([1]);
+  });
+
+  it('độ rộng vùng theo vũ khí: kiếm rộng 5 lát trúng quái lệch 2 lát, cung rộng 1 lát thì trượt', () => {
+    const swordReach = playTurn(
+      stateWith([monster(1, 2, 0)], { weaponIndex: 0 }),
+      0,
+      THREE_WEAPONS,
+    );
+    const bowMiss = playTurn(stateWith([monster(1, 1, 5)], { weaponIndex: 2 }), 0, THREE_WEAPONS);
+    expect(swordReach.lastAttack?.hits).toHaveLength(1);
+    expect(bowMiss.lastAttack?.hits).toEqual([]);
+  });
+
+  it('từ chối vũ khí không có trong danh sách', () => {
+    const state = stateWith([monster(1, 12, 5)]);
+    expect(() => selectWeapon(state, 3, THREE_WEAPONS)).toThrow(RangeError);
+    expect(() => selectWeapon(state, -1, THREE_WEAPONS)).toThrow(RangeError);
+    expect(() => selectWeapon(state, 1.5, THREE_WEAPONS)).toThrow(RangeError);
+  });
+
+  it('không đổi vũ khí khi trận đã kết thúc', () => {
+    expect(() => selectWeapon(stateWith([], { phase: 'won' }), 1, THREE_WEAPONS)).toThrow();
   });
 });
 
@@ -158,7 +224,7 @@ describe('playTurn — một nhát đánh', () => {
   });
 
   it('vũ khí không đánh được quái nằm ngoài khoảng vòng của nó', () => {
-    const shortReach = { ...CONFIG, weapon: { ...CONFIG.weapon, maxRing: 2 } };
+    const shortReach = { ...CONFIG, weapons: [{ ...ALL_REACH, maxRing: 2 }] };
     const after = playTurn(stateWith([monster(1, 0, 5)]), 0, shortReach);
     expect(after.lastAttack?.hits).toEqual([]);
   });

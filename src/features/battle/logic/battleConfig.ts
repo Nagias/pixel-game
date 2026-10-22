@@ -7,13 +7,12 @@ export const BATTLE_CONFIG: BattleConfig = {
   ringCount: 6,
   turnLimit: 8,
   arcPeriodMs: 2_400,
-  weapon: {
-    name: 'Kiếm gỗ',
-    widthSectors: 3,
-    minRing: 0,
-    maxRing: 5,
-    damage: 1,
-  },
+  // F02: 3 vũ khí theo tầm. Quái mới xuất hiện ở vòng 5 nên chỉ Cung với tới lúc đầu.
+  weapons: [
+    { name: 'Kiếm', rangeLabel: 'gần', widthSectors: 5, minRing: 0, maxRing: 1, damage: 1 },
+    { name: 'Giáo', rangeLabel: 'vừa', widthSectors: 3, minRing: 2, maxRing: 3, damage: 1 },
+    { name: 'Cung', rangeLabel: 'xa', widthSectors: 1, minRing: 4, maxRing: 5, damage: 1 },
+  ],
   monster: {
     name: 'Slime',
     hp: 2,

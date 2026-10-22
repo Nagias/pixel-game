@@ -21,6 +21,10 @@ Bổ sung sau khi chủ dự án chơi thử Micro RPG (nguyên văn):
 > tôi vừa chơi thì là quái sẽ di chuyển linh tinh, còn phạm vi tấn công được áp dụng theo lựa chọn
 > vũ khí chứ không phải lúc xa lúc gần.
 
+Bổ sung khi chốt F02, ngày 22/10/2026 (nguyên văn):
+
+> đây là game mobile nên thiết kế giao diện và tính năng mobile là được.
+
 Phân tích game tham chiếu: `docs/research/micro-rpg.md`. Phong cách hình: `docs/ART_STYLE.md`.
 
 ## 2. Nguyên tắc thiết kế kiểu Dune
@@ -44,41 +48,42 @@ Phân tích game tham chiếu: `docs/research/micro-rpg.md`. Phong cách hình: 
 
 ## 3. Một đường đúng duy nhất cho mỗi việc
 
-| Việc                          | Đường đúng duy nhất                                                                                                                                                                                         |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Thêm tính năng mới            | Copy khuôn `src/features/battle/` (xem mục 7), đăng ký scene ở `src/app/scenes.ts`                                                                                                                          |
-| Thêm/sửa luật chơi            | Hàm thuần trong `src/features/<f>/logic/`, test `*.test.ts` đặt cạnh, viết test trước                                                                                                                       |
-| Đổi con số cân bằng           | Chỉ trong `src/features/<f>/logic/<f>Config.ts`                                                                                                                                                             |
-| Dùng màu                      | Chỉ `PALETTE` trong `src/shared/palette.ts` (bảng Sweetie 16, không thêm màu ngoài)                                                                                                                         |
-| Thêm hình nhân vật/quái       | Lưới ký tự trong `src/features/<f>/view/<f>Sprites.ts`, nạp bằng `registerPixelSprites(scene, '<f>', …)` (tên texture tự thành `<f>.<tên>`)                                                                 |
-| Vẽ đối tượng theo state       | Một hàm `sync…(state)` tạo cái thiếu, dời cái đang có, gỡ cái không còn — không vẽ theo "cái vừa đổi"                                                                                                       |
-| Ngẫu nhiên                    | `src/shared/random.ts` (RNG có seed, trạng thái nằm trong state)                                                                                                                                            |
-| Hẹn giờ / hoạt ảnh trong view | `this.time` và `this.tweens` của Phaser (không `setTimeout`)                                                                                                                                                |
-| Cho test E2E đọc trạng thái   | Scene gọi `setSnapshotProvider()` (`src/app/testBridge.ts`) trong `create()`; test đọc qua `e2e/support/gameDriver.ts`                                                                                      |
-| Test E2E điều khiển game      | `GameDriver` (chung: mở game, đồng hồ ảo, chạm, giữ phím, kiểm đúng scene) + `e2e/support/<f>Driver.ts` (riêng tính năng, kế thừa `GameDriver`); E2E chỉ import kiểu từ `index.ts` và hàm thuần từ `logic/` |
-| Xem game tận mắt              | Claude Desktop: preview `game-dev` (`.claude/launch.json`); hoặc `npm run dev`                                                                                                                              |
-| Kiểm tra trước khi báo xong   | `npm run check` (giống hệt CI)                                                                                                                                                                              |
-| Thêm thư viện                 | Ghi lý do vào `docs/ARCHITECTURE.md` và nêu rõ trong PR (chủ dự án duyệt qua PR)                                                                                                                            |
-| Đi tắt                        | Ghi `DEBT.md` trước, comment `// NỢ DEBT-xxx` tại chỗ                                                                                                                                                       |
+| Việc                          | Đường đúng duy nhất                                                                                                                                                                                                                                       |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Thêm tính năng mới            | Copy khuôn `src/features/battle/` (xem mục 7), đăng ký scene ở `src/app/scenes.ts`                                                                                                                                                                        |
+| Thêm/sửa luật chơi            | Hàm thuần trong `src/features/<f>/logic/`, test `*.test.ts` đặt cạnh, viết test trước                                                                                                                                                                     |
+| Đổi con số cân bằng           | Chỉ trong `src/features/<f>/logic/<f>Config.ts`                                                                                                                                                                                                           |
+| Dùng màu                      | Chỉ `PALETTE` trong `src/shared/palette.ts` (bảng Sweetie 16, không thêm màu ngoài)                                                                                                                                                                       |
+| Thêm hình nhân vật/quái       | Lưới ký tự trong `src/features/<f>/view/<f>Sprites.ts`, nạp bằng `registerPixelSprites(scene, '<f>', …)` (tên texture tự thành `<f>.<tên>`)                                                                                                               |
+| Vẽ đối tượng theo state       | Một hàm `sync…(state)` tạo cái thiếu, dời cái đang có, gỡ cái không còn — không vẽ theo "cái vừa đổi"                                                                                                                                                     |
+| Ngẫu nhiên                    | `src/shared/random.ts` (RNG có seed, trạng thái nằm trong state)                                                                                                                                                                                          |
+| Hẹn giờ / hoạt ảnh trong view | `this.time` và `this.tweens` của Phaser (không `setTimeout`)                                                                                                                                                                                              |
+| Cho test E2E đọc trạng thái   | Scene gọi `setSnapshotProvider()` (`src/app/testBridge.ts`) trong `create()`; test đọc qua `e2e/support/gameDriver.ts`                                                                                                                                    |
+| Test E2E điều khiển game      | `GameDriver` (chung: mở game, đồng hồ ảo, chạm theo tọa độ game, kiểm đúng scene) + `e2e/support/<f>Driver.ts` (riêng tính năng, kế thừa `GameDriver`); E2E chỉ import kiểu từ `index.ts` và file thuần không dùng Phaser (`logic/`, `view/<f>Layout.ts`) |
+| Xem game tận mắt              | Claude Desktop: preview `game-dev` (`.claude/launch.json`); hoặc `npm run dev`                                                                                                                                                                            |
+| Kiểm tra trước khi báo xong   | `npm run check` (giống hệt CI)                                                                                                                                                                                                                            |
+| Thêm thư viện                 | Ghi lý do vào `docs/ARCHITECTURE.md` và nêu rõ trong PR (chủ dự án duyệt qua PR)                                                                                                                                                                          |
+| Đi tắt                        | Ghi `DEBT.md` trước, comment `// NỢ DEBT-xxx` tại chỗ                                                                                                                                                                                                     |
 
 ## 4. Đường cấm (dự kiến, bổ sung dần)
 
-| #   | Cấm                                                                                      | Vì sao                                          | Máy chặn bằng                     |
-| --- | ---------------------------------------------------------------------------------------- | ----------------------------------------------- | --------------------------------- |
-| 1   | `import` Phaser trong `logic/` hoặc `src/shared/`                                        | Logic phải chạy/test được không cần trình duyệt | ESLint `no-restricted-imports`    |
-| 2   | `Math.random`, `Date`, `performance`, `window`, `document` trong `logic/`, `src/shared/` | Mất tính lặp lại, test chập chờn                | ESLint                            |
-| 3   | Luật chơi (tính sát thương, di chuyển quái, thắng/thua) trong `view/`                    | Không test được, dễ lệch giữa hình và luật      | Review + test                     |
-| 4   | Mã màu hex (`'#ff0000'`, `0xff0000`) ngoài `palette.ts`                                  | Màu lạc bảng, mất phong cách                    | ESLint `no-restricted-syntax`     |
-| 5   | `any`, `@ts-ignore`, `@ts-expect-error` không lý do                                      | Che lỗi kiểu                                    | ESLint                            |
-| 6   | `test.only` / `describe.only`                                                            | CI chạy thiếu test                              | ESLint + Playwright `forbidOnly`  |
-| 7   | `test.skip` không kèm mã `DEBT-xxx`                                                      | Nợ ẩn                                           | Review                            |
-| 8   | Sửa test cho xanh thay vì sửa code                                                       | Phá lưới an toàn                                | Review                            |
-| 9   | `setTimeout`/`setInterval` trong `view/`                                                 | Không dừng theo game, E2E không điều khiển được | ESLint `no-restricted-globals`    |
-| 10  | Import vào ruột (`logic/`, `view/`) của tính năng khác — chỉ qua `index.ts`              | Rối phụ thuộc                                   | Review (xem DEBT-005)             |
-| 11  | Tải ảnh/font/script từ mạng lúc chạy game                                                | Game phải chạy offline, không phụ thuộc CDN     | Review                            |
-| 12  | Commit/push thẳng `main`, force push, `--no-verify`                                      | Bỏ qua CI                                       | Branch protection + settings deny |
-| 13  | Đọc/in `.env`, token, mật khẩu                                                           | Lộ bí mật                                       | settings deny                     |
-| 14  | Thêm thư viện mà không ghi lý do trong `docs/ARCHITECTURE.md`                            | Phình phụ thuộc                                 | Review PR                         |
+| #   | Cấm                                                                                                   | Vì sao                                                       | Máy chặn bằng                     |
+| --- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------- |
+| 1   | `import` Phaser trong `logic/` hoặc `src/shared/`                                                     | Logic phải chạy/test được không cần trình duyệt              | ESLint `no-restricted-imports`    |
+| 2   | `Math.random`, `Date`, `performance`, `window`, `document` trong `logic/`, `src/shared/`              | Mất tính lặp lại, test chập chờn                             | ESLint                            |
+| 3   | Luật chơi (tính sát thương, di chuyển quái, thắng/thua) trong `view/`                                 | Không test được, dễ lệch giữa hình và luật                   | Review + test                     |
+| 4   | Mã màu hex (`'#ff0000'`, `0xff0000`) ngoài `palette.ts`                                               | Màu lạc bảng, mất phong cách                                 | ESLint `no-restricted-syntax`     |
+| 5   | `any`, `@ts-ignore`, `@ts-expect-error` không lý do                                                   | Che lỗi kiểu                                                 | ESLint                            |
+| 6   | `test.only` / `describe.only`                                                                         | CI chạy thiếu test                                           | ESLint + Playwright `forbidOnly`  |
+| 7   | `test.skip` không kèm mã `DEBT-xxx`                                                                   | Nợ ẩn                                                        | Review                            |
+| 8   | Sửa test cho xanh thay vì sửa code                                                                    | Phá lưới an toàn                                             | Review                            |
+| 9   | `setTimeout`/`setInterval` trong `view/`                                                              | Không dừng theo game, E2E không điều khiển được              | ESLint `no-restricted-globals`    |
+| 10  | Import vào ruột (`logic/`, `view/`) của tính năng khác — chỉ qua `index.ts`                           | Rối phụ thuộc                                                | Review (xem DEBT-005)             |
+| 11  | Tải ảnh/font/script từ mạng lúc chạy game                                                             | Game phải chạy offline, không phụ thuộc CDN                  | Review                            |
+| 12  | Commit/push thẳng `main`, force push, `--no-verify`                                                   | Bỏ qua CI                                                    | Branch protection + settings deny |
+| 13  | Đọc/in `.env`, token, mật khẩu                                                                        | Lộ bí mật                                                    | settings deny                     |
+| 14  | Thêm thư viện mà không ghi lý do trong `docs/ARCHITECTURE.md`                                         | Phình phụ thuộc                                              | Review PR                         |
+| 15  | Điều khiển bằng bàn phím/chuột riêng (phím tắt, rê chuột) — game chỉ cho mobile, mọi thao tác là chạm | Chủ dự án chốt chỉ mobile; thêm đường điều khiển là thêm lỗi | Review                            |
 
 **Phân quyền 3 vòng** (`.claude/settings.json`, chủ dự án chốt ngày 21/10/2026):
 
@@ -126,6 +131,7 @@ Máy Windows: đường dẫn dự án có dấu cách và dấu chấm (`D:\26.
 1. Đọc `FEATURE_MAP.md` → chọn mã `Fxx` tiếp theo, tạo branch.
 2. Tạo `src/features/<f>/` với đúng bố cục của `battle/`:
    `logic/<f>Types.ts`, `logic/<f>Config.ts`, `logic/<f>.ts` + `<f>.test.ts`, `view/<F>Scene.ts`,
+   `view/<f>Layout.ts` + test (phép tính tọa độ thuần, không Phaser),
    `view/<f>Sprites.ts`, `index.ts`. Thiếu phần nào không cần thì bỏ, không thêm phần lạ.
 3. Viết test luật trước (đỏ) → code logic (xanh) → view chỉ đọc state và gọi logic.
 4. Scene gọi `setSnapshotProvider()` trong `create()` và gỡ nó khi `SHUTDOWN`; thêm

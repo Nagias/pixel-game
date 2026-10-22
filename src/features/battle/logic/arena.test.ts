@@ -6,6 +6,7 @@ const SECTORS = 24;
 
 const weapon = (overrides: Partial<WeaponConfig> = {}): WeaponConfig => ({
   name: 'test',
+  rangeLabel: 'cả sân',
   widthSectors: 3,
   minRing: 0,
   maxRing: 5,

@@ -2,25 +2,29 @@
 // Thứ tự một lượt: đánh → kiểm thắng → quái di chuyển → kiểm bị chạm → kiểm hết lượt.
 import { nextFloat, nextInt, seedRng, type RngState } from '../../../shared/random';
 import { isInZone, wrapSector } from './arena';
-import type { BattleConfig, BattleState, Hit, Monster } from './battleTypes';
+import type { BattleConfig, BattleState, Hit, Monster, WeaponConfig } from './battleTypes';
 
 /** Chặn cấu hình sai ngay lúc mở trận, thay vì để game chạy với luật vô nghĩa. */
 function validateBattleConfig(config: BattleConfig): void {
-  const { sectorCount, ringCount, turnLimit, weapon, monster, spawn } = config;
+  const { sectorCount, ringCount, turnLimit, weapons, monster, spawn } = config;
   const slotCount = spawn.spread * 2 + 1;
   const problems: string[] = [];
 
   if (spawn.count > slotCount)
     problems.push(`không đủ ${spawn.count} chỗ trong cụm ${slotCount} lát`);
   if (slotCount > sectorCount) problems.push(`cụm quái ${slotCount} lát rộng hơn vòng tròn`);
-  if (weapon.widthSectors % 2 === 0) problems.push('vùng đánh phải rộng số lẻ lát');
-  if (weapon.widthSectors < 1 || weapon.widthSectors > sectorCount) {
-    problems.push(`vùng đánh rộng ${weapon.widthSectors} lát nằm ngoài [1, ${sectorCount}]`);
+  if (weapons.length === 0) problems.push('phải có ít nhất 1 vũ khí');
+  for (const weapon of weapons) {
+    const label = `vũ khí "${weapon.name}"`;
+    if (weapon.widthSectors % 2 === 0) problems.push(`${label}: vùng đánh phải rộng số lẻ lát`);
+    if (weapon.widthSectors < 1 || weapon.widthSectors > sectorCount) {
+      problems.push(`${label}: rộng ${weapon.widthSectors} lát nằm ngoài [1, ${sectorCount}]`);
+    }
+    if (weapon.minRing < 0 || weapon.minRing > weapon.maxRing || weapon.maxRing >= ringCount) {
+      problems.push(`${label}: tầm vòng ${weapon.minRing}–${weapon.maxRing} không hợp lệ`);
+    }
+    if (weapon.damage < 1) problems.push(`${label}: phải gây ít nhất 1 sát thương`);
   }
-  if (weapon.minRing < 0 || weapon.minRing > weapon.maxRing || weapon.maxRing >= ringCount) {
-    problems.push(`tầm vũ khí vòng ${weapon.minRing}–${weapon.maxRing} không hợp lệ`);
-  }
-  if (weapon.damage < 1) problems.push('vũ khí phải gây ít nhất 1 sát thương');
   if (turnLimit < 1) problems.push('phải có ít nhất 1 lượt');
   if (monster.hp < 1) problems.push('quái phải có ít nhất 1 máu');
   if (monster.advanceChance < 0 || monster.advanceChance > 1) {
@@ -61,6 +65,7 @@ export function createBattle(seed: number, config: BattleConfig): BattleState {
     seed,
     rng,
     turnsLeft: config.turnLimit,
+    weaponIndex: 0,
     monsters,
     phase: 'playing',
     lossReason: null,
@@ -68,7 +73,25 @@ export function createBattle(seed: number, config: BattleConfig): BattleState {
   };
 }
 
-/** Một lượt: người chơi đánh vào `aimSector`, rồi quái còn sống di chuyển. */
+/** Vũ khí ở vị trí `index` trên thanh nút; báo lỗi nếu không có. */
+function weaponAt(index: number, config: BattleConfig): WeaponConfig {
+  const weapon = Number.isInteger(index) ? config.weapons[index] : undefined;
+  if (!weapon) {
+    throw new RangeError(`Không có vũ khí số ${index} (có ${config.weapons.length} vũ khí)`);
+  }
+  return weapon;
+}
+
+/** Đổi vũ khí đang cầm. Không tốn lượt, quái không di chuyển — chỉ chém mới tốn lượt. */
+export function selectWeapon(state: BattleState, index: number, config: BattleConfig): BattleState {
+  if (state.phase !== 'playing') {
+    throw new Error(`Trận đã kết thúc (${state.phase}), không thể đổi vũ khí`);
+  }
+  weaponAt(index, config);
+  return { ...state, weaponIndex: index };
+}
+
+/** Một lượt: người chơi đánh vào `aimSector` bằng vũ khí đang cầm, rồi quái còn sống di chuyển. */
 export function playTurn(state: BattleState, aimSector: number, config: BattleConfig): BattleState {
   if (state.phase !== 'playing') {
     throw new Error(`Trận đã kết thúc (${state.phase}), không thể đánh tiếp`);
@@ -77,7 +100,7 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
     throw new RangeError(`aimSector phải trong [0, ${config.sectorCount}), nhận ${aimSector}`);
   }
 
-  const { weapon } = config;
+  const weapon = weaponAt(state.weaponIndex, config);
   const hits: Hit[] = [];
   const survivors: Monster[] = [];
   for (const monster of state.monsters) {
