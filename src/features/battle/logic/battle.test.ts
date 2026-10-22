@@ -197,10 +197,9 @@ describe('selectWeapon — đổi vũ khí (F02)', () => {
 
 describe('playTurn — một nhát đánh', () => {
   it('quái trong vùng xanh mất máu, quái ngoài vùng giữ nguyên', () => {
-    const before = stateWith([monster(1, 0, 5), monster(2, 1, 5), monster(3, 5, 5)]);
+    const before = stateWith([monster(1, 0, 5), monster(3, 5, 5)]);
     const after = playTurn(before, 0, CONFIG);
     expect(byId(after, 1)?.hp).toBe(1);
-    expect(byId(after, 2)?.hp).toBe(1);
     expect(byId(after, 3)?.hp).toBe(2);
   });
 
@@ -211,14 +210,15 @@ describe('playTurn — một nhát đánh', () => {
     expect(byId(after, 2)).toBeDefined();
   });
 
-  it('ghi lại nhát đánh (lát ngắm, ai trúng, ai chết) để hiển thị số sát thương', () => {
+  it('ghi lại nhát đánh (lát ngắm, ai trúng theo thứ tự combo, sát thương, ai chết)', () => {
+    // F03: quái 1 (1 máu) bị chém trước ăn 1; quái 2 (2 máu) là con thứ hai, ăn 2 → chết luôn.
     const before = stateWith([monster(1, 0, 5, 1), monster(2, 1, 5), monster(3, 12, 5)]);
     const after = playTurn(before, 0, CONFIG);
     expect(after.lastAttack).toEqual({
       aimSector: 0,
       hits: [
         { monsterId: 1, damage: 1, killed: true },
-        { monsterId: 2, damage: 1, killed: false },
+        { monsterId: 2, damage: 2, killed: true },
       ],
     });
   });
@@ -232,6 +232,45 @@ describe('playTurn — một nhát đánh', () => {
   it('mỗi nhát đánh tốn đúng 1 lượt', () => {
     const after = playTurn(stateWith([monster(1, 12, 5)], { turnsLeft: 5 }), 0, CONFIG);
     expect(after.turnsLeft).toBe(4);
+  });
+});
+
+describe('playTurn — combo gom cụm (F03)', () => {
+  it('chém trúng 3 quái: con thứ 1 ăn 100%, thứ 2 ăn 200%, thứ 3 ăn 300% sát thương', () => {
+    // Cùng 10 máu → con gần nhân vật hơn bị chém trước: quái 2 (vòng 3), quái 3 (vòng 4), quái 1 (vòng 5).
+    const before = stateWith([monster(1, 0, 5, 10), monster(2, 1, 3, 10), monster(3, 23, 4, 10)]);
+    const after = playTurn(before, 0, withAdvanceChance(0));
+    expect(after.lastAttack?.hits).toEqual([
+      { monsterId: 2, damage: 1, killed: false },
+      { monsterId: 3, damage: 2, killed: false },
+      { monsterId: 1, damage: 3, killed: false },
+    ]);
+    expect(byId(after, 2)?.hp).toBe(9);
+    expect(byId(after, 3)?.hp).toBe(8);
+    expect(byId(after, 1)?.hp).toBe(7);
+  });
+
+  it('con ít máu nhất bị chém trước, để nhát mạnh nhất dồn vào con trâu nhất', () => {
+    const before = stateWith([monster(1, 0, 5, 5), monster(2, 1, 5, 1)]);
+    const after = playTurn(before, 0, withAdvanceChance(0));
+    expect(after.lastAttack?.hits).toEqual([
+      { monsterId: 2, damage: 1, killed: true },
+      { monsterId: 1, damage: 2, killed: false },
+    ]);
+    expect(byId(after, 1)?.hp).toBe(3);
+  });
+
+  it('bằng máu và cùng vòng thì theo id', () => {
+    const before = stateWith([monster(2, 0, 5, 10), monster(1, 1, 5, 10)]);
+    const after = playTurn(before, 0, withAdvanceChance(0));
+    expect(after.lastAttack?.hits.map((hit) => hit.monsterId)).toEqual([1, 2]);
+  });
+
+  it('nhân theo sát thương của vũ khí: vũ khí 2 sát thương → 2, 4', () => {
+    const strong = { ...CONFIG, weapons: [{ ...ALL_REACH, damage: 2 }] };
+    const before = stateWith([monster(1, 0, 5, 10), monster(2, 1, 5, 10)]);
+    const after = playTurn(before, 0, strong);
+    expect(after.lastAttack?.hits.map((hit) => hit.damage)).toEqual([2, 4]);
   });
 });
 

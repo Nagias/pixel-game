@@ -9,6 +9,7 @@
 | --- | ------------------------------------------------ | ---------- | ------------------------------------ | -------------------------------------------------------- |
 | F01 | Trận đấu tối thiểu (walking skeleton, khuôn mẫu) | ✅ Xong    | `src/features/battle/`               | `src/features/battle/**/*.test.ts`, `e2e/battle.spec.ts` |
 | F02 | Thanh 3 nút vũ khí theo tầm (gần / vừa / xa)     | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
+| F03 | Combo gom cụm 100% / 200% / 300%                 | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -22,7 +23,8 @@ chạm tới mình thì thắng.
 2. Mở trận: 4 slime (2 máu) xuất hiện thành cụm ở vòng ngoài cùng, mỗi con một lát.
 3. Vùng xanh quay đều theo chiều kim đồng hồ, hết một vòng sau 2,4 giây. Hình vùng (vòng nào, rộng
    mấy lát) theo vũ khí đang cầm — xem F02.
-4. Mỗi lần chém tốn 1 lượt (tối đa 8): mọi quái trong vùng mất máu theo vũ khí, hết máu thì biến mất.
+4. Mỗi lần chém tốn 1 lượt (tối đa 8): mọi quái trong vùng mất máu theo vũ khí và combo (F03), hết
+   máu thì biến mất.
 5. Sau nhát chém, từng con quái còn sống (theo thứ tự id): 60% tiến vào 1 vòng, 40% đi ngang 1 lát
    ("đi lung tung"); không đi vào ô đã có quái khác.
 6. Hết quái → **thắng**. Quái tiến vào từ vòng 0 → **thua** ("Quái đã chạm tới bạn").
@@ -92,11 +94,36 @@ chém bừa thua 100%. Seed 42 dùng cho E2E thắng được, dư 3 lượt.
 
 **Nợ liên quan:** DEBT-009.
 
+## F03 — Combo gom cụm
+
+**Người chơi thấy và làm gì:** chém trúng nhiều quái trong một nhát thì sát thương tăng dần — số bay
+lên hiện -1, -2, -3… Người chơi được thưởng khi canh lúc quái đứng sát nhau rồi mới chém.
+
+**Luật** (nguồn sự thật: `logic/battle.ts` + `logic/battle.test.ts`, mục "combo gom cụm"; chủ dự án
+duyệt ngày 22/10/2026):
+
+1. Trong một nhát chém, con thứ n bị chém ăn n × sát thương vũ khí: 100%, 200%, 300%… không giới hạn.
+2. Thứ tự bị chém: con ít máu nhất trước (nhát mạnh nhất dồn vào con trâu nhất); bằng máu thì con gần
+   nhân vật hơn trước; vẫn bằng thì theo id.
+
+**Hành vi giao diện:** không thêm hiệu ứng — số sát thương bay lên sẵn có tự hiện đúng con số combo.
+
+**Kiểm chứng tự động:**
+
+- Unit: 3 quái ăn 1×/2×/3×; con ít máu trước; bằng máu theo vòng rồi theo id; nhân theo sát thương
+  vũ khí; ghi lại thứ tự combo trong `lastAttack`.
+- E2E: trong ván thắng, mọi nhát chém có sát thương đúng 1×, 2×, 3×… và có ít nhất một nhát trúng từ
+  2 quái trở lên (ảnh `3-thang.png` thấy -1, -2 từ cùng một nhát).
+
+**Cân bằng (mô phỏng 500 ván):** ngắm chuẩn thắng 100%, dư trung bình ~2,2 lượt (F02: ~1,6); chém bừa
+thắng 0,2%. Seed 42 thắng, dư 4 lượt.
+
+**Nợ liên quan:** DEBT-009.
+
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
 | Mã  | Tính năng                                                  | Ghi chú                                                     |
 | --- | ---------------------------------------------------------- | ----------------------------------------------------------- |
-| F03 | Combo gom cụm 100% / 200% / 300%                           | Thưởng việc canh lúc quái đứng sát nhau                     |
 | F04 | Dấu "!" báo quái sắp đánh + máu nhân vật                   | Thay luật "chạm là thua" bằng mất máu                       |
 | F05 | Đẩy quái theo vũ khí (knockback)                           |                                                             |
 | F06 | Màn chơi nối tiếp + trùm                                   |                                                             |

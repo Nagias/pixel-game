@@ -32,4 +32,15 @@ không rìu, không skill.
 - [x] Scene: thanh 3 nút, vùng xanh theo vũ khí; bỏ phím Space
 - [x] E2E: đổi vũ khí, chém đúng vũ khí, thắng phải đổi vũ khí đúng lúc, thua
 - [x] CLAUDE.md (chỉ mobile, đường cấm #15), FEATURE_MAP (F02, hàng chờ F07 kho vũ khí, F08 skill), DEBT-009
-- [ ] `npm run check`, mở PR #2, CI xanh, chủ dự án duyệt → gộp
+- [x] `npm run check`, mở PR #2, CI xanh, chủ dự án duyệt → gộp (22/10/2026)
+
+## Đợt 2 — F03 Combo gom cụm (22/10/2026)
+
+Phạm vi chủ dự án chốt: luật combo như đề xuất, mức tối thiểu, không thêm hiệu ứng.
+
+- [x] Chốt luật cùng chủ dự án: con thứ n ăn n × sát thương; con ít máu trước, rồi gần nhân vật, rồi id
+- [x] Test trước (đỏ) → code combo trong `playTurn` (xanh); sửa 2 test cũ theo luật mới đã duyệt
+- [x] Mô phỏng 500 ván: ngắm chuẩn thắng 100% dư ~2,2 lượt; chém bừa thắng 0,2%
+- [x] E2E: sát thương mỗi nhát đúng 1×, 2×, 3×…; có nhát trúng từ 2 quái trở lên
+- [x] FEATURE_MAP (F03), DEBT-009
+- [ ] `npm run check`, mở PR #3, CI xanh, chủ dự án duyệt → gộp

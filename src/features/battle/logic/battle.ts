@@ -101,16 +101,22 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
   }
 
   const weapon = weaponAt(state.weaponIndex, config);
-  const hits: Hit[] = [];
+
+  // F03 — combo gom cụm: con thứ n bị chém ăn n × sát thương vũ khí. Con ít máu bị chém trước để
+  // nhát mạnh nhất dồn vào con trâu nhất; bằng máu thì con gần nhân vật hơn trước, rồi theo id.
+  const hits: Hit[] = [...state.monsters]
+    .filter((monster) => isInZone(monster, aimSector, weapon, config.sectorCount))
+    .sort((a, b) => a.hp - b.hp || a.ring - b.ring || a.id - b.id)
+    .map((monster, order) => {
+      const damage = weapon.damage * (order + 1);
+      return { monsterId: monster.id, damage, killed: monster.hp - damage <= 0 };
+    });
+
+  const damageById = new Map(hits.map((hit) => [hit.monsterId, hit.damage]));
   const survivors: Monster[] = [];
   for (const monster of state.monsters) {
-    if (!isInZone(monster, aimSector, weapon, config.sectorCount)) {
-      survivors.push(monster);
-      continue;
-    }
-    const hp = monster.hp - weapon.damage;
-    hits.push({ monsterId: monster.id, damage: weapon.damage, killed: hp <= 0 });
-    if (hp > 0) survivors.push({ ...monster, hp });
+    const hp = monster.hp - (damageById.get(monster.id) ?? 0);
+    if (hp > 0) survivors.push(hp === monster.hp ? monster : { ...monster, hp });
   }
 
   const lastAttack = { aimSector, hits };
