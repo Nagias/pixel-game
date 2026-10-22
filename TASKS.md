@@ -43,7 +43,7 @@ Phạm vi chủ dự án chốt: luật combo như đề xuất, mức tối thi
 - [x] Mô phỏng 500 ván: ngắm chuẩn thắng 100% dư ~2,2 lượt; chém bừa thắng 0,2%
 - [x] E2E: sát thương mỗi nhát đúng 1×, 2×, 3×…; có nhát trúng từ 2 quái trở lên
 - [x] FEATURE_MAP (F03), DEBT-009
-- [ ] `npm run check`, mở PR #3, CI xanh, chủ dự án duyệt → gộp
+- [x] `npm run check`, mở PR #3, CI xanh, chủ dự án duyệt → gộp (22/10/2026)
 
 ## Việc lẻ — CI không tự hủy lần chạy trên main (22/10/2026)
 
@@ -51,4 +51,16 @@ Phát hiện khi gộp PR #3: GitHub tạo 2 lần chạy CI cho cùng commit g�
 
 - [x] Đổi nhóm chạy CI theo mẫu chính thức của GitHub: PR chung nhóm theo nhánh, main mỗi lần chạy một nhóm
 - [x] Kiểm chứng trên PR #4: đẩy commit mới → lần chạy cũ (1ccc3ba) bị hủy, lần mới (b716d83) xanh
-- [ ] Chủ dự án duyệt → gộp → xác nhận lần chạy trên main xanh, không bị hủy
+- [x] Chủ dự án duyệt → gộp PR #4 → lần chạy trên main (2e2fd07) xanh, không bị hủy
+
+## Đợt 3 — F04 Máu nhân vật + dấu "!" (22/10/2026)
+
+Phạm vi chủ dự án chốt: luật như đề xuất, mức tối thiểu, không thêm hiệu ứng.
+
+- [x] Chốt luật: 5 máu; quái vòng 0 đứng yên đánh 1; hết máu thì thua (thay luật chạm là thua)
+- [x] Test trước (đỏ) → code (xanh); `isThreatening` là nguồn duy nhất cho dấu "!"
+- [x] Mô phỏng 500 ván: ngắm chuẩn thắng 100% dư ~2,2 lượt; chém bừa thắng 0,2%
+- [x] Hiển thị: ô "Máu", dấu "!" đỏ, màn thua "Bạn đã gục"
+- [x] E2E: máu giảm đúng số quái áp sát × sức đánh, có lượt bị đánh
+- [x] FEATURE_MAP (F04), DEBT-008, DEBT-009
+- [ ] `npm run check`, mở PR #5, CI xanh, chủ dự án duyệt → gộp

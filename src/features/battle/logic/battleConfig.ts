@@ -17,6 +17,11 @@ export const BATTLE_CONFIG: BattleConfig = {
     name: 'Slime',
     hp: 2,
     advanceChance: 0.6,
+    // F04: quái áp sát (vòng 0) đánh mỗi lượt, mỗi con trừ 1 máu nhân vật.
+    attack: 1,
+  },
+  hero: {
+    hp: 5,
   },
   spawn: {
     count: 4,

@@ -6,7 +6,7 @@ import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE } from '../../../shared/palette';
 import { parseSeedParam } from '../../../shared/seedParam';
 import { arcSectorAt } from '../logic/arena';
-import { createBattle, playTurn, selectWeapon } from '../logic/battle';
+import { createBattle, isThreatening, playTurn, selectWeapon } from '../logic/battle';
 import { BATTLE_CONFIG } from '../logic/battleConfig';
 import type { BattleState, Monster } from '../logic/battleTypes';
 import {
@@ -63,7 +63,10 @@ export class BattleScene extends Scene {
 
   private zone!: GameObjects.Graphics;
   private turnsText!: GameObjects.Text;
+  private heroHpText!: GameObjects.Text;
   private monstersText!: GameObjects.Text;
+  /** F04: dấu "!" trên đầu quái sắp đánh, theo id quái. */
+  private readonly threatMarks = new Map<number, GameObjects.Text>();
   private resultLayer!: GameObjects.Container;
   private resultTitle!: GameObjects.Text;
   private resultDetail!: GameObjects.Text;
@@ -254,6 +257,31 @@ export class BattleScene extends Scene {
         this.spawnMonster(monster, point);
       }
     }
+
+    this.syncThreatMarks(state);
+  }
+
+  /** F04: dấu "!" đỏ trên đầu đúng những con luật coi là sắp đánh (isThreatening). */
+  private syncThreatMarks(state: BattleState): void {
+    const threatening = new Map(
+      state.monsters.filter(isThreatening).map((m) => [m.id, m] as const),
+    );
+    for (const [id, mark] of this.threatMarks) {
+      if (threatening.has(id)) continue;
+      mark.destroy();
+      this.threatMarks.delete(id);
+    }
+    for (const [id, monster] of threatening) {
+      const point = cellToPoint(monster, this.config.sectorCount, ARENA_LAYOUT);
+      const mark =
+        this.threatMarks.get(id) ??
+        this.add
+          .text(0, 0, '!', { ...TEXT, fontSize: '18px', color: PALETTE.crimson })
+          .setOrigin(0.5)
+          .setDepth(DEPTH.popup);
+      mark.setPosition(point.x, point.y - 20);
+      this.threatMarks.set(id, mark);
+    }
   }
 
   private spawnMonster(monster: Monster, point: Point): void {
@@ -296,6 +324,10 @@ export class BattleScene extends Scene {
 
   private createHud(): void {
     this.turnsText = this.add.text(16, 16, '', { ...TEXT, fontSize: '20px' }).setDepth(DEPTH.hud);
+    this.heroHpText = this.add
+      .text(GAME_WIDTH / 2, 16, '', { ...TEXT, fontSize: '20px', color: PALETTE.lime })
+      .setOrigin(0.5, 0)
+      .setDepth(DEPTH.hud);
     this.monstersText = this.add
       .text(GAME_WIDTH - 16, 16, '', { ...TEXT, fontSize: '20px' })
       .setOrigin(1, 0)
@@ -312,6 +344,7 @@ export class BattleScene extends Scene {
 
   private updateHud(): void {
     this.turnsText.setText(`Lượt: ${this.battle.turnsLeft}/${this.config.turnLimit}`);
+    this.heroHpText.setText(`Máu: ${this.battle.heroHp}/${this.config.hero.hp}`);
     this.monstersText.setText(`Quái: ${this.battle.monsters.length}`);
   }
 
@@ -387,7 +420,7 @@ export class BattleScene extends Scene {
     } else {
       this.resultTitle.setText('THUA').setColor(PALETTE.orange);
       this.resultDetail.setText(
-        state.lossReason === 'reachedHero' ? 'Quái đã chạm tới bạn' : 'Hết lượt mà quái vẫn còn',
+        state.lossReason === 'heroDefeated' ? 'Bạn đã gục' : 'Hết lượt mà quái vẫn còn',
       );
     }
     this.resultLayer.setVisible(true);
