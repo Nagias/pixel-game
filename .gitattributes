@@ -1,0 +1,3 @@
+# Ép mọi file văn bản dùng xuống dòng LF trong repo, kể cả trên Windows,
+# để diff không bị nhiễu bởi CRLF và Prettier không báo lỗi giả.
+* text=auto eol=lf

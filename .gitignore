@@ -1,0 +1,23 @@
+# Thư viện và bản build
+node_modules/
+dist/
+
+# Kết quả test E2E (ảnh chụp, video, báo cáo)
+test-results/
+playwright-report/
+blob-report/
+
+# Bí mật — không bao giờ commit
+.env
+.env.*
+
+# Cấu hình cá nhân của Claude Code trên máy này
+.claude/settings.local.json
+
+# Rác của hệ điều hành / editor
+.DS_Store
+Thumbs.db
+*.log
+
+# Bộ đệm/tải tạm cục bộ
+.cache/

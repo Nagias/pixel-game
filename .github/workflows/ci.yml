@@ -1,0 +1,48 @@
+# CI chạy đúng một lệnh như máy local: `npm run check`.
+# Tên job "check" là tên mà luật bảo vệ nhánh main yêu cầu phải xanh.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Cài thư viện
+        run: npm ci
+
+      - name: Tải Chromium cho test E2E
+        run: npm run e2e:setup -- --with-deps
+
+      - name: Kiểm tra toàn bộ (format, lint, kiểu, unit, build, E2E)
+        run: npm run check
+
+      - name: Lưu ảnh chụp và báo cáo E2E làm bằng chứng
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-evidence
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14
+          if-no-files-found: ignore
