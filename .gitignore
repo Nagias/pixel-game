@@ -21,3 +21,6 @@ Thumbs.db
 
 # Bộ đệm/tải tạm cục bộ
 .cache/
+
+# Bản phác thảo của công cụ brainstorming (không thuộc sản phẩm)
+.superpowers/

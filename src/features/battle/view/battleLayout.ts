@@ -81,6 +81,51 @@ export function zoneRadii(
   };
 }
 
+// ---------- Thanh nút vũ khí ở đáy màn hình (F02) ----------
+
+export interface WeaponBarLayout {
+  readonly left: number;
+  readonly top: number;
+  readonly width: number;
+  readonly height: number;
+  /** Khe giữa hai nút — chạm vào khe không tính là chạm nút nào. */
+  readonly gap: number;
+}
+
+export interface Rect {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** Thanh nút cho khung 360×640: nằm dưới sân tròn (đáy sân ở y = 460), vừa tầm ngón cái. */
+export const WEAPON_BAR: WeaponBarLayout = { left: 18, top: 520, width: 324, height: 72, gap: 12 };
+
+/** Chia thanh thành `count` nút bằng nhau, từ trái sang phải. */
+export function weaponButtonRects(count: number, bar: WeaponBarLayout): Rect[] {
+  const width = (bar.width - bar.gap * (count - 1)) / count;
+  return Array.from({ length: count }, (_, i) => ({
+    x: bar.left + i * (width + bar.gap),
+    y: bar.top,
+    width,
+    height: bar.height,
+  }));
+}
+
+/** Nút vũ khí ở điểm chạm (x, y), hoặc null nếu chạm ngoài các nút (tức là chạm vào sân). */
+export function weaponButtonAt(
+  x: number,
+  y: number,
+  count: number,
+  bar: WeaponBarLayout,
+): number | null {
+  const index = weaponButtonRects(count, bar).findIndex(
+    (r) => x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height,
+  );
+  return index === -1 ? null : index;
+}
+
 /** Đổi góc của game (0 = 12 giờ) sang góc Phaser Graphics (0 = 3 giờ). */
 export function toPhaserAngle(angle: number): number {
   return angle - Math.PI / 2;

@@ -4,6 +4,8 @@ import type { RngState } from '../../../shared/random';
 
 export interface WeaponConfig {
   readonly name: string;
+  /** Chữ ngắn hiện trên nút vũ khí: "gần", "vừa", "xa". */
+  readonly rangeLabel: string;
   /** Độ rộng vùng xanh tính bằng số lát; phải là số lẻ để có lát chính giữa. */
   readonly widthSectors: number;
   /** Vòng trong cùng (0 = sát nhân vật) mà vũ khí với tới. */
@@ -29,7 +31,8 @@ export interface BattleConfig {
   readonly turnLimit: number;
   /** Thời gian vùng xanh quay hết một vòng (ms). */
   readonly arcPeriodMs: number;
-  readonly weapon: WeaponConfig;
+  /** Các vũ khí trên thanh nút ở đáy màn hình, theo thứ tự từ trái sang phải. */
+  readonly weapons: readonly WeaponConfig[];
   readonly monster: MonsterConfig;
   readonly spawn: {
     readonly count: number;
@@ -70,6 +73,8 @@ export interface BattleState {
   readonly seed: number;
   readonly rng: RngState;
   readonly turnsLeft: number;
+  /** Vũ khí đang cầm: chỉ số trong config.weapons. */
+  readonly weaponIndex: number;
   readonly monsters: readonly Monster[];
   readonly phase: BattlePhase;
   readonly lossReason: LossReason | null;

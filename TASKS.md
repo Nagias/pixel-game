@@ -19,5 +19,17 @@
 - [x] Bật luật bảo vệ nhánh `main` (ruleset 5 quy tắc, GitHub xác nhận đang áp dụng)
 - [x] Agent rà code độc lập → sửa cả 8 điểm (lỗi giữ phím Space, vẽ theo state, chặn cấu hình sai…)
 - [x] Đẩy branch `feat/walking-skeleton`, mở PR #1
-- [ ] CI xanh trên PR #1 → chủ dự án duyệt nền → gộp (squash) vào `main`
-- [ ] Bắt đầu tính năng thứ hai theo quy trình (sau khi nền được duyệt)
+- [x] CI xanh trên PR #1 → chủ dự án duyệt nền → gộp (squash) vào `main` (22/10/2026)
+
+## Đợt 1 — F02 Thanh 3 nút vũ khí (22/10/2026)
+
+Phạm vi chủ dự án chốt: thanh 3 nút, đổi vùng xanh, test; bỏ phím Space; không hiệu ứng mới,
+không rìu, không skill.
+
+- [x] Chốt luật cùng chủ dự án (có phác thảo màn hình): chỉ mobile, đổi vũ khí không tốn lượt
+- [x] Luật: danh sách vũ khí trong config, `selectWeapon`, chém bằng vũ khí đang cầm (test trước)
+- [x] Bố cục thanh nút + xác định chạm nút hay chạm sân (test trước)
+- [x] Scene: thanh 3 nút, vùng xanh theo vũ khí; bỏ phím Space
+- [x] E2E: đổi vũ khí, chém đúng vũ khí, thắng phải đổi vũ khí đúng lúc, thua
+- [x] CLAUDE.md (chỉ mobile, đường cấm #15), FEATURE_MAP (F02, hàng chờ F07 kho vũ khí, F08 skill), DEBT-009
+- [ ] `npm run check`, mở PR #2, CI xanh, chủ dự án duyệt → gộp

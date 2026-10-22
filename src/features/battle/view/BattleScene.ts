@@ -1,11 +1,12 @@
-// Scene trận đấu: VỎ hiển thị. Chỉ vẽ state và chuyển cú chạm thành playTurn() — không chứa luật chơi.
-import { Scene, Scenes, type GameObjects } from 'phaser';
+// Scene trận đấu: VỎ hiển thị. Chỉ vẽ state và chuyển cú chạm thành selectWeapon()/playTurn() —
+// không chứa luật chơi. Game chỉ cho mobile: mọi thao tác là chạm, không có bàn phím.
+import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
 import { registerPixelSprites } from '../../../app/pixelSprites';
 import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE } from '../../../shared/palette';
 import { parseSeedParam } from '../../../shared/seedParam';
 import { arcSectorAt } from '../logic/arena';
-import { createBattle, playTurn } from '../logic/battle';
+import { createBattle, playTurn, selectWeapon } from '../logic/battle';
 import { BATTLE_CONFIG } from '../logic/battleConfig';
 import type { BattleState, Monster } from '../logic/battleTypes';
 import {
@@ -16,6 +17,9 @@ import {
   ringInnerRadius,
   sectorStartAngle,
   toPhaserAngle,
+  WEAPON_BAR,
+  weaponButtonAt,
+  weaponButtonRects,
   zoneArc,
   zoneRadii,
 } from './battleLayout';
@@ -65,6 +69,11 @@ export class BattleScene extends Scene {
   private resultDetail!: GameObjects.Text;
   private readonly monsterSprites = new Map<number, GameObjects.Image>();
   private spriteKeys!: Record<keyof typeof BATTLE_SPRITES, string>;
+  private readonly weaponButtons: {
+    frame: GameObjects.Rectangle;
+    name: GameObjects.Text;
+    range: GameObjects.Text;
+  }[] = [];
 
   constructor() {
     super('battle');
@@ -79,13 +88,10 @@ export class BattleScene extends Scene {
       .setScale(SPRITE_SCALE.hero)
       .setDepth(DEPTH.hero);
     this.createHud();
+    this.createWeaponBar();
     this.createResultLayer();
 
-    this.input.on('pointerdown', () => this.handleTap());
-    // Giữ phím thì trình duyệt tự lặp sự kiện nhấn; chỉ tính lần nhấn đầu, nếu không sẽ đốt hết lượt.
-    this.input.keyboard?.on('keydown-SPACE', (event: KeyboardEvent) => {
-      if (!event.repeat) this.handleTap();
-    });
+    this.input.on('pointerdown', (pointer: Input.Pointer) => this.handleTap(pointer.x, pointer.y));
     const clearSnapshot = setSnapshotProvider(() => this.snapshot());
     this.events.once(Scenes.Events.SHUTDOWN, clearSnapshot);
 
@@ -121,14 +127,23 @@ export class BattleScene extends Scene {
 
     this.resultLayer.setVisible(false);
     this.drawZone();
+    this.syncWeaponBar(this.battle);
     this.updateHud();
   }
 
-  private handleTap(): void {
-    if (this.battle.phase === 'playing') {
+  /** Chạm vào nút vũ khí thì đổi vũ khí; chạm vào chỗ khác là chém. Màn kết quả: chạm để chơi lại. */
+  private handleTap(x: number, y: number): void {
+    if (this.battle.phase !== 'playing') {
+      if (this.canRestart()) this.startBattle();
+      return;
+    }
+    const button = weaponButtonAt(x, y, this.config.weapons.length, WEAPON_BAR);
+    if (button === null) {
       this.attack();
-    } else if (this.canRestart()) {
-      this.startBattle();
+    } else {
+      this.battle = selectWeapon(this.battle, button, this.config);
+      this.drawZone();
+      this.syncWeaponBar(this.battle);
     }
   }
 
@@ -182,9 +197,13 @@ export class BattleScene extends Scene {
     g.lineStyle(3, colorNumber('ink')).strokeCircle(centerX, centerY, outer);
   }
 
-  /** Hình nêm xanh: đúng các lát và vòng mà luật chơi coi là trúng (đã kiểm bằng test layout). */
+  /**
+   * Hình nêm xanh của vũ khí đang cầm: đúng các lát và vòng mà luật chơi coi là trúng
+   * (đã kiểm bằng test layout). Đổi vũ khí là vẽ lại ngay.
+   */
   private drawZone(): void {
-    const { weapon, sectorCount } = this.config;
+    const { sectorCount } = this.config;
+    const weapon = this.currentWeapon();
     const { centerX, centerY } = ARENA_LAYOUT;
     const arc = zoneArc(this.arcSector, weapon.widthSectors, sectorCount);
     const { inner, outer } = zoneRadii(weapon, ARENA_LAYOUT);
@@ -282,9 +301,9 @@ export class BattleScene extends Scene {
       .setOrigin(1, 0)
       .setDepth(DEPTH.hud);
     this.add
-      .text(GAME_WIDTH / 2, 560, 'Chạm để chém vào vùng xanh', {
+      .text(GAME_WIDTH / 2, 490, 'Chạm sân: chém · Chạm nút: đổi vũ khí', {
         ...TEXT,
-        fontSize: '16px',
+        fontSize: '14px',
         color: PALETTE.mist,
       })
       .setOrigin(0.5)
@@ -294,6 +313,47 @@ export class BattleScene extends Scene {
   private updateHud(): void {
     this.turnsText.setText(`Lượt: ${this.battle.turnsLeft}/${this.config.turnLimit}`);
     this.monstersText.setText(`Quái: ${this.battle.monsters.length}`);
+  }
+
+  // ---------- Thanh nút vũ khí (F02) ----------
+
+  private currentWeapon() {
+    const weapon = this.config.weapons[this.battle.weaponIndex];
+    if (!weapon) throw new RangeError(`Không có vũ khí số ${this.battle.weaponIndex}`);
+    return weapon;
+  }
+
+  /** Vẽ khung nút một lần; trạng thái chọn/không chọn do syncWeaponBar cập nhật theo state. */
+  private createWeaponBar(): void {
+    const rects = weaponButtonRects(this.config.weapons.length, WEAPON_BAR);
+    this.config.weapons.forEach((weapon, i) => {
+      const rect = rects[i];
+      if (!rect) return;
+      const centerX = rect.x + rect.width / 2;
+      const frame = this.add
+        .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('navy'))
+        .setOrigin(0)
+        .setDepth(DEPTH.hud);
+      const name = this.add
+        .text(centerX, rect.y + 26, weapon.name, { ...TEXT, fontSize: '18px' })
+        .setOrigin(0.5)
+        .setDepth(DEPTH.hud);
+      const range = this.add
+        .text(centerX, rect.y + 50, weapon.rangeLabel, { ...TEXT, fontSize: '14px' })
+        .setOrigin(0.5)
+        .setDepth(DEPTH.hud);
+      this.weaponButtons.push({ frame, name, range });
+    });
+  }
+
+  /** Nút của vũ khí đang cầm có viền xanh lá và chữ sáng; các nút khác mờ đi. */
+  private syncWeaponBar(state: BattleState): void {
+    this.weaponButtons.forEach((button, i) => {
+      const selected = i === state.weaponIndex;
+      button.frame.setStrokeStyle(selected ? 3 : 1, colorNumber(selected ? 'lime' : 'slate'));
+      button.name.setColor(selected ? PALETTE.white : PALETTE.mist);
+      button.range.setColor(selected ? PALETTE.sand : PALETTE.mist);
+    });
   }
 
   private createResultLayer(): void {
