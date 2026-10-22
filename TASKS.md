@@ -13,7 +13,11 @@
 - [x] Bộ công cụ: package.json, TypeScript, Vite, Vitest, Playwright, ESLint, Prettier
 - [x] `DEBT.md` — sổ nợ có chủ đích (nợ của phần nền)
 - [x] Commit nền lên `main` (vỏ game + test khởi động, `npm run check` xanh)
-- [ ] Walking skeleton F01 "Trận đấu tối thiểu" trên branch `feat/walking-skeleton`
-- [ ] Chủ dự án đăng nhập `gh` → tạo repo công khai, đẩy `main`, bật luật bảo vệ nhánh
-- [ ] Đẩy branch `feat/walking-skeleton`, mở PR đầu tiên, CI xanh, merge
-- [ ] Báo cáo để chủ dự án duyệt nền
+- [x] Walking skeleton F01 "Trận đấu tối thiểu" trên branch `feat/walking-skeleton`
+      (luật thuần + test viết trước, scene Phaser, E2E thắng/thua, nợ DEBT-007…009)
+- [x] Tạo repo công khai `Nagias/pixel-game`, chủ dự án đẩy `main` lần đầu, CI `main` xanh
+- [x] Bật luật bảo vệ nhánh `main` (ruleset 5 quy tắc, GitHub xác nhận đang áp dụng)
+- [x] Agent rà code độc lập → sửa cả 8 điểm (lỗi giữ phím Space, vẽ theo state, chặn cấu hình sai…)
+- [x] Đẩy branch `feat/walking-skeleton`, mở PR #1
+- [ ] CI xanh trên PR #1 → chủ dự án duyệt nền → gộp (squash) vào `main`
+- [ ] Bắt đầu tính năng thứ hai theo quy trình (sau khi nền được duyệt)

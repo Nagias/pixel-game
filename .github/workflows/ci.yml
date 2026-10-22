@@ -17,7 +17,8 @@ concurrency:
 jobs:
   check:
     name: check
-    runs-on: ubuntu-latest
+    # Ghim phiên bản: ubuntu-latest đang tự chuyển sang Ubuntu 26 — xem DEBT-010.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7

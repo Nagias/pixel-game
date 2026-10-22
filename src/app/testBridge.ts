@@ -14,9 +14,15 @@ declare global {
 
 let provider: (() => unknown) | null = null;
 
-/** Scene gọi trong create() để test E2E đọc được trạng thái của nó. */
-export function setSnapshotProvider(next: () => unknown): void {
+/**
+ * Scene gọi trong create() để test E2E đọc được trạng thái của nó.
+ * Trả về hàm gỡ: scene gọi khi tắt (sự kiện SHUTDOWN) để test không đọc phải trạng thái cũ.
+ */
+export function setSnapshotProvider(next: () => unknown): () => void {
   provider = next;
+  return () => {
+    if (provider === next) provider = null;
+  };
 }
 
 /** Gắn cầu nối vào window. Gọi đúng một lần ở main.ts. */
