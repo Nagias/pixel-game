@@ -50,5 +50,5 @@ Phạm vi chủ dự án chốt: luật combo như đề xuất, mức tối thi
 Phát hiện khi gộp PR #3: GitHub tạo 2 lần chạy CI cho cùng commit gộp, lần đầu bị hủy.
 
 - [x] Đổi nhóm chạy CI theo mẫu chính thức của GitHub: PR chung nhóm theo nhánh, main mỗi lần chạy một nhóm
-- [ ] Kiểm chứng trên PR: đẩy commit mới → lần chạy cũ của PR bị hủy, lần mới xanh
+- [x] Kiểm chứng trên PR #4: đẩy commit mới → lần chạy cũ (1ccc3ba) bị hủy, lần mới (b716d83) xanh
 - [ ] Chủ dự án duyệt → gộp → xác nhận lần chạy trên main xanh, không bị hủy
