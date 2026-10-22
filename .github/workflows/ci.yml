@@ -10,8 +10,12 @@ on:
 permissions:
   contents: read
 
+# PR: các lần chạy của cùng một nhánh PR chung một nhóm → đẩy commit mới thì hủy lần chạy cũ (đỡ tốn).
+# main (sự kiện push): head_ref rỗng → nhóm là run_id riêng của từng lần chạy → không bao giờ bị hủy
+# hay bị thay chỗ khi xếp hàng, nên commit gộp nào cũng được CI xác nhận.
+# Mẫu chính thức trong tài liệu GitHub Actions ("cancel on pull_request events only").
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
 jobs:
