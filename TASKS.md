@@ -13,7 +13,8 @@
 - [x] Bộ công cụ: package.json, TypeScript, Vite, Vitest, Playwright, ESLint, Prettier
 - [x] `DEBT.md` — sổ nợ có chủ đích (nợ của phần nền)
 - [x] Commit nền lên `main` (vỏ game + test khởi động, `npm run check` xanh)
-- [ ] Walking skeleton F01 "Trận đấu tối thiểu" trên branch `feat/walking-skeleton`
+- [x] Walking skeleton F01 "Trận đấu tối thiểu" trên branch `feat/walking-skeleton`
+      (luật thuần + test viết trước, scene Phaser, E2E thắng/thua, nợ DEBT-007…009)
 - [ ] Chủ dự án đăng nhập `gh` → tạo repo công khai, đẩy `main`, bật luật bảo vệ nhánh
 - [ ] Đẩy branch `feat/walking-skeleton`, mở PR đầu tiên, CI xanh, merge
 - [ ] Báo cáo để chủ dự án duyệt nền

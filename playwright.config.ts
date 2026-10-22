@@ -6,6 +6,9 @@ export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.spec.ts',
   fullyParallel: true,
+  // Mỗi trình duyệt tự vẽ game bằng CPU (chạy ẩn không có card đồ họa). Mở quá nhiều cùng lúc thì
+  // chúng giành CPU của nhau và quá giờ khi máy bận; 2 = đúng số nhân của máy CI.
+  workers: 2,
   // Test chập chờn phải được sửa, không được che bằng chạy lại.
   retries: 0,
   forbidOnly: true,
