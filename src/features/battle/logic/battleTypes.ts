@@ -2,10 +2,19 @@ import type { RngState } from '../../../shared/random';
 
 // ---------- Cấu hình (con số cân bằng — giá trị thật nằm ở battleConfig.ts) ----------
 
+/**
+ * F05: quái bị chém mà còn sống bị đẩy thế nào. out = lùi ra xa 1 vòng, in = kéo vào gần 1 vòng,
+ * clockwise = lệch sang phải 1 lát (theo chiều kim đồng hồ), none = không đẩy.
+ */
+export type PushDirection = 'none' | 'out' | 'in' | 'clockwise';
+
+export const PUSH_DIRECTIONS: readonly PushDirection[] = ['none', 'out', 'in', 'clockwise'];
+
 export interface WeaponConfig {
   readonly name: string;
   /** Chữ ngắn hiện trên nút vũ khí: "gần", "vừa", "xa". */
   readonly rangeLabel: string;
+  readonly push: PushDirection;
   /** Độ rộng vùng xanh tính bằng số lát; phải là số lẻ để có lát chính giữa. */
   readonly widthSectors: number;
   /** Vòng trong cùng (0 = sát nhân vật) mà vũ khí với tới. */

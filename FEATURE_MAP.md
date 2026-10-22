@@ -11,6 +11,7 @@
 | F02 | Thanh 3 nút vũ khí theo tầm (gần / vừa / xa)     | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 | F03 | Combo gom cụm 100% / 200% / 300%                 | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 | F04 | Máu nhân vật + dấu "!" báo quái sắp đánh         | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
+| F05 | Đẩy quái theo vũ khí (knockback)                 | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -156,11 +157,46 @@ hiệu ứng mới.
 
 **Nợ liên quan:** DEBT-008 (quái áp sát đứng chồng hình nhau), DEBT-009.
 
+## F05 — Đẩy quái theo vũ khí
+
+**Người chơi thấy và làm gì:** quái bị chém trúng mà còn sống bị đẩy theo vũ khí: Kiếm đẩy lùi ra xa,
+Giáo đẩy lệch sang phải, Cung kéo vào gần. Người chơi dùng cú đẩy để gỡ quái áp sát (Kiếm), dồn quái
+cho combo (Giáo), hoặc kéo quái ở rìa vào tầm (Cung).
+
+**Luật** (nguồn sự thật: `logic/battle.ts` `applyKnockback` + `logic/arena.ts` `knockbackCell` +
+test mục F05; chủ dự án duyệt ngày 23/10/2026):
+
+1. Kiếm: lùi ra xa 1 vòng · Giáo: lệch sang phải 1 lát (theo chiều kim đồng hồ) · Cung: kéo vào gần 1 vòng.
+2. Chỉ quái bị chém trúng mà còn sống mới bị đẩy.
+3. Ô đích có quái khác hoặc nằm ngoài sân thì không bị đẩy (và con đó hành động bình thường).
+4. Đẩy lần lượt theo thứ tự combo (con bị chém trước được đẩy trước).
+5. Đẩy xảy ra ngay sau nhát chém, trước khi quái hành động — con có dấu "!" bị Kiếm đẩy ra vòng 1 thì
+   lượt đó không đánh được.
+6. Quái bị đẩy thành công đứng yên lượt đó (không tiến, không đi ngang). Đẩy không tung số ngẫu nhiên.
+
+**Hành vi giao diện:** không thêm hiệu ứng hay chữ mới — quái lướt tới ô mới bằng chuyển động sẵn có.
+
+**Con số:** `push` của từng vũ khí trong `src/features/battle/logic/battleConfig.ts` (`none` / `out` /
+`in` / `clockwise`) — vũ khí mới (F07) chỉ cần khai báo kiểu đẩy.
+
+**Kiểm chứng tự động:**
+
+- Unit: ô đích theo từng kiểu đẩy (kể cả quấn lát 23→0); Kiếm/Giáo/Cung đẩy đúng hướng và quái bị đẩy
+  đứng yên; quái không trúng thì không bị đẩy; bị chặn bởi quái khác hoặc mép sân thì không bị đẩy;
+  thứ tự đẩy theo combo; Kiếm gỡ con có dấu "!" nên nó không đánh; không tung số ngẫu nhiên; chặn kiểu
+  đẩy không tồn tại.
+- E2E: Cung bắn trúng quái ở rìa thì kéo nó vào đúng 1 vòng, giữ lát (ảnh `5-cung-keo.png`).
+
+**Cân bằng (mô phỏng 500 ván):** ngắm chuẩn thắng 100%, dư ~2,36 lượt (F04: ~2,2); chém bừa thắng 0,2%,
+thua vì hết máu giảm từ 72 xuống 60 ván. Mô phỏng chưa cố ý tận dụng cú đẩy, nên người chơi giỏi còn
+dễ hơn số này.
+
+**Nợ liên quan:** DEBT-009.
+
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
 | Mã  | Tính năng                                                  | Ghi chú                                                     |
 | --- | ---------------------------------------------------------- | ----------------------------------------------------------- |
-| F05 | Đẩy quái theo vũ khí (knockback)                           |                                                             |
 | F06 | Màn chơi nối tiếp + trùm                                   |                                                             |
 | F07 | Kho vũ khí (rìu và vũ khí khác) + chọn 3 món mang vào trận | Chủ dự án nêu ngày 22/10; rìu có thể cần hình vùng đánh mới |
 | F08 | Skill                                                      | Chủ dự án nêu ngày 22/10; chờ mô tả cơ chế                  |

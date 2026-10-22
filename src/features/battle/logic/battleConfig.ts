@@ -9,9 +9,34 @@ export const BATTLE_CONFIG: BattleConfig = {
   arcPeriodMs: 2_400,
   // F02: 3 vũ khí theo tầm. Quái mới xuất hiện ở vòng 5 nên chỉ Cung với tới lúc đầu.
   weapons: [
-    { name: 'Kiếm', rangeLabel: 'gần', widthSectors: 5, minRing: 0, maxRing: 1, damage: 1 },
-    { name: 'Giáo', rangeLabel: 'vừa', widthSectors: 3, minRing: 2, maxRing: 3, damage: 1 },
-    { name: 'Cung', rangeLabel: 'xa', widthSectors: 1, minRing: 4, maxRing: 5, damage: 1 },
+    // F05: Kiếm đẩy lùi ra xa, Giáo đẩy lệch phải, Cung kéo vào gần.
+    {
+      name: 'Kiếm',
+      rangeLabel: 'gần',
+      push: 'out',
+      widthSectors: 5,
+      minRing: 0,
+      maxRing: 1,
+      damage: 1,
+    },
+    {
+      name: 'Giáo',
+      rangeLabel: 'vừa',
+      push: 'clockwise',
+      widthSectors: 3,
+      minRing: 2,
+      maxRing: 3,
+      damage: 1,
+    },
+    {
+      name: 'Cung',
+      rangeLabel: 'xa',
+      push: 'in',
+      widthSectors: 1,
+      minRing: 4,
+      maxRing: 5,
+      damage: 1,
+    },
   ],
   monster: {
     name: 'Slime',

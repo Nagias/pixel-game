@@ -1,5 +1,19 @@
 // Hình học sân đấu tròn: lát (sector) quấn vòng, vùng đánh của vũ khí, vị trí vùng xanh theo thời gian.
-import type { Cell, WeaponConfig } from './battleTypes';
+import type { Cell, PushDirection, WeaponConfig } from './battleTypes';
+
+/** F05: ô đích khi một ô bị đẩy theo kiểu `push` (chưa xét ô có trống hay nằm trong sân không). */
+export function knockbackCell(cell: Cell, push: PushDirection, sectorCount: number): Cell {
+  switch (push) {
+    case 'out':
+      return { sector: cell.sector, ring: cell.ring + 1 };
+    case 'in':
+      return { sector: cell.sector, ring: cell.ring - 1 };
+    case 'clockwise':
+      return { sector: wrapSector(cell.sector + 1, sectorCount), ring: cell.ring };
+    case 'none':
+      return { sector: cell.sector, ring: cell.ring };
+  }
+}
 
 /** Đưa chỉ số lát về [0, sectorCount), kể cả số âm. */
 export function wrapSector(sector: number, sectorCount: number): number {
