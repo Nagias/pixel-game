@@ -44,3 +44,11 @@ Phạm vi chủ dự án chốt: luật combo như đề xuất, mức tối thi
 - [x] E2E: sát thương mỗi nhát đúng 1×, 2×, 3×…; có nhát trúng từ 2 quái trở lên
 - [x] FEATURE_MAP (F03), DEBT-009
 - [ ] `npm run check`, mở PR #3, CI xanh, chủ dự án duyệt → gộp
+
+## Việc lẻ — CI không tự hủy lần chạy trên main (22/10/2026)
+
+Phát hiện khi gộp PR #3: GitHub tạo 2 lần chạy CI cho cùng commit gộp, lần đầu bị hủy.
+
+- [x] Đổi nhóm chạy CI theo mẫu chính thức của GitHub: PR chung nhóm theo nhánh, main mỗi lần chạy một nhóm
+- [ ] Kiểm chứng trên PR: đẩy commit mới → lần chạy cũ của PR bị hủy, lần mới xanh
+- [ ] Chủ dự án duyệt → gộp → xác nhận lần chạy trên main xanh, không bị hủy
