@@ -6,6 +6,7 @@ import {
   ringCenterRadius,
   sectorCenterAngle,
   zoneArc,
+  zoneRadii,
   type ArenaLayout,
 } from './battleLayout';
 
@@ -68,5 +69,20 @@ describe('zoneArc — hình nêm xanh khớp đúng vùng luật chơi', () => {
     const arc = zoneArc(5, 3, 24);
     expect(sectorCenterAngle(3, 24)).toBeLessThan(arc.start);
     expect(sectorCenterAngle(7, 24)).toBeGreaterThan(arc.end);
+  });
+});
+
+describe('zoneRadii — hình nêm xanh phủ đúng các vòng vũ khí với tới', () => {
+  it('vũ khí vòng 1–2: từ mép trong vòng 1 (34 + 21) tới mép ngoài vòng 2 (34 + 3·21)', () => {
+    expect(zoneRadii({ minRing: 1, maxRing: 2 }, LAYOUT)).toEqual({ inner: 55, outer: 97 });
+  });
+
+  it('tâm vòng trong tầm nằm trong hình nêm, vòng ngoài tầm nằm ngoài', () => {
+    const radii = zoneRadii({ minRing: 1, maxRing: 2 }, LAYOUT);
+    for (let ring = 0; ring < 6; ring++) {
+      const radius = ringCenterRadius(ring, LAYOUT);
+      const inside = radius > radii.inner && radius < radii.outer;
+      expect(inside).toBe(ring >= 1 && ring <= 2);
+    }
   });
 });

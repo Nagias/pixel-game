@@ -1,67 +1,36 @@
-// Cách DUY NHẤT để test E2E điều khiển game: chạm màn hình như người chơi, đọc trạng thái qua
-// window.__PIXEL_GAME__.snapshot(), và tự cầm đồng hồ để kết quả lặp lại 100%.
+// Cách DUY NHẤT để test E2E điều khiển game: chạm/bấm phím như người chơi, đọc trạng thái qua
+// window.__PIXEL_GAME__.snapshot(), và tự cầm đồng hồ ảo để kết quả lặp lại 100%.
+// Phần chung cho mọi tính năng ở đây; phần riêng của từng tính năng ở e2e/support/<f>Driver.ts.
 // E2E chỉ được import kiểu (import type) từ index.ts và hàm thuần từ logic/ — không import view.
 import type { Page } from '@playwright/test';
-import type { BattleSnapshot } from '../../src/features/battle';
-import { isInZone } from '../../src/features/battle/logic/arena';
-import { BATTLE_CONFIG } from '../../src/features/battle/logic/battleConfig';
 
-const FRAME_MS = 16;
+/** Nhịp phím tự lặp khi giữ phím trên Windows/macOS (khoảng 30–35 ms). */
+const KEY_REPEAT_MS = 35;
 
 export class GameDriver {
-  constructor(private readonly page: Page) {}
+  constructor(protected readonly page: Page) {}
 
-  /** Mở game với seed cố định rồi dừng đồng hồ: từ đây thời gian chỉ trôi khi test cho phép. */
-  async open(seed: number): Promise<void> {
+  /** Mở game rồi dừng đồng hồ: từ đây thời gian trong game chỉ trôi khi test cho phép. */
+  async open(path: string): Promise<void> {
     await this.page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
-    await this.page.goto(`/?seed=${seed}`);
+    await this.page.goto(path);
     await this.page.waitForFunction(() => window.__PIXEL_GAME__?.snapshot() != null);
     await this.pauseClock();
   }
 
-  /** Dừng đồng hồ ở một mốc ngay phía trước. Máy bận có thể làm mốc đó trôi qua → thử lại. */
-  private async pauseClock(): Promise<void> {
-    for (let attempt = 1; ; attempt++) {
-      const now = await this.page.evaluate(() => Date.now());
-      try {
-        await this.page.clock.pauseAt(now + 500);
-        return;
-      } catch (error) {
-        const tooLate = error instanceof Error && error.message.includes('past');
-        if (!tooLate || attempt >= 3) throw error;
-      }
-    }
-  }
-
-  async snapshot(): Promise<BattleSnapshot> {
+  /** Đọc trạng thái của scene đang chạy; báo lỗi rõ ràng nếu đang ở scene khác. */
+  async snapshotOf<T extends { readonly scene: string }>(scene: T['scene']): Promise<T> {
     const snapshot = await this.page.evaluate(() => window.__PIXEL_GAME__?.snapshot());
-    if (!snapshot) throw new Error('Game chưa sẵn sàng: snapshot rỗng');
-    return snapshot as BattleSnapshot;
+    const actual = (snapshot as { scene?: unknown } | null)?.scene;
+    if (actual !== scene) {
+      throw new Error(`Đang ở scene "${String(actual)}", test cần scene "${scene}"`);
+    }
+    return snapshot as T;
   }
 
   /** Cho thời gian trong game trôi thêm. */
   async advance(ms: number): Promise<void> {
     await this.page.clock.runFor(ms);
-  }
-
-  /**
-   * Cho thời gian trôi tới khi vùng xanh chỉ vào `sector`: tính trước rồi nhảy một lần tới gần
-   * giữa lát đó, sau đó mới dò từng khung hình (mỗi lần dò là một lượt hỏi trình duyệt — tốn).
-   */
-  async waitArcAt(sector: number): Promise<void> {
-    const { arcPeriodMs, sectorCount } = BATTLE_CONFIG;
-    const msPerSector = arcPeriodMs / sectorCount;
-    const { arcElapsedMs } = await this.snapshot();
-    const middleOfTarget = (sector + 0.5) * msPerSector;
-    const wait = (middleOfTarget - (arcElapsedMs % arcPeriodMs) + arcPeriodMs) % arcPeriodMs;
-    if (wait > 2 * FRAME_MS) await this.advance(wait - FRAME_MS);
-
-    const maxFrames = Math.ceil(arcPeriodMs / FRAME_MS);
-    for (let frame = 0; frame < maxFrames; frame++) {
-      if ((await this.snapshot()).arcSector === sector) return;
-      await this.advance(FRAME_MS);
-    }
-    throw new Error(`Vùng xanh không tới lát ${sector} sau ${maxFrames} khung hình`);
   }
 
   /** Chạm giữa màn hình bằng ngón tay (cảm ứng), như trên điện thoại. */
@@ -71,32 +40,31 @@ export class GameDriver {
     await this.page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
   }
 
-  /** Chờ vùng xanh tới `sector` rồi chạm — một nhát đánh có chủ đích. */
-  async attackAt(sector: number): Promise<void> {
-    await this.waitArcAt(sector);
-    await this.tap();
+  /**
+   * Giữ một phím: lần nhấn đầu là thật, các lần sau là phím tự lặp (repeat) như khi giữ tay.
+   * Giữa các lần lặp cho thời gian trôi đúng nhịp lặp phím của hệ điều hành; bấm dồn cùng một
+   * khoảnh khắc thì Phaser coi là trùng lặp và gộp lại — không giống tay người.
+   */
+  async holdKey(key: string, presses: number): Promise<void> {
+    for (let i = 0; i < presses; i++) {
+      await this.page.keyboard.down(key);
+      await this.advance(KEY_REPEAT_MS);
+    }
+    await this.page.keyboard.up(key);
   }
-}
 
-/** Số quái sẽ trúng nếu ngắm vào `sector`. */
-function hitsAt(snapshot: BattleSnapshot, sector: number): number {
-  const { weapon, sectorCount } = BATTLE_CONFIG;
-  return snapshot.battle.monsters.filter((m) => isInZone(m, sector, weapon, sectorCount)).length;
-}
-
-/** Lát trúng nhiều quái nhất (hòa thì lấy lát nhỏ nhất) — người chơi ngắm chuẩn. */
-export function bestAim(snapshot: BattleSnapshot): number {
-  let best = 0;
-  for (let sector = 1; sector < BATTLE_CONFIG.sectorCount; sector++) {
-    if (hitsAt(snapshot, sector) > hitsAt(snapshot, best)) best = sector;
+  /** Dừng đồng hồ ở một mốc ngay phía trước. Máy bận có thể làm mốc đó trôi qua → thử lại. */
+  private async pauseClock(): Promise<void> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const now = await this.page.evaluate(() => Date.now());
+      try {
+        await this.page.clock.pauseAt(now + 500);
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError;
   }
-  return best;
-}
-
-/** Một lát không trúng con quái nào — người chơi chém trượt. */
-export function missAim(snapshot: BattleSnapshot): number {
-  for (let sector = 0; sector < BATTLE_CONFIG.sectorCount; sector++) {
-    if (hitsAt(snapshot, sector) === 0) return sector;
-  }
-  throw new Error('Không còn lát trống để chém trượt');
 }

@@ -1,5 +1,5 @@
 // Scene trận đấu: VỎ hiển thị. Chỉ vẽ state và chuyển cú chạm thành playTurn() — không chứa luật chơi.
-import { Scene, type GameObjects } from 'phaser';
+import { Scene, Scenes, type GameObjects } from 'phaser';
 import { registerPixelSprites } from '../../../app/pixelSprites';
 import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE } from '../../../shared/palette';
@@ -11,11 +11,13 @@ import type { BattleState, Monster } from '../logic/battleTypes';
 import {
   ARENA_LAYOUT,
   cellToPoint,
+  type Point,
   polarToPoint,
   ringInnerRadius,
   sectorStartAngle,
   toPhaserAngle,
   zoneArc,
+  zoneRadii,
 } from './battleLayout';
 import { BATTLE_SPRITES, SPRITE_SCALE } from './battleSprites';
 
@@ -33,6 +35,7 @@ export interface BattleSnapshot {
 
 const GAME_WIDTH = 360;
 const GAME_HEIGHT = 640;
+/** Hành vi giao diện, không phải luật chơi: màn kết quả chờ chút mới nhận chạm "chơi lại". */
 const RESTART_DELAY_MS = 500;
 const MOVE_TWEEN_MS = 180;
 
@@ -61,25 +64,30 @@ export class BattleScene extends Scene {
   private resultTitle!: GameObjects.Text;
   private resultDetail!: GameObjects.Text;
   private readonly monsterSprites = new Map<number, GameObjects.Image>();
+  private spriteKeys!: Record<keyof typeof BATTLE_SPRITES, string>;
 
   constructor() {
     super('battle');
   }
 
   create(): void {
-    registerPixelSprites(this, BATTLE_SPRITES);
+    this.spriteKeys = registerPixelSprites(this, 'battle', BATTLE_SPRITES);
     this.drawArena();
     this.zone = this.add.graphics().setDepth(DEPTH.zone);
     this.add
-      .image(ARENA_LAYOUT.centerX, ARENA_LAYOUT.centerY, 'hero')
+      .image(ARENA_LAYOUT.centerX, ARENA_LAYOUT.centerY, this.spriteKeys.hero)
       .setScale(SPRITE_SCALE.hero)
       .setDepth(DEPTH.hero);
     this.createHud();
     this.createResultLayer();
 
     this.input.on('pointerdown', () => this.handleTap());
-    this.input.keyboard?.on('keydown-SPACE', () => this.handleTap());
-    setSnapshotProvider(() => this.snapshot());
+    // Giữ phím thì trình duyệt tự lặp sự kiện nhấn; chỉ tính lần nhấn đầu, nếu không sẽ đốt hết lượt.
+    this.input.keyboard?.on('keydown-SPACE', (event: KeyboardEvent) => {
+      if (!event.repeat) this.handleTap();
+    });
+    const clearSnapshot = setSnapshotProvider(() => this.snapshot());
+    this.events.once(Scenes.Events.SHUTDOWN, clearSnapshot);
 
     this.startBattle();
   }
@@ -103,9 +111,13 @@ export class BattleScene extends Scene {
     this.arcSector = 0;
     this.endedAtMs = null;
 
-    for (const sprite of this.monsterSprites.values()) sprite.destroy();
+    // Trận mới: bỏ hết hình cũ (kể cả hiệu ứng đang chạy) rồi vẽ lại từ state.
+    for (const sprite of this.monsterSprites.values()) {
+      this.tweens.killTweensOf(sprite);
+      sprite.destroy();
+    }
     this.monsterSprites.clear();
-    for (const monster of this.battle.monsters) this.spawnMonster(monster);
+    this.syncMonsters(this.battle);
 
     this.resultLayer.setVisible(false);
     this.drawZone();
@@ -124,7 +136,7 @@ export class BattleScene extends Scene {
     const next = playTurn(this.battle, this.arcSector, this.config);
     this.battle = next;
     this.showHits(next);
-    this.moveMonsters(next.monsters);
+    this.syncMonsters(next);
     this.updateHud();
     if (next.phase !== 'playing') this.showResult(next);
   }
@@ -175,8 +187,7 @@ export class BattleScene extends Scene {
     const { weapon, sectorCount } = this.config;
     const { centerX, centerY } = ARENA_LAYOUT;
     const arc = zoneArc(this.arcSector, weapon.widthSectors, sectorCount);
-    const inner = ringInnerRadius(weapon.minRing, ARENA_LAYOUT);
-    const outer = ringInnerRadius(weapon.maxRing + 1, ARENA_LAYOUT);
+    const { inner, outer } = zoneRadii(weapon, ARENA_LAYOUT);
     const start = toPhaserAngle(arc.start);
     const end = toPhaserAngle(arc.end);
 
@@ -195,25 +206,46 @@ export class BattleScene extends Scene {
     g.strokePath();
   }
 
-  private spawnMonster(monster: Monster): void {
-    const point = cellToPoint(monster, this.config.sectorCount, ARENA_LAYOUT);
+  /**
+   * Vẽ quái theo ĐÚNG state, không theo "cái gì vừa đổi": tạo hình cho quái chưa có, dời quái đang
+   * có tới ô mới, gỡ quái không còn trong state (teo lại rồi biến mất). Tính năng sau thêm cách
+   * quái xuất hiện/biến mất mới thì hình vẫn tự khớp.
+   */
+  private syncMonsters(state: BattleState): void {
+    const present = new Set(state.monsters.map((m) => m.id));
+    for (const [id, sprite] of this.monsterSprites) {
+      if (present.has(id)) continue;
+      this.monsterSprites.delete(id);
+      this.tweens.killTweensOf(sprite);
+      this.tweens.add({
+        targets: sprite,
+        scale: 0,
+        alpha: 0,
+        duration: 220,
+        onComplete: () => sprite.destroy(),
+      });
+    }
+
+    for (const monster of state.monsters) {
+      const point = cellToPoint(monster, this.config.sectorCount, ARENA_LAYOUT);
+      const sprite = this.monsterSprites.get(monster.id);
+      if (sprite) {
+        this.tweens.add({ targets: sprite, x: point.x, y: point.y, duration: MOVE_TWEEN_MS });
+      } else {
+        this.spawnMonster(monster, point);
+      }
+    }
+  }
+
+  private spawnMonster(monster: Monster, point: Point): void {
     const sprite = this.add
-      .image(point.x, point.y, 'slime')
+      .image(point.x, point.y, this.spriteKeys.slime)
       .setScale(SPRITE_SCALE.slime)
       .setDepth(DEPTH.monster);
     this.monsterSprites.set(monster.id, sprite);
   }
 
-  private moveMonsters(monsters: readonly Monster[]): void {
-    for (const monster of monsters) {
-      const sprite = this.monsterSprites.get(monster.id);
-      if (!sprite) continue;
-      const point = cellToPoint(monster, this.config.sectorCount, ARENA_LAYOUT);
-      this.tweens.add({ targets: sprite, x: point.x, y: point.y, duration: MOVE_TWEEN_MS });
-    }
-  }
-
-  /** Số sát thương bay lên kiểu Pixel Chaos; quái chết thì teo lại rồi biến mất. */
+  /** Số sát thương bay lên kiểu Pixel Chaos; quái trúng đòn mà còn sống thì nhấp nháy. */
   private showHits(state: BattleState): void {
     for (const hit of state.lastAttack?.hits ?? []) {
       const sprite = this.monsterSprites.get(hit.monsterId);
@@ -234,16 +266,8 @@ export class BattleScene extends Scene {
         onComplete: () => label.destroy(),
       });
 
-      if (hit.killed) {
-        this.monsterSprites.delete(hit.monsterId);
-        this.tweens.add({
-          targets: sprite,
-          scale: 0,
-          alpha: 0,
-          duration: 220,
-          onComplete: () => sprite.destroy(),
-        });
-      } else {
+      // Quái chết được syncMonsters gỡ (teo lại) ngay sau đây.
+      if (!hit.killed) {
         this.tweens.add({ targets: sprite, alpha: 0.3, duration: 70, yoyo: true, repeat: 1 });
       }
     }

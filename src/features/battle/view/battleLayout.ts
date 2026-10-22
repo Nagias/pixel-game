@@ -1,6 +1,6 @@
 // Phép tính đổi ô trên sân (lát, vòng) sang tọa độ màn hình. Không chứa luật chơi.
 // Quy ước góc: 0 = hướng 12 giờ, tăng theo chiều kim đồng hồ (giống chiều quay vùng xanh).
-import type { Cell } from '../logic/battleTypes';
+import type { Cell, WeaponConfig } from '../logic/battleTypes';
 
 export interface ArenaLayout {
   readonly centerX: number;
@@ -67,6 +67,17 @@ export function zoneArc(
   return {
     start: sectorStartAngle(aimSector - half, sectorCount),
     end: sectorStartAngle(aimSector + half + 1, sectorCount),
+  };
+}
+
+/** Bán kính trong/ngoài của hình nêm xanh: từ mép trong vòng minRing tới mép ngoài vòng maxRing. */
+export function zoneRadii(
+  reach: Pick<WeaponConfig, 'minRing' | 'maxRing'>,
+  layout: ArenaLayout,
+): { inner: number; outer: number } {
+  return {
+    inner: ringInnerRadius(reach.minRing, layout),
+    outer: ringInnerRadius(reach.maxRing + 1, layout),
   };
 }
 

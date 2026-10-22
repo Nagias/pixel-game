@@ -25,7 +25,10 @@ lượt hoặc trước khi quái chạm tới mình thì thắng.
    ("đi lung tung"); không đi vào ô đã có quái khác.
 6. Hết quái → **thắng**. Quái tiến vào từ vòng 0 → **thua** ("Quái đã chạm tới bạn").
    Hết lượt mà còn quái → **thua** ("Hết lượt mà quái vẫn còn"). Nhát cuối vừa diệt hết quái thì vẫn thắng.
-7. Màn kết quả chờ 0,5 giây mới nhận chạm "chơi lại" (chống chạm nhầm).
+7. Cấu hình sai (vd. vùng đánh rộng số chẵn lát, tầm vũ khí vượt sân) bị từ chối ngay lúc mở trận.
+
+**Hành vi giao diện** (nằm ở `view/BattleScene.ts`, không phải luật): màn kết quả chờ 0,5 giây mới
+nhận chạm "chơi lại" (chống chạm nhầm); giữ phím Space chỉ tính một nhát.
 
 **Con số:** `src/features/battle/logic/battleConfig.ts`.
 
@@ -41,11 +44,12 @@ lượt hoặc trước khi quái chạm tới mình thì thắng.
 
 **Kiểm chứng tự động:**
 
-- Unit (Vitest): luật đánh, di chuyển quái, thắng/thua, hàm thuần không sửa đầu vào; hình nêm vẽ ra
-  trùng khít vùng luật coi là trúng; hình sprite không lệch hàng.
-- E2E (`e2e/battle.spec.ts`, Playwright, khung Pixel 7): mở trận; chạm đánh đúng lát vùng xanh đang
-  chỉ; ngắm chuẩn thì thắng + màn thắng chống chạm nhầm + chơi lại; chém trượt thì thua. Ảnh bằng
-  chứng lưu ở `test-results/`.
+- Unit (Vitest): luật đánh, di chuyển quái (chặn ô, quấn vòng lát 0↔23), thắng/thua, từ chối cấu
+  hình sai, hàm thuần không sửa đầu vào; hình nêm vẽ ra trùng khít vùng luật coi là trúng (cả góc lẫn
+  bán kính); hình sprite không lệch hàng.
+- E2E (`e2e/battle.spec.ts` + `e2e/support/battleDriver.ts`, Playwright, khung Pixel 7): mở trận;
+  chạm đánh đúng lát vùng xanh đang chỉ; giữ Space chỉ một nhát; ngắm chuẩn thì thắng + chống chạm
+  nhầm + chơi lại; chém trượt thì thua + chơi lại. Ảnh bằng chứng lưu ở `test-results/`.
 
 **Tự xem:** `npm run dev` → http://localhost:5173/?seed=42 (bỏ `?seed=` để mỗi ván một khác).
 

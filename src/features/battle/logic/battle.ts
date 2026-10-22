@@ -4,13 +4,39 @@ import { nextFloat, nextInt, seedRng, type RngState } from '../../../shared/rand
 import { isInZone, wrapSector } from './arena';
 import type { BattleConfig, BattleState, Hit, Monster } from './battleTypes';
 
+/** Chặn cấu hình sai ngay lúc mở trận, thay vì để game chạy với luật vô nghĩa. */
+function validateBattleConfig(config: BattleConfig): void {
+  const { sectorCount, ringCount, turnLimit, weapon, monster, spawn } = config;
+  const slotCount = spawn.spread * 2 + 1;
+  const problems: string[] = [];
+
+  if (spawn.count > slotCount)
+    problems.push(`không đủ ${spawn.count} chỗ trong cụm ${slotCount} lát`);
+  if (slotCount > sectorCount) problems.push(`cụm quái ${slotCount} lát rộng hơn vòng tròn`);
+  if (weapon.widthSectors % 2 === 0) problems.push('vùng đánh phải rộng số lẻ lát');
+  if (weapon.widthSectors < 1 || weapon.widthSectors > sectorCount) {
+    problems.push(`vùng đánh rộng ${weapon.widthSectors} lát nằm ngoài [1, ${sectorCount}]`);
+  }
+  if (weapon.minRing < 0 || weapon.minRing > weapon.maxRing || weapon.maxRing >= ringCount) {
+    problems.push(`tầm vũ khí vòng ${weapon.minRing}–${weapon.maxRing} không hợp lệ`);
+  }
+  if (weapon.damage < 1) problems.push('vũ khí phải gây ít nhất 1 sát thương');
+  if (turnLimit < 1) problems.push('phải có ít nhất 1 lượt');
+  if (monster.hp < 1) problems.push('quái phải có ít nhất 1 máu');
+  if (monster.advanceChance < 0 || monster.advanceChance > 1) {
+    problems.push('xác suất tiến vào phải trong [0, 1]');
+  }
+
+  if (problems.length > 0) {
+    throw new RangeError(`Cấu hình trận đấu sai: ${problems.join('; ')}`);
+  }
+}
+
 /** Mở trận mới: một cụm quái xuất hiện ở vòng ngoài cùng, mỗi con một lát khác nhau. */
 export function createBattle(seed: number, config: BattleConfig): BattleState {
+  validateBattleConfig(config);
   const { count, spread } = config.spawn;
   const slotCount = spread * 2 + 1;
-  if (count > slotCount) {
-    throw new RangeError(`Không đủ ${count} chỗ trong cụm rộng ${slotCount} lát`);
-  }
 
   const [center, rngAfterCenter] = nextInt(seedRng(seed), config.sectorCount);
   let rng = rngAfterCenter;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { seedRng } from '../../../shared/random';
 import { createBattle, playTurn } from './battle';
+import { BATTLE_CONFIG } from './battleConfig';
 import type { BattleConfig, BattleState, Monster } from './battleTypes';
 
 // Cấu hình riêng cho test: con số cố định để kỳ vọng tính tay được,
@@ -94,6 +95,40 @@ describe('createBattle — mở trận', () => {
   });
 });
 
+describe('createBattle — chặn cấu hình sai trước khi mở trận', () => {
+  const weapon = (patch: Partial<BattleConfig['weapon']>): BattleConfig => ({
+    ...CONFIG,
+    weapon: { ...CONFIG.weapon, ...patch },
+  });
+  const monsterRule = (patch: Partial<BattleConfig['monster']>): BattleConfig => ({
+    ...CONFIG,
+    monster: { ...CONFIG.monster, ...patch },
+  });
+
+  it.each<[string, BattleConfig]>([
+    [
+      'cụm quái rộng hơn cả vòng tròn (quái chồng ô)',
+      { ...CONFIG, spawn: { count: 25, spread: 12 } },
+    ],
+    ['vùng đánh rộng số chẵn lát', weapon({ widthSectors: 2 })],
+    ['vùng đánh rộng hơn cả vòng tròn', weapon({ widthSectors: 25 })],
+    ['vũ khí với tới vòng không tồn tại', weapon({ maxRing: 6 })],
+    ['vòng trong của vũ khí lớn hơn vòng ngoài', weapon({ minRing: 3, maxRing: 2 })],
+    ['vòng trong của vũ khí âm', weapon({ minRing: -1 })],
+    ['vũ khí không gây sát thương', weapon({ damage: 0 })],
+    ['không có lượt nào', { ...CONFIG, turnLimit: 0 }],
+    ['quái không có máu', monsterRule({ hp: 0 })],
+    ['xác suất tiến vào lớn hơn 1', monsterRule({ advanceChance: 1.5 })],
+    ['xác suất tiến vào âm', monsterRule({ advanceChance: -0.1 })],
+  ])('từ chối: %s', (_label, config) => {
+    expect(() => createBattle(1, config)).toThrow(RangeError);
+  });
+
+  it('cấu hình thật của game hợp lệ', () => {
+    expect(() => createBattle(1, BATTLE_CONFIG)).not.toThrow();
+  });
+});
+
 describe('playTurn — một nhát đánh', () => {
   it('quái trong vùng xanh mất máu, quái ngoài vùng giữ nguyên', () => {
     const before = stateWith([monster(1, 0, 5), monster(2, 1, 5), monster(3, 5, 5)]);
@@ -172,12 +207,45 @@ describe('playTurn — quái di chuyển sau nhát đánh', () => {
     expect(byId(after, 1)).toMatchObject({ sector: 0, ring: 3 });
     expect(byId(after, 2)).toMatchObject({ sector: 0, ring: 1 });
   });
+
+  it('quái được đi vào ô mà quái id nhỏ hơn vừa rời trong cùng lượt', () => {
+    const before = stateWith([monster(1, 0, 2), monster(2, 0, 3)]);
+    const after = playTurn(before, 12, withAdvanceChance(1));
+    expect(byId(after, 1)).toMatchObject({ sector: 0, ring: 1 });
+    expect(byId(after, 2)).toMatchObject({ sector: 0, ring: 2 });
+  });
+
+  it('đi ngang mà cả hai bên đều có quái thì đứng yên', () => {
+    for (let seed = 1; seed <= 10; seed++) {
+      const before = stateWith([monster(1, 12, 5), monster(2, 11, 5), monster(3, 13, 5)], {
+        rng: seedRng(seed),
+      });
+      expect(byId(playTurn(before, 0, withAdvanceChance(0)), 1)).toMatchObject({
+        sector: 12,
+        ring: 5,
+      });
+    }
+  });
+
+  it.each([
+    [0, [1, 23]],
+    [23, [0, 22]],
+  ])('đi ngang từ lát %i quấn vòng đúng sang %j', (start, expected) => {
+    const seen = new Set<number>();
+    for (let seed = 1; seed <= 20; seed++) {
+      const before = stateWith([monster(1, start, 5)], { rng: seedRng(seed) });
+      seen.add(byId(playTurn(before, 6, withAdvanceChance(0)), 1)?.sector ?? -1);
+    }
+    expect([...seen].sort((a, b) => a - b)).toEqual(expected);
+  });
 });
 
 describe('playTurn — thắng / thua', () => {
-  it('giết hết quái thì thắng ngay, không quái nào kịp đi', () => {
-    const after = playTurn(stateWith([monster(1, 0, 5, 1)]), 0, CONFIG);
+  it('giết hết quái thì thắng ngay, không tung số ngẫu nhiên cho lượt di chuyển', () => {
+    const before = stateWith([monster(1, 0, 5, 1)]);
+    const after = playTurn(before, 0, CONFIG);
     expect(after).toMatchObject({ phase: 'won', lossReason: null, monsters: [] });
+    expect(after.rng).toBe(before.rng);
   });
 
   it('quái đang ở vòng 0 tiến thêm là chạm nhân vật → thua', () => {

@@ -69,7 +69,8 @@ src/
       index.ts               cổng công khai duy nhất của tính năng
 e2e/
   *.spec.ts                  test cả luồng, mỗi tính năng một file
-  support/gameDriver.ts      cách duy nhất để test điều khiển game
+  support/gameDriver.ts      cách duy nhất để test điều khiển game (phần chung)
+  support/<f>Driver.ts       phần điều khiển riêng của từng tính năng
 docs/                        kiến trúc, phân tích game tham chiếu, phong cách hình
 ```
 
