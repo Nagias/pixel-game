@@ -67,11 +67,21 @@ test('ngắm chuẩn và đổi vũ khí đúng lúc thì thắng; màn thắng 
   const game = new BattleDriver(page);
   await game.openBattle(SEED);
 
+  // F03: mỗi nhát chém, sát thương phải tăng dần 1×, 2×, 3×… sát thương vũ khí (combo gom cụm).
+  let mostHitsInOneStrike = 0;
   for (let turn = 0; turn < BATTLE_CONFIG.turnLimit; turn++) {
     const snapshot = await game.snapshot();
     if (snapshot.battle.phase !== 'playing') break;
-    await game.play(bestMove(snapshot));
+    const move = bestMove(snapshot);
+    await game.play(move);
+
+    const hits = (await game.snapshot()).battle.lastAttack?.hits ?? [];
+    const weaponDamage = BATTLE_CONFIG.weapons[move.weaponIndex]?.damage ?? 0;
+    expect(hits.map((hit) => hit.damage)).toEqual(hits.map((_, i) => weaponDamage * (i + 1)));
+    mostHitsInOneStrike = Math.max(mostHitsInOneStrike, hits.length);
   }
+  // Ván này phải có ít nhất một nhát trúng từ 2 quái trở lên, nếu không combo chưa được thử.
+  expect(mostHitsInOneStrike).toBeGreaterThanOrEqual(2);
 
   const won = await game.snapshot();
   expect(won.battle.phase).toBe('won');
