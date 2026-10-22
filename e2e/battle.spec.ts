@@ -140,3 +140,26 @@ test('chém trượt mọi lượt: quái áp sát đánh mất máu đúng số
   expect(restarted.battle.phase).toBe('playing');
   expect(restarted.battle.turnsLeft).toBe(BATTLE_CONFIG.turnLimit);
 });
+
+test('F05: Cung bắn trúng quái ở rìa sân thì kéo nó vào gần đúng 1 vòng, giữ lát, đứng yên', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.openBattle(SEED);
+
+  // Mở trận mọi quái đều ở vòng ngoài cùng; Cung rộng 1 lát nên trúng đúng con ở lát ngắm.
+  const before = await game.snapshot();
+  const target = before.battle.monsters[0];
+  if (!target) throw new Error('Trận không có quái');
+  const bowIndex = BATTLE_CONFIG.weapons.findIndex((w) => w.push === 'in');
+  await game.play({ weaponIndex: bowIndex, sector: target.sector });
+
+  const after = await game.snapshot();
+  expect(after.battle.lastAttack?.hits.map((hit) => hit.monsterId)).toEqual([target.id]);
+  expect(after.battle.monsters.find((m) => m.id === target.id)).toMatchObject({
+    sector: target.sector,
+    ring: target.ring - 1,
+  });
+  await game.advance(300); // cho quái kịp lướt tới ô mới rồi chụp
+  await page.screenshot({ path: test.info().outputPath('5-cung-keo.png') });
+});

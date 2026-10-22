@@ -1,8 +1,15 @@
 // Luật trận đấu: hàm thuần (state cũ + hành động → state mới). Không Phaser, không đồng hồ.
 // Thứ tự một lượt: đánh → kiểm thắng → quái di chuyển → kiểm bị chạm → kiểm hết lượt.
 import { nextFloat, nextInt, seedRng, type RngState } from '../../../shared/random';
-import { isInZone, wrapSector } from './arena';
-import type { BattleConfig, BattleState, Hit, Monster, WeaponConfig } from './battleTypes';
+import { isInZone, knockbackCell, wrapSector } from './arena';
+import {
+  PUSH_DIRECTIONS,
+  type BattleConfig,
+  type BattleState,
+  type Hit,
+  type Monster,
+  type WeaponConfig,
+} from './battleTypes';
 
 /** Chặn cấu hình sai ngay lúc mở trận, thay vì để game chạy với luật vô nghĩa. */
 function validateBattleConfig(config: BattleConfig): void {
@@ -24,6 +31,9 @@ function validateBattleConfig(config: BattleConfig): void {
       problems.push(`${label}: tầm vòng ${weapon.minRing}–${weapon.maxRing} không hợp lệ`);
     }
     if (weapon.damage < 1) problems.push(`${label}: phải gây ít nhất 1 sát thương`);
+    if (!PUSH_DIRECTIONS.includes(weapon.push)) {
+      problems.push(`${label}: kiểu đẩy "${String(weapon.push)}" không tồn tại`);
+    }
   }
   if (turnLimit < 1) problems.push('phải có ít nhất 1 lượt');
   if (monster.hp < 1) problems.push('quái phải có ít nhất 1 máu');
@@ -129,12 +139,15 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
     return { ...state, turnsLeft, monsters: [], phase: 'won', lossReason: null, lastAttack };
   }
 
-  // F04: quái đang áp sát (còn sống sau nhát chém) đánh trước; quái vừa tiến vào vòng 0 lượt này
-  // chỉ đánh từ lượt sau — đúng những con người chơi đã thấy dấu "!" trước khi chém.
-  const attackers = survivors.filter(isThreatening).length;
+  // F05: đẩy quái ngay sau nhát chém, trước khi quái hành động.
+  const knocked = applyKnockback(survivors, hits, weapon, config);
+
+  // F04: quái đang áp sát (còn sống sau nhát chém và sau khi bị đẩy) đánh; quái vừa tiến vào vòng 0
+  // lượt này chỉ đánh từ lượt sau — đúng những con người chơi đã thấy dấu "!" trước khi chém.
+  const attackers = knocked.monsters.filter(isThreatening).length;
   const heroHp = Math.max(0, state.heroHp - attackers * config.monster.attack);
 
-  const moved = moveMonsters(survivors, state.rng, config);
+  const moved = moveMonsters(knocked.monsters, state.rng, config, knocked.pushedIds);
   const base = {
     ...state,
     turnsLeft,
@@ -153,6 +166,40 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
   return { ...base, phase: 'playing', lossReason: null };
 }
 
+/**
+ * F05: quái bị chém mà còn sống bị đẩy theo kiểu đẩy của vũ khí, lần lượt theo thứ tự combo.
+ * Ô đích có quái khác hoặc nằm ngoài sân thì không bị đẩy. Trả về id những con bị đẩy thành công
+ * (chúng đứng yên lượt đó). Không tung số ngẫu nhiên.
+ */
+function applyKnockback(
+  survivors: readonly Monster[],
+  hits: readonly Hit[],
+  weapon: WeaponConfig,
+  config: BattleConfig,
+): { monsters: Monster[]; pushedIds: Set<number> } {
+  const pushedIds = new Set<number>();
+  if (weapon.push === 'none') return { monsters: [...survivors], pushedIds };
+
+  const key = (cell: { sector: number; ring: number }) => `${cell.sector}:${cell.ring}`;
+  const positions = new Map(survivors.map((m) => [m.id, m]));
+  const occupied = new Set(survivors.map(key));
+
+  for (const hit of hits) {
+    const monster = positions.get(hit.monsterId);
+    if (!monster) continue; // đã chết trong nhát chém
+    const target = knockbackCell(monster, weapon.push, config.sectorCount);
+    const insideArena = target.ring >= 0 && target.ring < config.ringCount;
+    if (!insideArena || occupied.has(key(target))) continue;
+
+    occupied.delete(key(monster));
+    occupied.add(key(target));
+    positions.set(monster.id, { ...monster, ...target });
+    pushedIds.add(monster.id);
+  }
+
+  return { monsters: survivors.map((m) => positions.get(m.id) ?? m), pushedIds };
+}
+
 /** F04: quái đang áp sát nhân vật (vòng 0) sẽ đánh sau nhát chém tới — view hiện dấu "!" cho nó. */
 export function isThreatening(monster: Monster): boolean {
   return monster.ring === 0;
@@ -167,6 +214,8 @@ function moveMonsters(
   monsters: readonly Monster[],
   rngIn: RngState,
   config: BattleConfig,
+  /** F05: quái vừa bị đẩy thành công đứng yên lượt này. */
+  pushedIds: ReadonlySet<number>,
 ): { monsters: Monster[]; rng: RngState } {
   let rng = rngIn;
   const key = (sector: number, ring: number) => `${sector}:${ring}`;
@@ -174,7 +223,7 @@ function moveMonsters(
   const positions = new Map(monsters.map((m) => [m.id, m]));
 
   for (const monster of [...monsters].sort((a, b) => a.id - b.id)) {
-    if (isThreatening(monster)) continue;
+    if (isThreatening(monster) || pushedIds.has(monster.id)) continue;
     let roll: number;
     [roll, rng] = nextFloat(rng);
 

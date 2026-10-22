@@ -63,4 +63,15 @@ Phạm vi chủ dự án chốt: luật như đề xuất, mức tối thiểu, 
 - [x] Hiển thị: ô "Máu", dấu "!" đỏ, màn thua "Bạn đã gục"
 - [x] E2E: máu giảm đúng số quái áp sát × sức đánh, có lượt bị đánh
 - [x] FEATURE_MAP (F04), DEBT-008, DEBT-009
-- [ ] `npm run check`, mở PR #5, CI xanh, chủ dự án duyệt → gộp
+- [x] `npm run check`, mở PR #5, CI xanh, chủ dự án duyệt → gộp (22/10/2026)
+
+## Đợt 4 — F05 Đẩy quái theo vũ khí (23/10/2026)
+
+Phạm vi chủ dự án chốt: luật như đề xuất, mức tối thiểu, không thêm hiệu ứng/chữ mới.
+
+- [x] Chốt luật: Kiếm đẩy lùi, Giáo đẩy phải, Cung kéo vào; bị chặn thì đứng yên; đẩy trước khi quái hành động; bị đẩy thì đứng yên lượt đó
+- [x] Test trước (đỏ) → code (xanh); sửa 1 test "xanh nhầm" (ca Cung) để nó thật sự bắt được lỗi
+- [x] Mô phỏng 500 ván: ngắm chuẩn thắng 100% dư ~2,36 lượt; chém bừa thắng 0,2%
+- [x] E2E: Cung kéo quái vào đúng 1 vòng, giữ lát
+- [x] FEATURE_MAP (F05), DEBT-009
+- [ ] `npm run check`, mở PR #6, CI xanh, chủ dự án duyệt → gộp

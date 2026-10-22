@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arcSectorAt, isInZone, wrapSector, zoneSectors } from './arena';
+import { arcSectorAt, isInZone, knockbackCell, wrapSector, zoneSectors } from './arena';
 import type { WeaponConfig } from './battleTypes';
 
 const SECTORS = 24;
@@ -7,6 +7,7 @@ const SECTORS = 24;
 const weapon = (overrides: Partial<WeaponConfig> = {}): WeaponConfig => ({
   name: 'test',
   rangeLabel: 'cả sân',
+  push: 'none',
   widthSectors: 3,
   minRing: 0,
   maxRing: 5,
@@ -86,5 +87,17 @@ describe('arcSectorAt (vùng xanh quay theo thời gian)', () => {
 
   it('từ chối chu kỳ không dương', () => {
     expect(() => arcSectorAt(0, 0, SECTORS)).toThrow(RangeError);
+  });
+});
+
+describe('knockbackCell — ô đích khi bị vũ khí đẩy (F05)', () => {
+  it.each([
+    ['out', { sector: 5, ring: 1 }, { sector: 5, ring: 2 }], // Kiếm: lùi ra xa 1 vòng
+    ['in', { sector: 5, ring: 4 }, { sector: 5, ring: 3 }], // Cung: kéo vào gần 1 vòng
+    ['clockwise', { sector: 5, ring: 2 }, { sector: 6, ring: 2 }], // Giáo: lệch phải 1 lát
+    ['clockwise', { sector: 23, ring: 2 }, { sector: 0, ring: 2 }], // quấn qua lát 0
+    ['none', { sector: 5, ring: 2 }, { sector: 5, ring: 2 }],
+  ] as const)('đẩy kiểu %s: %j → %j', (push, from, expected) => {
+    expect(knockbackCell(from, push, SECTORS)).toEqual(expected);
   });
 });

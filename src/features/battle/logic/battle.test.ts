@@ -10,6 +10,7 @@ import type { BattleConfig, BattleState, Monster, WeaponConfig } from './battleT
 const ALL_REACH: WeaponConfig = {
   name: 'Kiếm thử',
   rangeLabel: 'cả sân',
+  push: 'none',
   widthSectors: 3,
   minRing: 0,
   maxRing: 5,
@@ -31,11 +32,41 @@ const CONFIG: BattleConfig = {
 const THREE_WEAPONS: BattleConfig = {
   ...CONFIG,
   weapons: [
-    { name: 'Kiếm', rangeLabel: 'gần', widthSectors: 5, minRing: 0, maxRing: 1, damage: 1 },
-    { name: 'Giáo', rangeLabel: 'vừa', widthSectors: 3, minRing: 2, maxRing: 3, damage: 1 },
-    { name: 'Cung', rangeLabel: 'xa', widthSectors: 1, minRing: 4, maxRing: 5, damage: 1 },
+    {
+      name: 'Kiếm',
+      rangeLabel: 'gần',
+      push: 'none',
+      widthSectors: 5,
+      minRing: 0,
+      maxRing: 1,
+      damage: 1,
+    },
+    {
+      name: 'Giáo',
+      rangeLabel: 'vừa',
+      push: 'none',
+      widthSectors: 3,
+      minRing: 2,
+      maxRing: 3,
+      damage: 1,
+    },
+    {
+      name: 'Cung',
+      rangeLabel: 'xa',
+      push: 'none',
+      widthSectors: 1,
+      minRing: 4,
+      maxRing: 5,
+      damage: 1,
+    },
   ],
 };
+
+/** F05: một vũ khí với tới cả sân, đẩy theo kiểu `push`. */
+const pushing = (push: WeaponConfig['push'], patch: Partial<WeaponConfig> = {}): BattleConfig => ({
+  ...CONFIG,
+  weapons: [{ ...ALL_REACH, push, ...patch }],
+});
 
 /** Quái luôn tiến (advanceChance 1) hoặc luôn đi ngang (0) để kết quả đoán trước được. */
 const withAdvanceChance = (advanceChance: number): BattleConfig => ({
@@ -148,6 +179,7 @@ describe('createBattle — chặn cấu hình sai trước khi mở trận', () 
     ['xác suất tiến vào âm', monsterRule({ advanceChance: -0.1 })],
     ['nhân vật không có máu', { ...CONFIG, hero: { hp: 0 } }],
     ['quái không có sức đánh', monsterRule({ attack: 0 })],
+    ['kiểu đẩy không tồn tại', weapon({ push: 'xoay' as WeaponConfig['push'] })],
   ])('từ chối: %s', (_label, config) => {
     expect(() => createBattle(1, config)).toThrow(RangeError);
   });
@@ -451,5 +483,71 @@ describe('playTurn — hợp đồng hàm thuần', () => {
     const state = stateWith([monster(1, 0, 5), monster(2, 12, 3), monster(3, 20, 4)]);
     const config = withAdvanceChance(0.5);
     expect(playTurn(state, 0, config)).toEqual(playTurn(state, 0, config));
+  });
+});
+
+describe('F05 — đẩy quái theo vũ khí', () => {
+  // Quái 5 máu để sống sót sau nhát chém; luật "luôn tiến" để thấy rõ quái bị đẩy thì đứng yên.
+  const ALWAYS_ADVANCE = { monster: { ...CONFIG.monster, advanceChance: 1 } };
+
+  it('Kiếm (đẩy lùi): quái bị chém còn sống lùi ra 1 vòng và đứng yên lượt đó', () => {
+    const config = { ...pushing('out'), ...ALWAYS_ADVANCE };
+    const after = playTurn(stateWith([monster(1, 0, 1, 5)]), 0, config);
+    expect(byId(after, 1)).toMatchObject({ sector: 0, ring: 2 });
+  });
+
+  it('Giáo (đẩy phải): lệch 1 lát theo chiều kim đồng hồ, quấn qua lát 0', () => {
+    const config = { ...pushing('clockwise'), ...ALWAYS_ADVANCE };
+    const after = playTurn(stateWith([monster(1, 23, 2, 5)]), 0, config);
+    expect(byId(after, 1)).toMatchObject({ sector: 0, ring: 2 });
+  });
+
+  it('Cung (kéo vào): quái vào gần 1 vòng và đứng yên lượt đó', () => {
+    // Luật "luôn đi ngang": nếu không bị kéo, quái sẽ lệch lát chứ không vào vòng 4 cùng lát.
+    const config = { ...pushing('in'), monster: { ...CONFIG.monster, advanceChance: 0 } };
+    const after = playTurn(stateWith([monster(1, 0, 5, 5)]), 0, config);
+    expect(byId(after, 1)).toMatchObject({ sector: 0, ring: 4 });
+  });
+
+  it('quái không bị chém thì không bị đẩy, vẫn di chuyển bình thường', () => {
+    const config = { ...pushing('out'), ...ALWAYS_ADVANCE };
+    const after = playTurn(stateWith([monster(1, 12, 3, 5)]), 0, config);
+    expect(byId(after, 1)).toMatchObject({ sector: 12, ring: 2 });
+  });
+
+  it('ô đích có quái khác thì không bị đẩy — và vẫn hành động bình thường', () => {
+    // Kiếm chỉ với tới vòng 0–1: quái 1 bị chém, muốn lùi ra vòng 2 nhưng quái 2 đang đứng đó.
+    const config = { ...pushing('out', { minRing: 0, maxRing: 1 }), ...ALWAYS_ADVANCE };
+    const before = stateWith([monster(1, 0, 1, 5), monster(2, 0, 2, 5)]);
+    const after = playTurn(before, 0, config);
+    expect(byId(after, 1)).toMatchObject({ sector: 0, ring: 0 }); // không bị đẩy → tiến vào như thường
+  });
+
+  it('ô đích nằm ngoài sân thì không bị đẩy', () => {
+    const config = { ...pushing('out'), ...ALWAYS_ADVANCE };
+    const after = playTurn(stateWith([monster(1, 0, 5, 5)]), 0, config);
+    expect(byId(after, 1)).toMatchObject({ sector: 0, ring: 4 }); // không lùi ra vòng 6 → tiến như thường
+  });
+
+  it('đẩy theo thứ tự combo: con bị chém trước được đẩy trước', () => {
+    // Quái 1 ít máu hơn nên bị chém trước; nó muốn sang lát 1 nhưng quái 2 còn đứng đó → bị chặn.
+    // Sau đó quái 2 mới bị đẩy sang lát 2.
+    const config = { ...pushing('clockwise'), ...ALWAYS_ADVANCE };
+    const before = stateWith([monster(1, 0, 2, 2), monster(2, 1, 2, 5)]);
+    const after = playTurn(before, 0, config);
+    expect(byId(after, 1)).toMatchObject({ sector: 0, ring: 1 }); // bị chặn → tiến như thường
+    expect(byId(after, 2)).toMatchObject({ sector: 2, ring: 2 }); // bị đẩy → đứng yên ở ô mới
+  });
+
+  it('Kiếm đẩy con có dấu "!" ra vòng 1 nên lượt đó nó không đánh được', () => {
+    const after = playTurn(stateWith([monster(1, 0, 0, 5)]), 0, pushing('out'));
+    expect(byId(after, 1)?.ring).toBe(1);
+    expect(after.heroHp).toBe(5);
+  });
+
+  it('đẩy không tung số ngẫu nhiên', () => {
+    const before = stateWith([monster(1, 0, 1, 5)]);
+    const config = { ...pushing('out'), monster: { ...CONFIG.monster, advanceChance: 0.5 } };
+    expect(playTurn(before, 0, config).rng).toBe(before.rng);
   });
 });
