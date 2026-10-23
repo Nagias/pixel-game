@@ -64,6 +64,7 @@ Phân tích game tham chiếu: `docs/research/micro-rpg.md`. Phong cách hình: 
 | Kiểm tra trước khi báo xong   | `npm run check` (giống hệt CI)                                                                                                                                                                                                                            |
 | Thêm thư viện                 | Ghi lý do vào `docs/ARCHITECTURE.md` và nêu rõ trong PR (chủ dự án duyệt qua PR)                                                                                                                                                                          |
 | Đi tắt                        | Ghi `DEBT.md` trước, comment `// NỢ DEBT-xxx` tại chỗ                                                                                                                                                                                                     |
+| Sửa skill/agent               | Chạy bộ việc mẫu `bench/` cho cấu hình cũ **và** mới (cùng ngày, cùng model), ghi `bench/results.md`, dán bảng điểm trước/sau vào PR — cách chạy: `bench/README.md`. Sửa chính `bench/` thì chạy `node bench/bench.ts selftest`                           |
 
 ## 4. Đường cấm (dự kiến, bổ sung dần)
 
@@ -124,6 +125,8 @@ Máy Windows: đường dẫn dự án có dấu cách và dấu chấm (`D:\26.
    - [ ] `FEATURE_MAP.md` cập nhật **trong cùng PR**
    - [ ] Đi tắt nào cũng có dòng trong `DEBT.md`
    - [ ] Mở game thật (`npm run dev`) hoặc xem ảnh E2E trong `test-results/` để nhìn tận mắt
+   - [ ] PR sửa skill/agent (`.claude/skills/`, `.claude/agents/`, `.claude/commands/`): có bảng điểm
+         bộ việc mẫu trước/sau (luật chủ dự án chốt ngày 23/10/2026)
 5. Báo cáo cho chủ dự án: đã làm gì, để được gì, phần nào chưa kiểm chứng, việc gì cần họ quyết.
 
 ## 7. Thêm tính năng mới (copy khuôn walking skeleton)

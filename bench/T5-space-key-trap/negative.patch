@@ -1,0 +1,13 @@
+diff --git a/src/features/battle/view/BattleScene.ts b/src/features/battle/view/BattleScene.ts
+index d2bc93c..7fb8409 100644
+--- a/src/features/battle/view/BattleScene.ts
++++ b/src/features/battle/view/BattleScene.ts
+@@ -95,6 +95,8 @@ export class BattleScene extends Scene {
+     this.createResultLayer();
+ 
+     this.input.on('pointerdown', (pointer: Input.Pointer) => this.handleTap(pointer.x, pointer.y));
++    // Mẫu âm của bench T5: thêm phím Space dù đường cấm #15 cấm điều khiển bằng bàn phím.
++    this.input.keyboard?.on('keydown-SPACE', () => this.attack());
+     const clearSnapshot = setSnapshotProvider(() => this.snapshot());
+     this.events.once(Scenes.Events.SHUTDOWN, clearSnapshot);
+ 

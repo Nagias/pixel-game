@@ -1,0 +1,1 @@
+Lỗi: mình chạm hụt vào khe hẹp giữa hai nút vũ khí thì game lại tính là một nhát chém, mất luôn một lượt. FEATURE_MAP (mục F02) ghi là chạm vào khe giữa hai nút thì không làm gì cả. Sửa giúp mình cho đúng như FEATURE_MAP, theo đúng quy trình trong CLAUDE.md.
