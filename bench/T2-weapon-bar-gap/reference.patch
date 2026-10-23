@@ -1,0 +1,81 @@
+diff --git a/src/features/battle/view/BattleScene.ts b/src/features/battle/view/BattleScene.ts
+index d2bc93c..5e92937 100644
+--- a/src/features/battle/view/BattleScene.ts
++++ b/src/features/battle/view/BattleScene.ts
+@@ -12,6 +12,7 @@ import type { BattleState, Monster } from '../logic/battleTypes';
+ import {
+   ARENA_LAYOUT,
+   cellToPoint,
++  isInWeaponBar,
+   type Point,
+   polarToPoint,
+   ringInnerRadius,
+@@ -142,7 +143,8 @@ export class BattleScene extends Scene {
+     }
+     const button = weaponButtonAt(x, y, this.config.weapons.length, WEAPON_BAR);
+     if (button === null) {
+-      this.attack();
++      // Khe giữa hai nút vẫn thuộc thanh nút: không chém, không tốn lượt (FEATURE_MAP F02).
++      if (!isInWeaponBar(x, y, WEAPON_BAR)) this.attack();
+     } else {
+       this.battle = selectWeapon(this.battle, button, this.config);
+       this.drawZone();
+diff --git a/src/features/battle/view/battleLayout.test.ts b/src/features/battle/view/battleLayout.test.ts
+index 49ad6a1..1372d42 100644
+--- a/src/features/battle/view/battleLayout.test.ts
++++ b/src/features/battle/view/battleLayout.test.ts
+@@ -8,6 +8,7 @@ import {
+   ringInnerRadius,
+   sectorCenterAngle,
+   WEAPON_BAR,
++  isInWeaponBar,
+   weaponButtonAt,
+   weaponButtonRects,
+   zoneArc,
+@@ -116,15 +117,28 @@ describe('thanh nút vũ khí ở đáy màn hình (F02)', () => {
+   });
+ 
+   it.each([
+-    [124, 556], // khe giữa nút 1 và 2
++    [124, 556], // khe giữa nút 1 và 2 — không trúng nút, nhưng vẫn thuộc thanh nút (xem test dưới)
+     [180, 300], // giữa sân
+     [180, 519], // ngay trên thanh
+     [180, 592], // ngay dưới thanh
+     [10, 556], // lề trái
+-  ])('chạm (%f, %f) → không trúng nút nào (là chạm vào sân)', (x, y) => {
++  ])('chạm (%f, %f) → không trúng nút nào', (x, y) => {
+     expect(weaponButtonAt(x, y, 3, BAR)).toBeNull();
+   });
+ 
++  // FEATURE_MAP F02: chạm vào khe giữa hai nút không làm gì (không tính là chém). Trước đây test
++  // trên ghi khe là "chạm vào sân" nên game chém nhầm và mất lượt — giờ tách riêng thanh nút.
++  it.each([
++    [124, 556, true], // khe giữa nút 1 và 2
++    [236, 556, true], // khe giữa nút 2 và 3
++    [68, 556, true], // trên nút
++    [180, 300, false], // giữa sân
++    [180, 519, false], // ngay trên thanh
++    [180, 592, false], // ngay dưới thanh
++  ])('chạm (%f, %f) thuộc thanh nút vũ khí: %s', (x, y, expected) => {
++    expect(isInWeaponBar(x, y, BAR)).toBe(expected);
++  });
++
+   it('thanh nút không đè lên sân tròn', () => {
+     const arenaBottom = ARENA_LAYOUT.centerY + ringInnerRadius(6, ARENA_LAYOUT);
+     expect(WEAPON_BAR.top).toBeGreaterThan(arenaBottom);
+diff --git a/src/features/battle/view/battleLayout.ts b/src/features/battle/view/battleLayout.ts
+index 11af092..fc4968c 100644
+--- a/src/features/battle/view/battleLayout.ts
++++ b/src/features/battle/view/battleLayout.ts
+@@ -126,6 +126,11 @@ export function weaponButtonAt(
+   return index === -1 ? null : index;
+ }
+ 
++/** Điểm chạm nằm trong thanh nút vũ khí (kể cả khe giữa hai nút) — vùng không bao giờ là chém. */
++export function isInWeaponBar(x: number, y: number, bar: WeaponBarLayout): boolean {
++  return x >= bar.left && x < bar.left + bar.width && y >= bar.top && y < bar.top + bar.height;
++}
++
+ /** Đổi góc của game (0 = 12 giờ) sang góc Phaser Graphics (0 = 3 giờ). */
+ export function toPhaserAngle(angle: number): number {
+   return angle - Math.PI / 2;
