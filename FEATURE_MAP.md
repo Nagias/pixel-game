@@ -12,6 +12,7 @@
 | F03 | Combo gom cụm 100% / 200% / 300%                 | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 | F04 | Máu nhân vật + dấu "!" báo quái sắp đánh         | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 | F05 | Đẩy quái theo vũ khí (knockback)                 | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
+| F06 | Màn chơi nối tiếp + trùm Slime Vua               | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -22,10 +23,11 @@ chạm tới mình thì thắng.
 **Luật** (nguồn sự thật: `logic/battle.ts` + `logic/battle.test.ts`):
 
 1. Sân chia 24 lát × 6 vòng; vòng 0 sát nhân vật.
-2. Mở trận: 4 slime (2 máu) xuất hiện thành cụm ở vòng ngoài cùng, mỗi con một lát.
+2. Mở trận: đội hình quái của màn (màn 1: 4 slime 2 máu — xem F06) xuất hiện thành cụm ở vòng ngoài
+   cùng, mỗi con một lát.
 3. Vùng xanh quay đều theo chiều kim đồng hồ, hết một vòng sau 2,4 giây. Hình vùng (vòng nào, rộng
    mấy lát) theo vũ khí đang cầm — xem F02.
-4. Mỗi lần chém tốn 1 lượt (tối đa 8): mọi quái trong vùng mất máu theo vũ khí và combo (F03), hết
+4. Mỗi lần chém tốn 1 lượt (màn 1 tối đa 8): mọi quái trong vùng mất máu theo vũ khí và combo (F03), hết
    máu thì biến mất.
 5. Sau nhát chém, từng con quái còn sống (theo thứ tự id): 60% tiến vào 1 vòng, 40% đi ngang 1 lát
    ("đi lung tung"); không đi vào ô đã có quái khác.
@@ -44,10 +46,10 @@ nhận chạm "chơi lại" (chống chạm nhầm). Game chỉ cho mobile: mọ
 | `logic/battleTypes.ts`  | Kiểu dữ liệu: cấu hình, trạng thái trận                                               |
 | `logic/battleConfig.ts` | Con số cân bằng, danh sách vũ khí                                                     |
 | `logic/arena.ts`        | Hình học sân: lát quấn vòng, vùng đánh, vị trí vùng xanh theo thời gian               |
-| `logic/battle.ts`       | `createBattle`, `selectWeapon`, `playTurn`                                            |
+| `logic/battle.ts`       | `createBattle`, `selectWeapon`, `playTurn`, `nextLevelIndex`, `isGameCleared`         |
 | `view/BattleScene.ts`   | Vẽ, nhận chạm, thanh nút vũ khí, số sát thương, màn thắng/thua, `BattleSnapshot`      |
 | `view/battleLayout.ts`  | Đổi (lát, vòng) sang tọa độ màn hình; hình nêm xanh khớp vùng luật; vị trí nút vũ khí |
-| `view/battleSprites.ts` | Hình hiệp sĩ và slime                                                                 |
+| `view/battleSprites.ts` | Hình hiệp sĩ, slime, Slime Vua                                                        |
 
 **Kiểm chứng tự động:**
 
@@ -193,11 +195,56 @@ dễ hơn số này.
 
 **Nợ liên quan:** DEBT-009.
 
+## F06 — Màn chơi nối tiếp + trùm
+
+**Người chơi thấy và làm gì:** game có 3 màn nối tiếp, thanh trên hiện "Màn 1/3". Thắng một màn thì
+chạm để sang màn kế. Màn 3 có trùm Slime Vua (slime tím đội vương miện, to hơn) — trâu và đánh đau
+hơn. Hạ hết màn 3 là "PHÁ ĐẢO!", chạm để chơi lại từ màn 1. Thua thì chạm để chơi lại đúng màn đó.
+
+**Luật** (nguồn sự thật: `logic/battle.ts` `createBattle` / `nextLevelIndex` / `isGameCleared` +
+test mục F06; chủ dự án duyệt ngày 23/10/2026):
+
+1. Màn 1: 4 slime, 8 lượt (y như trận trước F06) · Màn 2: 6 slime, 10 lượt · Màn 3: Slime Vua + 2
+   slime, 12 lượt.
+2. Slime Vua: 6 máu, áp sát thì mỗi lượt đánh mất 2 máu; còn lại y như slime (đi lung tung, combo, bị
+   đẩy, dấu "!"). Không có luật trùm riêng.
+3. Mỗi loại quái có máu, sức đánh, xác suất tiến vào riêng; quái áp sát đánh theo sức đánh của loại nó.
+4. Màn nào cũng bắt đầu đầy máu, cầm Kiếm, đủ lượt của màn.
+5. Thắng màn chưa phải cuối → sang màn kế; thắng màn cuối → phá đảo, chơi lại từ màn 1; thua → chơi
+   lại đúng màn đó.
+6. Màn 2 có 6 con nên cụm quái rộng ±3 lát (cụm ±2 chỉ có 5 chỗ); màn 1 và 3 giữ ±2.
+7. Cấu hình sai (không có màn, màn không có quái hoặc 0 lượt, loại quái không tồn tại hoặc 0 máu/0 sức
+   đánh) bị từ chối lúc mở màn — kiểm cả những màn chưa chơi tới.
+
+**Hành vi giao diện:** thanh trên chia 2 hàng (Lượt · Quái / Màn · Máu) vì số lượt có thể có 2 chữ số.
+Màn kết quả ghi rõ chạm để làm gì: "Chạm để sang màn 2", "Chạm để chơi lại màn 2", "Chạm để chơi lại
+từ màn 1". Có `?seed=` thì màn nào cũng dùng seed đó. Không lưu tiến trình: tải lại trang là về màn 1.
+
+**Con số:** `monsterKinds` và `levels` trong `src/features/battle/logic/battleConfig.ts`. Thêm màn =
+thêm một dòng; thêm loại quái = thêm tên vào `MonsterKind` + con số + hình cùng tên trong
+`view/battleSprites.ts` (thiếu hình thì TypeScript báo lỗi).
+
+**Kiểm chứng tự động:**
+
+- Unit: mở màn đúng cấu hình của màn (lượt, đội hình theo thứ tự id, máu theo loại); đầy máu, cầm vũ
+  khí đầu; cụm quái theo spread của màn; từ chối màn không tồn tại; trùm + slime áp sát đánh cộng theo
+  loại (2 + 1); mỗi loại đi theo xác suất của loại đó; chém không làm đổi màn; màn kế khi thắng / thua /
+  phá đảo; màn chưa xong thì chưa có màn kế; phá đảo chỉ khi thắng màn cuối; chặn cấu hình sai của
+  loại quái và của màn; hình Slime Vua không lệch hàng.
+- E2E: ngắm chuẩn đi liền 3 màn — màn nào cũng đầy máu, cầm Kiếm, đúng đội hình; thắng màn cuối là phá
+  đảo, chạm thì về màn 1 (ảnh `3-thang.png` "Chạm để sang màn 2", `6-man-trum.png`, `7-pha-dao.png`);
+  qua màn 1 rồi chém trượt ở màn 2 → thua → chạm thì chơi lại đúng màn 2 (ảnh `4-thua.png`).
+
+**Cân bằng (mô phỏng 500 ván mỗi màn):** ngắm chuẩn thắng màn 1 / 2 / 3 = 100% / 99,8% / 100%, dư
+trung bình ~2,36 / ~2,89 / ~4,67 lượt — **màn trùm đang dễ hơn màn 2**. Chém bừa thắng 0,2% / 0% / 0%.
+Seed 42 của E2E qua cả 3 màn (dư 4 / 4 / 6 lượt).
+
+**Nợ liên quan:** DEBT-007 (hình Slime Vua tạm), DEBT-008, DEBT-009.
+
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
 | Mã  | Tính năng                                                  | Ghi chú                                                     |
 | --- | ---------------------------------------------------------- | ----------------------------------------------------------- |
-| F06 | Màn chơi nối tiếp + trùm                                   |                                                             |
 | F07 | Kho vũ khí (rìu và vũ khí khác) + chọn 3 món mang vào trận | Chủ dự án nêu ngày 22/10; rìu có thể cần hình vùng đánh mới |
 | F08 | Skill                                                      | Chủ dự án nêu ngày 22/10; chờ mô tả cơ chế                  |
 

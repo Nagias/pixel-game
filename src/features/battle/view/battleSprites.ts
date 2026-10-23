@@ -37,7 +37,26 @@ const slime: PixelSprite = [
   '..00000000..',
 ];
 
-export const BATTLE_SPRITES = { hero, slime } as const;
+/** F06: Slime Vua — trùm màn cuối: tím, đội vương miện vàng, to hơn slime thường. 16×14. */
+const slimeKing: PixelSprite = [
+  '....0..00..0....',
+  '...0400440040...',
+  '...0434444340...',
+  '...0444444440...',
+  '..001111111100..',
+  '.01CC1111111110.',
+  '01C1111111111110',
+  '0111CC1111CC1110',
+  '0111C01111C01110',
+  '0111111111111110',
+  '0111111001111110',
+  '0111111111111110',
+  '.0F1111111111F0.',
+  '..000000000000..',
+];
+
+/** Tên hình quái trùng tên loại quái (MonsterKind) để view lấy hình theo `monster.kind`. */
+export const BATTLE_SPRITES = { hero, slime, slimeKing } as const;
 
 /** Phóng to nguyên lần để giữ nét pixel. */
-export const SPRITE_SCALE = { hero: 2, slime: 2 } as const;
+export const SPRITE_SCALE = { hero: 2, slime: 2, slimeKing: 2 } as const;

@@ -24,6 +24,9 @@ export interface WeaponConfig {
   readonly damage: number;
 }
 
+/** F06: các loại quái. Thêm loại mới = thêm tên ở đây + con số trong battleConfig.ts + hình. */
+export type MonsterKind = 'slime' | 'slimeKing';
+
 export interface MonsterConfig {
   readonly name: string;
   readonly hp: number;
@@ -38,24 +41,29 @@ export interface HeroConfig {
   readonly hp: number;
 }
 
+/** F06: một màn chơi. */
+export interface LevelConfig {
+  /** Số lượt tấn công tối đa của màn. */
+  readonly turnLimit: number;
+  /** Đội hình mở màn, theo thứ tự id (phần tử đầu là quái id 1). */
+  readonly monsters: readonly MonsterKind[];
+  /** Quái xuất hiện thành cụm trong khoảng ±spread lát quanh một lát ngẫu nhiên. */
+  readonly spread: number;
+}
+
 export interface BattleConfig {
   /** Số lát của vòng tròn (Micro RPG dùng 24). */
   readonly sectorCount: number;
   /** Số vòng từ trong ra ngoài (Micro RPG dùng 6). */
   readonly ringCount: number;
-  /** Số lượt tấn công tối đa mỗi trận. */
-  readonly turnLimit: number;
   /** Thời gian vùng xanh quay hết một vòng (ms). */
   readonly arcPeriodMs: number;
   /** Các vũ khí trên thanh nút ở đáy màn hình, theo thứ tự từ trái sang phải. */
   readonly weapons: readonly WeaponConfig[];
-  readonly monster: MonsterConfig;
+  readonly monsterKinds: Readonly<Record<MonsterKind, MonsterConfig>>;
   readonly hero: HeroConfig;
-  readonly spawn: {
-    readonly count: number;
-    /** Quái xuất hiện thành cụm trong khoảng ±spread lát quanh một lát ngẫu nhiên. */
-    readonly spread: number;
-  };
+  /** F06: các màn theo thứ tự chơi; thắng màn cuối là phá đảo. */
+  readonly levels: readonly LevelConfig[];
 }
 
 // ---------- Trạng thái trận đấu (dữ liệu thuần, JSON được) ----------
@@ -68,6 +76,8 @@ export interface Cell {
 
 export interface Monster extends Cell {
   readonly id: number;
+  /** F06: loại quái — sức đánh, cách đi lấy theo loại trong config.monsterKinds. */
+  readonly kind: MonsterKind;
   readonly hp: number;
 }
 
@@ -89,6 +99,8 @@ export interface BattleState {
   /** Seed ban đầu — đủ để tái hiện nguyên trận. */
   readonly seed: number;
   readonly rng: RngState;
+  /** F06: màn đang chơi — chỉ số trong config.levels (0 = màn 1). */
+  readonly level: number;
   readonly turnsLeft: number;
   /** F04: máu còn lại của nhân vật. */
   readonly heroHp: number;
