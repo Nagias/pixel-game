@@ -13,7 +13,11 @@ Unit test và E2E điều khiển game qua cầu nối `window.__PIXEL_GAME__` v
 
 1. Mở game bằng preview `game-dev` (`.claude/launch.json`) trong trình duyệt của Claude Desktop, đường
    dẫn `/?seed=42` (ván lặp lại được) và thêm một ván không seed.
-2. Đặt khung điện thoại **412×839** (cùng cỡ Pixel 7 của E2E). Không dùng khung máy tính.
+2. Đặt khung điện thoại **375×760** (`resize_window`), mở lại trang cho game co giãn theo khung. Không
+   dùng khung máy tính. Không dùng khung lớn hơn ô trình duyệt (vd. 412×839 của Pixel 7): ô thu nhỏ hình
+   và cú bấm rơi sai chỗ (đo 26/10/2026). Khung 375×760 không bị thu nhỏ: tọa độ bấm = tọa độ CSS × 1,5.
+   Đổi tọa độ game (khung 360×640) sang tọa độ bấm: đọc `getBoundingClientRect()` của canvas một lần.
+   Lần đầu bấm, ghi lại vị trí chạm (lắng nghe `pointerdown`, chỉ đọc) để chắc phép đổi đúng.
 3. **Chỉ thao tác như người:** bấm chuột vào đúng chỗ ngón tay sẽ chạm, dựa trên ảnh chụp màn hình. Không
    dùng cầu nối test hay gọi hàm trong game để điều khiển. Cầu nối chỉ được dùng **sau** khi thao tác,
    để đối chiếu điều mắt thấy với trạng thái thật.
