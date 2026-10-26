@@ -84,7 +84,8 @@ interface TaskSpec {
   readonly selftest: 'base-fails-hidden' | 'negative-fails-scope';
 }
 
-const DOCS = ['FEATURE_MAP.md', 'DEBT.md', 'TASKS.md', 'docs/**'];
+// LESSONS.md: sổ lỗi của skill sua-thanh-luat (chủ dự án chốt 23/10) — ghi sổ không bị tính là lạc đề.
+const DOCS = ['FEATURE_MAP.md', 'DEBT.md', 'TASKS.md', 'LESSONS.md', 'docs/**'];
 
 const TASKS: readonly TaskSpec[] = [
   {
@@ -390,7 +391,19 @@ function prepare(runsDir: string, runId: string, task: TaskSpec, config: string)
   if (existsSync(worktree)) throw new Error(`Đã có bài làm ở ${worktree}`);
   mkdirSync(runDir, { recursive: true });
 
-  git(ROOT, ['worktree', 'add', '--detach', worktree, BASE]);
+  // Bản sao git độc lập, KHÔNG dùng `git worktree`: Claude Code coi worktree là cùng dự án với bản
+  // chính nên nạp skill, agent và sổ ghi nhớ của thư mục dự án chính — cấu hình "trước" bị lẫn
+  // cấu hình đang sửa (phát hiện 26/10/2026, xem LESSONS.md). `--shared` mượn kho object của dự án
+  // nên tạo nhanh, không chép lại lịch sử.
+  git(ROOT, ['clone', '--quiet', '--shared', '--no-checkout', ROOT, worktree]);
+  git(worktree, ['remote', 'remove', 'origin']); // bài làm không đẩy ngược được vào dự án
+  git(worktree, ['checkout', '--quiet', '--detach', BASE]);
+  if (
+    resolve(worktree, git(worktree, ['rev-parse', '--git-common-dir']).trim()) !==
+    join(worktree, '.git')
+  ) {
+    throw new Error(`${worktree} không phải kho git độc lập — dừng để khỏi trộn cấu hình`);
+  }
   overlayAgentConfig(worktree, config);
   git(worktree, ['add', '-A']);
   git(worktree, [
@@ -718,7 +731,12 @@ function cleanup(runDir: string): void {
       }
       unlinkSync(link);
     }
-    git(ROOT, ['worktree', 'remove', '--force', worktree]);
+    if (lstatSync(join(worktree, '.git')).isFile()) {
+      // Bài làm kiểu cũ (git worktree, trước 26/10/2026).
+      git(ROOT, ['worktree', 'remove', '--force', worktree]);
+    } else {
+      rmSync(worktree, { recursive: true, force: true });
+    }
     console.log(`Đã gỡ ${worktree}`);
   }
 }
