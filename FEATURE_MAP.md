@@ -89,9 +89,11 @@ tính là chém).
 
 - Unit: trận mới cầm vũ khí đầu; đổi vũ khí không tốn lượt/không tung số ngẫu nhiên; cung trúng quái ở
   rìa còn kiếm thì không; độ rộng theo vũ khí; từ chối vũ khí không tồn tại; chạm điểm nào thì trúng
-  nút nào (kể cả khe giữa nút); thanh nút không đè lên sân.
-- E2E: chạm nút đổi vũ khí không tốn lượt; chém bằng đúng vũ khí đang cầm; ván thắng phải đổi vũ khí
-  đúng lúc (ảnh `2-cam-cung.png`, `3-thang.png`).
+  nút nào (kể cả khe giữa nút và sát mép khe); điểm nào thuộc thanh nút (`isInWeaponBar` — khe là
+  thanh nút, không phải sân); thanh nút không đè lên sân.
+- E2E: chạm nút đổi vũ khí không tốn lượt; chạm vào từng khe giữa hai nút không chém, không mất lượt,
+  không đổi vũ khí, quái đứng yên (ảnh `cham-khe.png`); ở màn kết quả chạm chỗ khe vẫn đi tiếp; chém
+  bằng đúng vũ khí đang cầm; ván thắng phải đổi vũ khí đúng lúc (ảnh `2-cam-cung.png`, `3-thang.png`).
 
 **Cân bằng (mô phỏng 500 ván):** ngắm chuẩn thắng 100% nhưng chỉ dư trung bình ~1,6 lượt (F01 dư ~4);
 chém bừa thua 100%. Seed 42 dùng cho E2E thắng được, dư 3 lượt.

@@ -126,6 +126,11 @@ export function weaponButtonAt(
   return index === -1 ? null : index;
 }
 
+/** Điểm chạm nằm trong khung thanh nút vũ khí (kể cả khe giữa hai nút) — vùng này không bao giờ là chém. */
+export function isInWeaponBar(x: number, y: number, bar: WeaponBarLayout): boolean {
+  return x >= bar.left && x < bar.left + bar.width && y >= bar.top && y < bar.top + bar.height;
+}
+
 /** Đổi góc của game (0 = 12 giờ) sang góc Phaser Graphics (0 = 3 giờ). */
 export function toPhaserAngle(angle: number): number {
   return angle - Math.PI / 2;

@@ -7,6 +7,7 @@ import {
   ringCenterRadius,
   ringInnerRadius,
   sectorCenterAngle,
+  isInWeaponBar,
   WEAPON_BAR,
   weaponButtonAt,
   weaponButtonRects,
@@ -116,13 +117,37 @@ describe('thanh nút vũ khí ở đáy màn hình (F02)', () => {
   });
 
   it.each([
+    [117, 556, 0], // ngay trái khe 1–2: còn trên nút 1
+    [130, 556, 1], // ngay phải khe 1–2: đã sang nút 2
+  ])('chạm sát ngoài khe (%f, %f) → nút %i', (x, y, expected) => {
+    expect(weaponButtonAt(x, y, 3, BAR)).toBe(expected);
+  });
+
+  // Bỏ chữ "(là chạm vào sân)" ở tên cũ: khe giữa hai nút không trúng nút nào nhưng KHÔNG phải sân —
+  // FEATURE_MAP F02 ghi chạm khe "không làm gì". Tên cũ ghi ngược nên game chém nhầm mà test vẫn xanh.
+  it.each([
     [124, 556], // khe giữa nút 1 và 2
     [180, 300], // giữa sân
     [180, 519], // ngay trên thanh
     [180, 592], // ngay dưới thanh
     [10, 556], // lề trái
-  ])('chạm (%f, %f) → không trúng nút nào (là chạm vào sân)', (x, y) => {
+  ])('chạm (%f, %f) → không trúng nút nào', (x, y) => {
     expect(weaponButtonAt(x, y, 3, BAR)).toBeNull();
+  });
+
+  it.each([
+    [124, 556, true], // giữa khe 1–2
+    [236, 556, true], // giữa khe 2–3
+    [118, 556, true], // mép trái khe 1–2
+    [129, 556, true], // mép phải khe 1–2
+    [68, 556, true], // trên nút
+    [18, 520, true], // góc trên-trái thanh
+    [180, 300, false], // giữa sân
+    [180, 519, false], // ngay trên thanh
+    [180, 592, false], // ngay dưới thanh
+    [10, 556, false], // lề trái, ngoài thanh
+  ])('chạm (%f, %f) nằm trong thanh nút vũ khí: %s', (x, y, expected) => {
+    expect(isInWeaponBar(x, y, BAR)).toBe(expected);
   });
 
   it('thanh nút không đè lên sân tròn', () => {
