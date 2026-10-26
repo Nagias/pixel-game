@@ -5,14 +5,15 @@
 
 ## Tổng quan
 
-| Mã  | Tính năng                                        | Trạng thái | Code                                 | Test                                                     |
-| --- | ------------------------------------------------ | ---------- | ------------------------------------ | -------------------------------------------------------- |
-| F01 | Trận đấu tối thiểu (walking skeleton, khuôn mẫu) | ✅ Xong    | `src/features/battle/`               | `src/features/battle/**/*.test.ts`, `e2e/battle.spec.ts` |
-| F02 | Thanh 3 nút vũ khí theo tầm (gần / vừa / xa)     | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
-| F03 | Combo gom cụm 100% / 200% / 300%                 | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
-| F04 | Máu nhân vật + dấu "!" báo quái sắp đánh         | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
-| F05 | Đẩy quái theo vũ khí (knockback)                 | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
-| F06 | Màn chơi nối tiếp + trùm Slime Vua               | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
+| Mã   | Tính năng                                        | Trạng thái | Code                                 | Test                                                     |
+| ---- | ------------------------------------------------ | ---------- | ------------------------------------ | -------------------------------------------------------- |
+| F01  | Trận đấu tối thiểu (walking skeleton, khuôn mẫu) | ✅ Xong    | `src/features/battle/`               | `src/features/battle/**/*.test.ts`, `e2e/battle.spec.ts` |
+| F02  | Thanh 3 nút vũ khí theo tầm (gần / vừa / xa)     | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
+| F03  | Combo gom cụm 100% / 200% / 300%                 | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
+| F04  | Máu nhân vật + dấu "!" báo quái sắp đánh         | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
+| F05  | Đẩy quái theo vũ khí (knockback)                 | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
+| F06  | Màn chơi nối tiếp + trùm Slime Vua               | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
+| F07a | Rìu chém hai phía + màn 4 quái tới từ hai phía   | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -67,7 +68,8 @@ nhận chạm "chơi lại" (chống chạm nhầm). Game chỉ cho mobile: mọ
 
 ## F02 — Thanh 3 nút vũ khí theo tầm
 
-**Người chơi thấy và làm gì:** đáy màn hình có 3 nút Kiếm (gần) · Giáo (vừa) · Cung (xa). Chạm một
+**Người chơi thấy và làm gì:** đáy màn hình có 3 nút Kiếm (gần) · Giáo (vừa) · Cung (xa) — từ F07a
+thêm nút thứ 4 Rìu (2 phía). Chạm một
 nút là cầm vũ khí đó, vùng xanh đổi hình ngay. Chạm vào sân là chém bằng vũ khí đang cầm. Quái mới
 xuất hiện ở rìa sân nên lúc đầu chỉ Cung với tới; quái càng áp sát càng phải đổi sang Giáo, Kiếm.
 Đây là cách "phạm vi vòng tròn thay đổi" trong ý tưởng ban đầu: phạm vi đổi theo vũ khí đang chọn.
@@ -200,15 +202,16 @@ dễ hơn số này.
 
 ## F06 — Màn chơi nối tiếp + trùm
 
-**Người chơi thấy và làm gì:** game có 3 màn nối tiếp, thanh trên hiện "Màn 1/3". Thắng một màn thì
-chạm để sang màn kế. Màn 3 có trùm Slime Vua (slime tím đội vương miện, to hơn) — trâu và đánh đau
-hơn. Hạ hết màn 3 là "PHÁ ĐẢO!", chạm để chơi lại từ màn 1. Thua thì chạm để chơi lại đúng màn đó.
+**Người chơi thấy và làm gì:** game có 4 màn nối tiếp (màn 4 thêm ở F07a), thanh trên hiện "Màn 1/4".
+Thắng một màn thì chạm để sang màn kế. Màn 3 có trùm Slime Vua (slime tím đội vương miện, to hơn) —
+trâu và đánh đau hơn. Hạ hết màn cuối là "PHÁ ĐẢO!", chạm để chơi lại từ màn 1. Thua thì chạm để chơi lại đúng màn đó.
 
 **Luật** (nguồn sự thật: `logic/battle.ts` `createBattle` / `nextLevelIndex` / `isGameCleared` +
 test mục F06; chủ dự án duyệt ngày 23/10/2026):
 
 1. Màn 1: 4 slime, 8 lượt (y như trận trước F06) · Màn 2: 6 slime, 10 lượt · Màn 3: Slime Vua + 3
-   slime, 10 lượt (chủ dự án duyệt 26/10/2026 — trước đó 2 slime, 12 lượt, dễ hơn màn 2).
+   slime, 10 lượt (chủ dự án duyệt 26/10/2026 — trước đó 2 slime, 12 lượt, dễ hơn màn 2) · Màn 4: xem
+   F07a.
 2. Slime Vua: 6 máu, áp sát thì mỗi lượt đánh mất 2 máu; còn lại y như slime (đi lung tung, combo, bị
    đẩy, dấu "!"). Không có luật trùm riêng.
 3. Mỗi loại quái có máu, sức đánh, xác suất tiến vào riêng; quái áp sát đánh theo sức đánh của loại nó.
@@ -235,22 +238,59 @@ thêm một dòng; thêm loại quái = thêm tên vào `MonsterKind` + con số
   phá đảo; màn chưa xong thì chưa có màn kế; phá đảo chỉ khi thắng màn cuối; chặn cấu hình sai của
   loại quái và của màn; hình Slime Vua không lệch hàng; với con số thật, màn trùm ít lượt dư hơn và
   thắng không nhiều hơn màn 2 khi ngắm chuẩn (`logic/balance.test.ts`, 200 ván mỗi màn).
-- E2E: ngắm chuẩn đi liền 3 màn — màn nào cũng đầy máu, cầm Kiếm, đúng đội hình; thắng màn cuối là phá
+- E2E: ngắm chuẩn đi liền mọi màn — màn nào cũng đầy máu, cầm Kiếm, đúng đội hình; thắng màn cuối là phá
   đảo, chạm thì về màn 1 (ảnh `3-thang.png` "Chạm để sang màn 2", `6-man-trum.png`, `7-pha-dao.png`);
   qua màn 1 rồi chém trượt ở màn 2 → thua → chạm thì chơi lại đúng màn 2 (ảnh `4-thua.png`).
 
-**Cân bằng (`npm run sim` — 500 ván mỗi màn, seed 1…500, cùng bot với E2E):** ngắm chuẩn thắng màn 1 / 2 / 3 = 100% / 99,8% / 94,6%, dư
-trung bình ~2,36 / ~2,89 / ~2,56 lượt — màn trùm khó hơn màn 2 (unit test `balance.test.ts` giữ quan hệ này). Chém bừa thắng 0,2% / 0% / 0,2%.
-Seed 42 của E2E qua cả 3 màn (dư 4 / 4 / 4 lượt).
+**Cân bằng (`npm run sim` — 500 ván mỗi màn, seed 1…500, cùng bot với E2E):** ngắm chuẩn thắng màn 1 / 2 / 3 / 4 = 100% / 99,8% / 94,6% / 86,8%,
+dư trung bình ~2,36 / ~2,89 / ~2,56 / ~1,25 lượt — màn trùm khó hơn màn 2, màn 4 khó hơn màn 3 (unit test `balance.test.ts` giữ hai quan hệ này). Chém bừa (từ khi có 4 vũ khí) thắng 0,2% / 0% / 0% / 0%.
+Seed 42 của E2E qua cả 4 màn (dư 4 / 4 / 4 / 4 lượt).
 
 **Nợ liên quan:** DEBT-007 (hình Slime Vua tạm), DEBT-008, DEBT-009.
 
+## F07a — Rìu chém hai phía + màn 4 quái tới từ hai phía
+
+**Người chơi thấy và làm gì:** đáy màn hình có thêm nút thứ 4 **Rìu** (chữ phụ "2 phía"). Cầm Rìu thì
+vùng xanh là **hai nêm đối nhau** — trước mặt và sau lưng — ở sát nhân vật, quay cùng nhau. Màn 4 quái
+xuất hiện thành **hai cụm ở hai phía đối diện**; quái áp sát từ cả hai phía là lúc Rìu chém được cả hai.
+
+**Luật** (nguồn sự thật: `logic/arena.ts` `aimSectors` / `isInZone`, `logic/battle.ts` `createBattle`
+
+- test mục B2; chủ dự án duyệt ngày 26/10/2026):
+
+1. Rìu: mỗi nêm rộng 3 lát, vòng 0–1, 1 sát thương, đẩy lùi. Nêm sau lưng ở lát đối diện (lệch nửa vòng).
+2. Một nhát Rìu đếm quái của cả hai nêm cho combo; đẩy áp dụng cho quái ở cả hai nêm.
+3. Màn 4: 8 slime, 10 lượt. Nửa đầu đội hình (id 1–4) thành một cụm ±2 lát quanh một lát ngẫu nhiên,
+   nửa sau (id 5–8) thành cụm ±2 lát quanh lát đối diện.
+4. Cấu hình sai bị từ chối: vũ khí hai phía trên sân lẻ lát hoặc hai nêm chồng nhau; màn hai phía trên
+   sân lẻ lát, cụm không đủ chỗ, hoặc hai cụm chồng nhau.
+
+**Hành vi giao diện:** thanh nút chia 4 nút bằng nhau (mỗi nút rộng 72, khe 12), vẫn "chạm khe không
+làm gì" ở cả 3 khe. Không thêm hiệu ứng mới.
+
+**Con số:** `weapons` (Rìu: `twoSided: true`) và `levels` (màn 4: `splitOpposite: true`) trong
+`src/features/battle/logic/battleConfig.ts`.
+
+**Kiểm chứng tự động:**
+
+- Unit: lát giữa từng nêm (quấn qua lát 0); trúng ở cả hai nêm, mép nêm, ngoài nêm/ngoài vòng; combo đếm
+  chung hai nêm; đẩy lùi cả hai phía; hình nêm vẽ ra trùng khít vùng luật với mọi lát ngắm (vũ khí một
+  nêm và hai phía rộng 1/3/5); màn hai phía: mỗi cụm gọn, hai cụm đối diện, không chồng ô, đội hình lẻ;
+  màn thường mở y như trước; từ chối cấu hình sai; màn 4 khó hơn màn 3 khi ngắm chuẩn.
+- E2E: chạm nút Rìu cầm Rìu không tốn lượt, chém bằng Rìu đúng vùng luật (ảnh `9-cam-riu.png`); chạm
+  cả 3 khe không làm gì; ván seed 42 đi đủ 4 màn, màn 4 hai cụm đối diện (ảnh `8-man-hai-phia.png`).
+
+**Cân bằng:** xem F06 (`npm run sim`). Bot ngắm chuẩn dùng Rìu rất ít (~1% số nhát): nó hạ quái từ xa
+bằng Cung/Giáo nên quái hiếm khi áp sát cả hai phía cùng lúc. Rìu là vũ khí "cứu nguy".
+
+**Nợ liên quan:** DEBT-009.
+
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
-| Mã  | Tính năng                                                  | Ghi chú                                                     |
-| --- | ---------------------------------------------------------- | ----------------------------------------------------------- |
-| F07 | Kho vũ khí (rìu và vũ khí khác) + chọn 3 món mang vào trận | Chủ dự án nêu ngày 22/10; rìu có thể cần hình vùng đánh mới |
-| F08 | Skill                                                      | Chủ dự án nêu ngày 22/10; chờ mô tả cơ chế                  |
+| Mã  | Tính năng                                                     | Ghi chú                                      |
+| --- | ------------------------------------------------------------- | -------------------------------------------- |
+| F07 | Kho vũ khí + chọn 3 món mang vào trận (phần còn lại sau F07a) | Chủ dự án nêu ngày 22/10; Rìu đã xong ở F07a |
+| F08 | Skill                                                         | Chủ dự án nêu ngày 22/10; chờ mô tả cơ chế   |
 
 ## Mẫu cho tính năng mới (copy khối này)
 

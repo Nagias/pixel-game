@@ -129,6 +129,28 @@ test('F02: ở màn kết quả, chạm vào chỗ khe giữa hai nút vẫn là
   expect(battle).toMatchObject({ level: 0, phase: 'playing', turnsLeft: LEVEL_1.turnLimit });
 });
 
+test('B2: chạm nút Rìu thì cầm Rìu (không tốn lượt), chém bằng Rìu đúng vùng hai nêm', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.openBattle(SEED);
+  const axeIndex = BATTLE_CONFIG.weapons.findIndex((w) => w.twoSided);
+  expect(axeIndex).toBeGreaterThanOrEqual(0);
+
+  await game.selectWeapon(axeIndex);
+  const before = await game.snapshot();
+  expect(before.battle).toMatchObject({ weaponIndex: axeIndex, turnsLeft: LEVEL_1.turnLimit });
+  await game.advance(50);
+  await page.screenshot({ path: test.info().outputPath('9-cam-riu.png') });
+
+  const move = { weaponIndex: axeIndex, sector: 0 };
+  await game.attackAt(move.sector);
+  const after = (await game.snapshot()).battle;
+  expect(after.turnsLeft).toBe(LEVEL_1.turnLimit - 1);
+  expect(after.lastAttack?.aimSector).toBe(move.sector);
+  expect(after.lastAttack?.hits.map((hit) => hit.monsterId)).toEqual(hitIds(before, move));
+});
+
 test('chạm sân chém đúng lát vùng xanh, bằng đúng vũ khí đang cầm', async ({ page }) => {
   const game = new BattleDriver(page);
   await game.openBattle(SEED);
@@ -166,9 +188,20 @@ test('F06: ngắm chuẩn thắng màn nào sang màn kế, hạ trùm ở màn 
       turnsLeft: turnLimit,
     });
     expect(start.monsters.map((m) => m.kind)).toEqual(monsters);
-    if (level === LAST_LEVEL) {
+    if (monsters.includes('slimeKing')) {
       await game.advance(50);
       await page.screenshot({ path: test.info().outputPath('6-man-trum.png') });
+    }
+    if (levelAt(level, BATTLE_CONFIG).splitOpposite) {
+      // B2: nửa đầu đội hình ở một phía, nửa sau ở phía đối diện (lệch nửa vòng).
+      const half = Math.ceil(start.monsters.length / 2);
+      const [first, last] = [start.monsters[0], start.monsters[half]];
+      if (!first || !last) throw new Error('Thiếu quái ở một trong hai cụm');
+      const gap = Math.abs(first.sector - last.sector) % BATTLE_CONFIG.sectorCount;
+      const apart = Math.min(gap, BATTLE_CONFIG.sectorCount - gap);
+      expect(apart).toBeGreaterThanOrEqual(BATTLE_CONFIG.sectorCount / 2 - 2 * 2);
+      await game.advance(50);
+      await page.screenshot({ path: test.info().outputPath('8-man-hai-phia.png') });
     }
 
     mostHitsInOneStrike = Math.max(mostHitsInOneStrike, await playBestUntilOver(game));
