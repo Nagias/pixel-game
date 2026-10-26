@@ -2,6 +2,7 @@
 import { expect, test } from '@playwright/test';
 import { isGameCleared, isThreatening, levelAt } from '../src/features/battle/logic/battle';
 import { BATTLE_CONFIG } from '../src/features/battle/logic/battleConfig';
+import { WEAPON_BAR, weaponButtonRects } from '../src/features/battle/view/battleLayout';
 import { BattleDriver, bestMove, hitIds, missMove } from './support/battleDriver';
 
 // Seed cố định để ván chơi lặp lại y hệt (màn nào cũng dùng seed này). Đổi cân bằng mà ván này
@@ -73,6 +74,59 @@ test('chạm nút vũ khí: đổi vũ khí đang cầm, không tốn lượt', 
 
   await game.selectWeapon(1);
   expect((await game.snapshot()).battle.weaponIndex).toBe(1);
+});
+
+/** Tâm các khe giữa hai nút vũ khí kề nhau, tính từ đúng bố cục game đang dùng. */
+function weaponGapCenters(): { x: number; y: number }[] {
+  const rects = weaponButtonRects(BATTLE_CONFIG.weapons.length, WEAPON_BAR);
+  return rects.slice(1).map((right, i) => {
+    const left = rects[i];
+    if (!left) throw new Error('Thiếu nút vũ khí bên trái khe');
+    return { x: (left.x + left.width + right.x) / 2, y: right.y + right.height / 2 };
+  });
+}
+
+test('F02: chạm vào khe giữa hai nút vũ khí không làm gì — không chém, không mất lượt', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.openBattle(SEED);
+  const before = (await game.snapshot()).battle;
+  const gaps = weaponGapCenters();
+  expect(gaps).toHaveLength(BATTLE_CONFIG.weapons.length - 1);
+
+  for (const gap of gaps) {
+    await game.tapAt(gap.x, gap.y);
+    const { battle } = await game.snapshot();
+    expect(battle.turnsLeft).toBe(before.turnsLeft);
+    expect(battle.weaponIndex).toBe(before.weaponIndex);
+    expect(battle.monsters).toEqual(before.monsters);
+    expect(battle.lastAttack).toBeNull();
+  }
+  await game.advance(50);
+  await page.screenshot({ path: test.info().outputPath('cham-khe.png') });
+
+  // Chạm vào sân thì vẫn chém như cũ.
+  await game.tap();
+  expect((await game.snapshot()).battle.turnsLeft).toBe(before.turnsLeft - 1);
+});
+
+test('F02: ở màn kết quả, chạm vào chỗ khe giữa hai nút vẫn là "chạm để tiếp tục"', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.openBattle(SEED);
+  while ((await game.snapshot()).battle.phase === 'playing') {
+    await game.play(missMove(await game.snapshot()));
+  }
+  expect((await game.snapshot()).battle.phase).toBe('lost');
+
+  await game.advance(RESULT_SCREEN_WAIT_MS);
+  const [gap] = weaponGapCenters();
+  if (!gap) throw new Error('Không có khe giữa hai nút');
+  await game.tapAt(gap.x, gap.y);
+  const { battle } = await game.snapshot();
+  expect(battle).toMatchObject({ level: 0, phase: 'playing', turnsLeft: LEVEL_1.turnLimit });
 });
 
 test('chạm sân chém đúng lát vùng xanh, bằng đúng vũ khí đang cầm', async ({ page }) => {

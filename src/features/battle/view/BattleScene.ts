@@ -25,6 +25,7 @@ import {
   ringInnerRadius,
   sectorStartAngle,
   toPhaserAngle,
+  isInWeaponBar,
   WEAPON_BAR,
   weaponButtonAt,
   weaponButtonRects,
@@ -156,7 +157,8 @@ export class BattleScene extends Scene {
     }
     const button = weaponButtonAt(x, y, this.config.weapons.length, WEAPON_BAR);
     if (button === null) {
-      this.attack();
+      // Khe giữa hai nút vẫn thuộc thanh nút: không chém, không tốn lượt (FEATURE_MAP F02).
+      if (!isInWeaponBar(x, y, WEAPON_BAR)) this.attack();
     } else {
       this.battle = selectWeapon(this.battle, button, this.config);
       this.drawZone();
