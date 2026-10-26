@@ -4,7 +4,13 @@ import type { BattleSnapshot, LoadoutSnapshot } from '../../src/features/battle'
 import * as autoPlay from '../../src/features/battle/logic/autoPlay';
 import type { Move } from '../../src/features/battle/logic/autoPlay';
 import { BATTLE_CONFIG } from '../../src/features/battle/logic/battleConfig';
-import { WEAPON_BAR, weaponButtonRects } from '../../src/features/battle/view/battleLayout';
+import type { SkillKind } from '../../src/features/battle/logic/battleTypes';
+import {
+  barButtonCount,
+  skillButtonIndex,
+  WEAPON_BAR,
+  weaponButtonRects,
+} from '../../src/features/battle/view/battleLayout';
 import { LOADOUT_LAYOUT, optionRects } from '../../src/features/battle/view/loadoutLayout';
 import { GameDriver } from './gameDriver';
 
@@ -65,6 +71,24 @@ export class BattleDriver extends GameDriver {
     await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
   }
 
+  /** B6: màn chuẩn bị — chạm nút skill `skill` ở hàng skill (ngay dưới các hàng vũ khí). */
+  async chooseSkill(skill: SkillKind): Promise<void> {
+    const { rows, skills } = await this.waitLoadoutReady();
+    const rect = optionRects(rows.length, skills.length, LOADOUT_LAYOUT)[skills.indexOf(skill)];
+    if (!rect) throw new Error(`Màn chuẩn bị không có nút skill "${skill}"`);
+    await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
+  }
+
+  /** B6: chạm ô skill cuối thanh nút (bấm skill nếu đã đầy; chưa đầy thì không có gì xảy ra). */
+  async castSkill(): Promise<void> {
+    const { loadout } = (await this.snapshot()).battle;
+    const index = skillButtonIndex(loadout);
+    const rect =
+      index === null ? undefined : weaponButtonRects(barButtonCount(loadout), WEAPON_BAR)[index];
+    if (!rect) throw new Error('Trận này không mang skill');
+    await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
+  }
+
   /** Màn chuẩn bị: chạm "VÀO TRẬN", chờ scene trận mở. */
   async startBattle(): Promise<void> {
     await this.waitLoadoutReady();
@@ -76,8 +100,10 @@ export class BattleDriver extends GameDriver {
 
   /** Chạm vào nút của vũ khí `weaponIndex` (chỉ số trong config.weapons) ở đáy màn hình. */
   async selectWeapon(weaponIndex: number): Promise<void> {
-    const { weapons } = (await this.snapshot()).battle.loadout;
-    const rect = weaponButtonRects(weapons.length, WEAPON_BAR)[weapons.indexOf(weaponIndex)];
+    const { loadout } = (await this.snapshot()).battle;
+    const rect = weaponButtonRects(barButtonCount(loadout), WEAPON_BAR)[
+      loadout.weapons.indexOf(weaponIndex)
+    ];
     if (!rect) throw new Error(`Không mang vũ khí số ${weaponIndex} vào trận`);
     await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
   }
