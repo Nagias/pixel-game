@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arcSectorAt, isInZone, knockbackCell, wrapSector, zoneSectors } from './arena';
+import { aimSectors, arcSectorAt, isInZone, knockbackCell, wrapSector, zoneSectors } from './arena';
 import type { WeaponConfig } from './battleTypes';
 
 const SECTORS = 24;
@@ -67,6 +67,42 @@ describe('isInZone', () => {
     expect(isInZone({ sector: 0, ring: 1 }, 0, shortSword, SECTORS)).toBe(true);
     expect(isInZone({ sector: 0, ring: 2 }, 0, shortSword, SECTORS)).toBe(true);
     expect(isInZone({ sector: 0, ring: 3 }, 0, shortSword, SECTORS)).toBe(false);
+  });
+});
+
+describe('B2 — vũ khí chém hai phía (twoSided): thêm một nêm y hệt ở lát đối diện', () => {
+  const axe = weapon({ twoSided: true, minRing: 0, maxRing: 1 });
+
+  it('vũ khí thường chỉ ngắm một lát; vũ khí hai phía ngắm thêm lát đối diện (nửa vòng)', () => {
+    expect(aimSectors(5, weapon(), SECTORS)).toEqual([5]);
+    expect(aimSectors(5, axe, SECTORS)).toEqual([5, 17]);
+  });
+
+  it.each([
+    [20, [20, 8]],
+    [2, [2, 14]],
+    [12, [12, 0]],
+  ])('ngắm lát %i → hai nêm ở lát %j (quấn qua lát 0)', (aim, expected) => {
+    expect(aimSectors(aim, axe, SECTORS)).toEqual(expected);
+  });
+
+  it('trúng quái ở nêm trước và nêm sau lưng, cả mép nêm', () => {
+    expect(isInZone({ sector: 5, ring: 0 }, 5, axe, SECTORS)).toBe(true);
+    expect(isInZone({ sector: 17, ring: 1 }, 5, axe, SECTORS)).toBe(true);
+    expect(isInZone({ sector: 16, ring: 0 }, 5, axe, SECTORS)).toBe(true); // mép nêm sau (rộng 3)
+    expect(isInZone({ sector: 18, ring: 1 }, 5, axe, SECTORS)).toBe(true);
+  });
+
+  it('nêm sau lưng quấn qua lát 0: ngắm lát 13 → nêm sau gồm lát 0, 1, 2', () => {
+    expect(isInZone({ sector: 0, ring: 0 }, 13, axe, SECTORS)).toBe(true);
+    expect(isInZone({ sector: 2, ring: 0 }, 13, axe, SECTORS)).toBe(true);
+    expect(isInZone({ sector: 3, ring: 0 }, 13, axe, SECTORS)).toBe(false);
+  });
+
+  it('không trúng ngoài hai nêm, hoặc ngoài dải vòng của vũ khí', () => {
+    expect(isInZone({ sector: 11, ring: 0 }, 5, axe, SECTORS)).toBe(false); // giữa hai nêm
+    expect(isInZone({ sector: 23, ring: 1 }, 5, axe, SECTORS)).toBe(false);
+    expect(isInZone({ sector: 17, ring: 2 }, 5, axe, SECTORS)).toBe(false); // ngoài vòng 0–1
   });
 });
 

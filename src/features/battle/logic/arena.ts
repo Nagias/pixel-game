@@ -37,7 +37,16 @@ export function zoneSectors(
   return sectors;
 }
 
-/** Ô có nằm trong vùng đánh của vũ khí khi ngắm vào `aimSector` không. */
+/**
+ * Lát giữa của từng nêm khi ngắm vào `aimSector`: một nêm, hoặc thêm nêm đối diện (lệch nửa vòng) với
+ * vũ khí chém hai phía (B2). Nguồn duy nhất cho luật, bot và hình vẽ.
+ */
+export function aimSectors(aimSector: number, weapon: WeaponConfig, sectorCount: number): number[] {
+  if (!weapon.twoSided) return [aimSector];
+  return [aimSector, wrapSector(aimSector + sectorCount / 2, sectorCount)];
+}
+
+/** Ô có nằm trong vùng đánh của vũ khí (mọi nêm của nó) khi ngắm vào `aimSector` không. */
 export function isInZone(
   cell: Cell,
   aimSector: number,
@@ -45,7 +54,9 @@ export function isInZone(
   sectorCount: number,
 ): boolean {
   if (cell.ring < weapon.minRing || cell.ring > weapon.maxRing) return false;
-  return zoneSectors(aimSector, weapon.widthSectors, sectorCount).includes(cell.sector);
+  return aimSectors(aimSector, weapon, sectorCount).some((aim) =>
+    zoneSectors(aim, weapon.widthSectors, sectorCount).includes(cell.sector),
+  );
 }
 
 /** Lát mà vùng xanh đang chỉ vào sau `elapsedMs` mili giây quay đều với chu kỳ `periodMs`. */

@@ -22,6 +22,8 @@ export interface WeaponConfig {
   /** Vòng ngoài cùng mà vũ khí với tới. */
   readonly maxRing: number;
   readonly damage: number;
+  /** B2: chém cả sau lưng — thêm một nêm y hệt ở lát đối diện (vd. Rìu). Mặc định chỉ một nêm. */
+  readonly twoSided?: boolean;
 }
 
 /** F06: các loại quái. Thêm loại mới = thêm tên ở đây + con số trong battleConfig.ts + hình. */

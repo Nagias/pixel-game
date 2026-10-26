@@ -29,6 +29,12 @@ function validateBattleConfig(config: BattleConfig): void {
       problems.push(`${label}: tầm vòng ${weapon.minRing}–${weapon.maxRing} không hợp lệ`);
     }
     if (weapon.damage < 1) problems.push(`${label}: phải gây ít nhất 1 sát thương`);
+    if (weapon.twoSided && sectorCount % 2 !== 0) {
+      problems.push(`${label}: chém hai phía cần số lát chẵn để có lát đối diện`);
+    }
+    if (weapon.twoSided && weapon.widthSectors * 2 > sectorCount) {
+      problems.push(`${label}: hai nêm rộng ${weapon.widthSectors} lát chồng lên nhau`);
+    }
     if (!PUSH_DIRECTIONS.includes(weapon.push)) {
       problems.push(`${label}: kiểu đẩy "${String(weapon.push)}" không tồn tại`);
     }

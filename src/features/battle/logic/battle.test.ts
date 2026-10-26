@@ -216,6 +216,9 @@ describe('createBattle — chặn cấu hình sai trước khi mở trận', () 
     ['nhân vật không có máu', { ...CONFIG, hero: { hp: 0 } }],
     ['quái không có sức đánh', kindRule('slime', { attack: 0 })],
     ['kiểu đẩy không tồn tại', weapon({ push: 'xoay' as WeaponConfig['push'] })],
+    // B2: nêm sau lưng nằm đúng lát đối diện → số lát phải chẵn; hai nêm không được chồng nhau.
+    ['vũ khí hai phía trên sân số lát lẻ', { ...weapon({ twoSided: true }), sectorCount: 23 }],
+    ['vũ khí hai phía có hai nêm chồng nhau', weapon({ twoSided: true, widthSectors: 13 })],
     // F06: mọi loại quái và mọi màn đều được kiểm, kể cả loại/màn chưa dùng tới lúc mở màn 1.
     ['trùm không có máu', kindRule('slimeKing', { hp: 0 })],
     ['trùm không có sức đánh', kindRule('slimeKing', { attack: 0 })],
@@ -594,6 +597,28 @@ describe('F05 — đẩy quái theo vũ khí', () => {
     const before = stateWith([monster(1, 0, 1, 5)]);
     const config = { ...pushing('out'), monsterKinds: withAdvanceChance(0.5).monsterKinds };
     expect(playTurn(before, 0, config).rng).toBe(before.rng);
+  });
+});
+
+describe('B2 — vũ khí chém hai phía (Rìu)', () => {
+  // Rìu thử: một lát mỗi nêm, vòng 0–1. Ngắm lát 0 → nêm trước ở lát 0, nêm sau lưng ở lát 12.
+  const AXE = { twoSided: true, widthSectors: 1, minRing: 0, maxRing: 1 } as const;
+
+  it('một nhát trúng quái ở cả trước mặt và sau lưng; combo đếm chung cả hai nêm', () => {
+    const before = stateWith([monster(1, 0, 0, 2), monster(2, 12, 1, 5), monster(3, 6, 0, 2)]);
+    const after = playTurn(before, 0, pushing('none', AXE));
+    expect(after.lastAttack?.hits).toEqual([
+      { monsterId: 1, damage: 1, killed: false },
+      { monsterId: 2, damage: 2, killed: false },
+    ]);
+    expect(byId(after, 3)?.hp).toBe(2); // lát 6 nằm giữa hai nêm — không trúng
+  });
+
+  it('đẩy lùi áp dụng cho quái ở cả hai nêm', () => {
+    const config = { ...pushing('out', AXE), monsterKinds: withAdvanceChance(1).monsterKinds };
+    const after = playTurn(stateWith([monster(1, 0, 1, 5), monster(2, 12, 1, 5)]), 0, config);
+    expect(byId(after, 1)).toMatchObject({ sector: 0, ring: 2 });
+    expect(byId(after, 2)).toMatchObject({ sector: 12, ring: 2 });
   });
 });
 
