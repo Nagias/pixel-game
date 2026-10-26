@@ -1,11 +1,23 @@
 # Lộ trình sau F06
 
-> Bản đề xuất ngày 26/10/2026 — **chờ chủ dự án duyệt**. Thứ tự và phạm vi do chủ dự án chốt; agent
+> Bản đề xuất ngày 26/10/2026, chủ dự án đã duyệt (PR #9); tiến độ ở mục "Trạng thái". Thứ tự và phạm vi do chủ dự án chốt; agent
 > không tự đặt luật chơi hay con số (CLAUDE.md mục 2.3). Mọi phương án và con số trong file này là
 > **đề xuất của agent để chủ dự án chọn**, chưa phải luật. Mỗi đợt xong mới bàn đợt sau.
 > Nguồn: `FEATURE_MAP.md`, `DEBT.md` (nhánh `feat/levels-boss`), `docs/research/micro-rpg.md`,
 > `docs/agent-team.md`, `bench/README.md`; phần nội dung game có góp ý của chuyên gia Game Designer
 > (agency-agents); bản này đã qua chấm chéo độc lập (mục 7).
+
+## Trạng thái (cập nhật 26/10/2026)
+
+| Đợt   | Trạng thái | Ghi chú                                                                                                                                                                                                                                                                                                  |
+| ----- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1    | ✅ Xong    | F06 gộp vào `main` (PR #7)                                                                                                                                                                                                                                                                               |
+| A2–A4 | ⏸️ Dừng    | Đo bài T6 + T2: chưa có đội 19/20, có đội 19/20 nhưng tốn ~3,5 lần token → chủ dự án quyết **tạm không dùng đội agent**; bản cất ở `D:\26. Archive\doi-agent-2026-10-26` (`docs/agent-team.md` mục 10, `bench/results.md`). Các đợt B chạy theo `docs/plans/` + kiểm chứng 3 lớp (`docs/MANUAL_TEST.md`) |
+| B1    | ✅ Xong    | Sửa chạm khe (PR #12), công cụ `npm run sim` (PR #13), màn trùm 6 máu + 3 slime, 10 lượt (PR #15) — kế hoạch `docs/plans/2026-10-26-sua-nen.md`                                                                                                                                                          |
+| B2    | ✅ Xong    | Rìu chém hai phía + **màn 4** quái tới từ hai phía (PR #16, F07a) — kế hoạch `docs/plans/2026-10-26-riu.md`. Màn 4 thêm vì mô phỏng cho thấy ở màn 1–3 quái không bao giờ ở cả hai phía                                                                                                                  |
+| B3    | ⏳ Kế tiếp | Chờ chủ dự án chọn loại quái (mục 3.2)                                                                                                                                                                                                                                                                   |
+| B4–B6 | ⏳ Chưa    | B5 (thêm màn) đã có một phần: màn 4                                                                                                                                                                                                                                                                      |
+| C, D  | ⏳ Chưa    | —                                                                                                                                                                                                                                                                                                        |
 
 ## 1. Kết luận
 
@@ -144,9 +156,8 @@ mạng hết lỗi IPv6), DEBT-010 (ghim máy CI Ubuntu 24.04 — khi Playwright
 
 ## 6. Việc cần chủ dự án quyết ngay để bắt đầu
 
-1. Duyệt thứ tự A → B (và C trước B4 nếu muốn).
-2. Duyệt gộp PR #7 (F06) — bước A1.
-3. Thư mục ngoài dự án để chạy `bench/` và đồng ý mức quota ở bước A2.
+Ba việc ban đầu (duyệt thứ tự A → B, gộp F06, thư mục chạy `bench/`) đã xong ngày 26/10/2026 — xem
+mục "Trạng thái". Việc cần quyết tiếp theo: loại quái của B3 (mục 3.2).
 
 ## 7. Chấm chéo bản lộ trình
 
