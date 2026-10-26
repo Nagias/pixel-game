@@ -189,6 +189,8 @@ test('chạm sân chém đúng lát vùng xanh, bằng đúng vũ khí đang c�
 test('F06: ngắm chuẩn thắng màn nào sang màn kế, hạ trùm ở màn cuối là phá đảo, rồi chơi lại từ màn 1', async ({
   page,
 }) => {
+  // Đi đủ mọi màn (mỗi màn qua màn chuẩn bị chờ 0,5 giây): lâu hơn mức 30 giây trên máy CI chậm.
+  test.slow();
   const game = new BattleDriver(page);
   await game.openBattle(SEED);
 
