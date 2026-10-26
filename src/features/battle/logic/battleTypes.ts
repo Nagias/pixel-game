@@ -51,6 +51,11 @@ export interface LevelConfig {
   readonly monsters: readonly MonsterKind[];
   /** Quái xuất hiện thành cụm trong khoảng ±spread lát quanh một lát ngẫu nhiên. */
   readonly spread: number;
+  /**
+   * B2: quái tới từ hai phía — nửa đầu đội hình thành một cụm, nửa sau thành cụm ở lát đối diện
+   * (mỗi cụm ±spread lát). Mặc định một cụm.
+   */
+  readonly splitOpposite?: boolean;
 }
 
 export interface BattleConfig {

@@ -190,6 +190,51 @@ describe('createBattle — mở trận', () => {
   });
 });
 
+describe('B2 — màn quái tới từ hai phía (splitOpposite)', () => {
+  // Chủ dự án duyệt 26/10/2026: nửa đầu đội hình thành một cụm, nửa sau thành cụm ở lát đối diện.
+  const TWO_SIDES = oneLevel({ monsters: slimes(8), spread: 2, splitOpposite: true });
+
+  it('nửa đầu đội hình (id nhỏ) là một cụm, nửa sau là cụm ở lát đối diện, không chồng ô', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const monsters = createBattle(seed, TWO_SIDES, 0).monsters;
+      const front = monsters.slice(0, 4).map((m) => m.sector);
+      const back = monsters.slice(4).map((m) => m.sector);
+      expect(new Set([...front, ...back]).size).toBe(8);
+      // Dời cụm sau nửa vòng thì cả 8 con nằm gọn trong một cụm ±2 lát.
+      const aligned = [...front, ...back.map((s) => (s + 12) % 24)];
+      for (const a of aligned) {
+        for (const b of aligned) expect(circularDistance(a, b, 24)).toBeLessThanOrEqual(4);
+      }
+      for (const m of monsters) expect(m.ring).toBe(5);
+    }
+  });
+
+  it('đội hình lẻ: cụm trước nhiều hơn một con', () => {
+    const odd = oneLevel({ monsters: slimes(5), spread: 2, splitOpposite: true });
+    const monsters = createBattle(3, odd, 0).monsters;
+    const center = monsters[0]?.sector ?? 0;
+    const near = monsters.filter((m) => circularDistance(m.sector, center, 24) <= 4);
+    expect(near.map((m) => m.id)).toEqual([1, 2, 3]);
+  });
+
+  it('màn không chia hai phía mở y như trước (cùng seed ra cùng đội hình)', () => {
+    expect(createBattle(9, CONFIG, 0)).toEqual(
+      createBattle(9, oneLevel({ splitOpposite: false }), 0),
+    );
+  });
+
+  it.each<[string, BattleConfig]>([
+    ['một cụm không đủ chỗ', oneLevel({ monsters: slimes(12), spread: 2, splitOpposite: true })],
+    ['hai cụm chồng lên nhau', oneLevel({ monsters: slimes(8), spread: 6, splitOpposite: true })],
+    [
+      'sân số lát lẻ',
+      { ...oneLevel({ monsters: slimes(4), spread: 2, splitOpposite: true }), sectorCount: 23 },
+    ],
+  ])('từ chối: %s', (_label, config) => {
+    expect(() => createBattle(1, config, 0)).toThrow(RangeError);
+  });
+});
+
 describe('createBattle — chặn cấu hình sai trước khi mở trận', () => {
   // Vũ khí sai nằm ở vị trí thứ 2 để chắc mọi vũ khí đều được kiểm, không chỉ vũ khí đầu.
   const weapon = (patch: Partial<WeaponConfig>): BattleConfig => ({
