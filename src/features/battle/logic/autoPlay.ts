@@ -24,7 +24,7 @@ export function hitIds(state: BattleState, move: Move, config: BattleConfig): nu
 /**
  * Người chơi ngắm chuẩn: trước hết chém trúng nhiều quái bắn đang có "!" nhất (B3 — hạ hoặc làm nó
  * choáng); rồi vũ khí + lát trúng nhiều quái nhất; hòa thì ưu tiên quái đang ở gần nhân vật hơn (nguy
- * hiểm hơn); vẫn hòa thì vũ khí và lát đứng trước.
+ * hiểm hơn); vẫn hòa thì vũ khí và lát đứng trước. B4: chỉ xét vũ khí đã mang vào trận.
  */
 export function bestMove(state: BattleState, config: BattleConfig): Move {
   const byId = new Map(state.monsters.map((m) => [m.id, m]));
@@ -35,9 +35,9 @@ export function bestMove(state: BattleState, config: BattleConfig): Move {
       )
       .map((m) => m.id),
   );
-  let best: Move = { weaponIndex: 0, sector: 0 };
+  let best: Move = { weaponIndex: state.weaponIndex, sector: 0 };
   let bestScore = [-1, -1, -1];
-  config.weapons.forEach((_, weaponIndex) => {
+  for (const weaponIndex of state.loadout.weapons) {
     for (let sector = 0; sector < config.sectorCount; sector++) {
       const ids = hitIds(state, { weaponIndex, sector }, config);
       const score = [
@@ -51,17 +51,17 @@ export function bestMove(state: BattleState, config: BattleConfig): Move {
         bestScore = score;
       }
     }
-  });
+  }
   return best;
 }
 
 /**
  * Người chơi chém trượt: một lát không trúng con quái nào — ưu tiên vũ khí đang cầm; quái phủ kín
- * vùng của nó (màn đông quái) thì đổi sang vũ khí khác.
+ * vùng của nó (màn đông quái) thì đổi sang vũ khí khác đã mang.
  */
 export function missMove(state: BattleState, config: BattleConfig): Move {
   const current = state.weaponIndex;
-  const others = config.weapons.map((_, i) => i).filter((i) => i !== current);
+  const others = state.loadout.weapons.filter((i) => i !== current);
   for (const weaponIndex of [current, ...others]) {
     for (let sector = 0; sector < config.sectorCount; sector++) {
       if (hitIds(state, { weaponIndex, sector }, config).length === 0)
@@ -71,9 +71,15 @@ export function missMove(state: BattleState, config: BattleConfig): Move {
   throw new Error('Không còn lát trống để chém trượt');
 }
 
-/** Người chơi chém bừa: vũ khí và lát ngẫu nhiên (RNG có seed — lặp lại được). */
-export function randomMove(rng: RngState, config: BattleConfig): [move: Move, next: RngState] {
-  const [weaponIndex, afterWeapon] = nextInt(rng, config.weapons.length);
+/** Người chơi chém bừa: vũ khí đã mang và lát ngẫu nhiên (RNG có seed — lặp lại được). */
+export function randomMove(
+  state: BattleState,
+  rng: RngState,
+  config: BattleConfig,
+): [move: Move, next: RngState] {
+  const { weapons } = state.loadout;
+  const [pick, afterWeapon] = nextInt(rng, weapons.length);
+  const weaponIndex = weapons[pick] as number;
   const [sector, next] = nextInt(afterWeapon, config.sectorCount);
   return [{ weaponIndex, sector }, next];
 }

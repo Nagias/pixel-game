@@ -3,12 +3,14 @@
 // → kiểm hết máu → kiểm hết lượt. F06: mỗi màn mở bằng createBattle(seed, config, màn).
 import { nextFloat, nextInt, seedRng, type RngState } from '../../../shared/random';
 import { isInZone, knockbackCell, wrapSector } from './arena';
+import { defaultLoadout, validateLoadout } from './loadout';
 import {
   PUSH_DIRECTIONS,
   type BattleConfig,
   type BattleState,
   type Hit,
   type LevelConfig,
+  type Loadout,
   type Monster,
   type WeaponConfig,
 } from './battleTypes';
@@ -116,10 +118,16 @@ function pickOffsets(rng: RngState, count: number, spread: number): [number[], R
 /**
  * Mở màn `level`: đội hình quái của màn xuất hiện thành cụm ở vòng ngoài cùng, mỗi con một lát
  * khác nhau — hoặc hai cụm đối diện nếu màn `splitOpposite` (B2). Màn nào cũng bắt đầu đầy máu,
- * cầm vũ khí đầu tiên.
+ * cầm món đầu tiên của bộ đồ mang vào (B4; không truyền thì mang bộ mặc định — món đầu mỗi tầm).
  */
-export function createBattle(seed: number, config: BattleConfig, level: number): BattleState {
+export function createBattle(
+  seed: number,
+  config: BattleConfig,
+  level: number,
+  loadout: Loadout = defaultLoadout(config),
+): BattleState {
   validateBattleConfig(config);
+  validateLoadout(loadout, config);
   const { turnLimit, monsters: lineup, spread, splitOpposite } = levelAt(level, config);
 
   const [center, rngAfterCenter] = nextInt(seedRng(seed), config.sectorCount);
@@ -146,7 +154,8 @@ export function createBattle(seed: number, config: BattleConfig, level: number):
     level,
     turnsLeft: turnLimit,
     heroHp: config.hero.hp,
-    weaponIndex: 0,
+    loadout,
+    weaponIndex: loadout.weapons[0] as number,
     monsters,
     phase: 'playing',
     lossReason: null,
@@ -178,12 +187,18 @@ function weaponAt(index: number, config: BattleConfig): WeaponConfig {
   return weapon;
 }
 
-/** Đổi vũ khí đang cầm. Không tốn lượt, quái không di chuyển — chỉ chém mới tốn lượt. */
+/**
+ * Đổi vũ khí đang cầm. Không tốn lượt, quái không di chuyển — chỉ chém mới tốn lượt. B4: chỉ được
+ * cầm vũ khí đã mang vào trận.
+ */
 export function selectWeapon(state: BattleState, index: number, config: BattleConfig): BattleState {
   if (state.phase !== 'playing') {
     throw new Error(`Trận đã kết thúc (${state.phase}), không thể đổi vũ khí`);
   }
-  weaponAt(index, config);
+  const weapon = weaponAt(index, config);
+  if (!state.loadout.weapons.includes(index)) {
+    throw new RangeError(`Không mang "${weapon.name}" vào trận này`);
+  }
   return { ...state, weaponIndex: index };
 }
 

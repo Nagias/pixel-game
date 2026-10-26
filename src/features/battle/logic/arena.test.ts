@@ -6,6 +6,7 @@ const SECTORS = 24;
 
 const weapon = (overrides: Partial<WeaponConfig> = {}): WeaponConfig => ({
   name: 'test',
+  slot: 'near',
   rangeLabel: 'cả sân',
   push: 'none',
   widthSectors: 3,

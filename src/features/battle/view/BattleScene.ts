@@ -1,5 +1,6 @@
 // Scene trận đấu: VỎ hiển thị. Chỉ vẽ state và chuyển cú chạm thành selectWeapon()/playTurn() —
 // không chứa luật chơi. Game chỉ cho mobile: mọi thao tác là chạm, không có bàn phím.
+// B4: mở từ màn chuẩn bị (LoadoutScene) với màn + bộ đồ; hết màn thì quay về màn chuẩn bị màn kế.
 import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
 import { registerPixelSprites } from '../../../app/pixelSprites';
 import { setSnapshotProvider } from '../../../app/testBridge';
@@ -16,7 +17,8 @@ import {
   selectWeapon,
 } from '../logic/battle';
 import { BATTLE_CONFIG } from '../logic/battleConfig';
-import type { BattleState, Monster } from '../logic/battleTypes';
+import type { BattleState, Loadout, Monster } from '../logic/battleTypes';
+import { defaultLoadout } from '../logic/loadout';
 import {
   ARENA_LAYOUT,
   cellToPoint,
@@ -33,6 +35,7 @@ import {
   zoneRadii,
 } from './battleLayout';
 import { BATTLE_SPRITES, SPRITE_SCALE } from './battleSprites';
+import type { LoadoutSceneData } from './LoadoutScene';
 
 /** Thứ test E2E đọc được qua window.__PIXEL_GAME__.snapshot(). */
 export interface BattleSnapshot {
@@ -65,6 +68,8 @@ const TEXT = {
 export class BattleScene extends Scene {
   private readonly config = BATTLE_CONFIG;
   private readonly fixedSeed = parseSeedParam(window.location.search);
+  private level = 0;
+  private loadout!: Loadout;
   private battle!: BattleState;
   private arcElapsedMs = 0;
   private arcSector = 0;
@@ -83,7 +88,7 @@ export class BattleScene extends Scene {
   private resultHint!: GameObjects.Text;
   private readonly monsterSprites = new Map<number, GameObjects.Image>();
   private spriteKeys!: Record<keyof typeof BATTLE_SPRITES, string>;
-  private readonly weaponButtons: {
+  private weaponButtons: {
     frame: GameObjects.Rectangle;
     name: GameObjects.Text;
     range: GameObjects.Text;
@@ -93,7 +98,18 @@ export class BattleScene extends Scene {
     super('battle');
   }
 
+  /** Màn chuẩn bị gửi màn + bộ đồ. Không có (chỉ khi mở thẳng scene này) thì màn 1, bộ mặc định. */
+  init(data: Partial<LoadoutSceneData>): void {
+    this.level = data.level ?? 0;
+    this.loadout = data.loadout ?? defaultLoadout(this.config);
+  }
+
   create(): void {
+    // Phaser dùng lại cùng đối tượng scene mỗi lần mở: bỏ tham chiếu tới hình của lần trước.
+    this.monsterSprites.clear();
+    this.threatMarks.clear();
+    this.weaponButtons = [];
+
     this.spriteKeys = registerPixelSprites(this, 'battle', BATTLE_SPRITES);
     this.drawArena();
     this.zone = this.add.graphics().setDepth(DEPTH.zone);
@@ -109,7 +125,7 @@ export class BattleScene extends Scene {
     const clearSnapshot = setSnapshotProvider(() => this.snapshot());
     this.events.once(Scenes.Events.SHUTDOWN, clearSnapshot);
 
-    this.startLevel(0);
+    this.startLevel(this.level);
   }
 
   override update(_time: number, delta: number): void {
@@ -127,19 +143,12 @@ export class BattleScene extends Scene {
   /** F06: mở màn `level`. Có `?seed=` thì màn nào cũng dùng seed đó để ván lặp lại y hệt. */
   private startLevel(level: number): void {
     const seed = this.fixedSeed ?? Math.floor(Math.random() * 2 ** 32);
-    this.battle = createBattle(seed, this.config, level);
+    this.battle = createBattle(seed, this.config, level, this.loadout);
     this.arcElapsedMs = 0;
     this.arcSector = 0;
     this.endedAtMs = null;
 
-    // Màn mới: bỏ hết hình cũ (kể cả hiệu ứng đang chạy) rồi vẽ lại từ state.
-    for (const sprite of this.monsterSprites.values()) {
-      this.tweens.killTweensOf(sprite);
-      sprite.destroy();
-    }
-    this.monsterSprites.clear();
     this.syncMonsters(this.battle);
-
     this.resultLayer.setVisible(false);
     this.drawZone();
     this.syncWeaponBar(this.battle);
@@ -148,19 +157,27 @@ export class BattleScene extends Scene {
 
   /**
    * Chạm vào nút vũ khí thì đổi vũ khí; chạm vào chỗ khác là chém. Màn kết quả: chạm để sang màn
-   * sau hoặc chơi lại — màn nào do luật quyết (nextLevelIndex).
+   * chuẩn bị của màn sau hoặc của màn vừa thua — màn nào do luật quyết (nextLevelIndex).
    */
   private handleTap(x: number, y: number): void {
     if (this.battle.phase !== 'playing') {
-      if (this.canRestart()) this.startLevel(nextLevelIndex(this.battle, this.config));
+      if (this.canRestart()) {
+        const data: LoadoutSceneData = {
+          level: nextLevelIndex(this.battle, this.config),
+          loadout: this.battle.loadout,
+        };
+        this.scene.start('loadout', data);
+      }
       return;
     }
-    const button = weaponButtonAt(x, y, this.config.weapons.length, WEAPON_BAR);
-    if (button === null) {
+    const { weapons } = this.battle.loadout;
+    const button = weaponButtonAt(x, y, weapons.length, WEAPON_BAR);
+    const weaponIndex = button === null ? undefined : weapons[button];
+    if (weaponIndex === undefined) {
       // Khe giữa hai nút vẫn thuộc thanh nút: không chém, không tốn lượt (FEATURE_MAP F02).
       if (!isInWeaponBar(x, y, WEAPON_BAR)) this.attack();
     } else {
-      this.battle = selectWeapon(this.battle, button, this.config);
+      this.battle = selectWeapon(this.battle, weaponIndex, this.config);
       this.drawZone();
       this.syncWeaponBar(this.battle);
     }
@@ -382,10 +399,13 @@ export class BattleScene extends Scene {
 
   /** Vẽ khung nút một lần; trạng thái chọn/không chọn do syncWeaponBar cập nhật theo state. */
   private createWeaponBar(): void {
-    const rects = weaponButtonRects(this.config.weapons.length, WEAPON_BAR);
-    this.config.weapons.forEach((weapon, i) => {
+    // B4: chỉ các món đã mang vào trận, theo thứ tự tầm gần → xa.
+    const { weapons } = this.loadout;
+    const rects = weaponButtonRects(weapons.length, WEAPON_BAR);
+    weapons.forEach((weaponIndex, i) => {
       const rect = rects[i];
-      if (!rect) return;
+      const weapon = this.config.weapons[weaponIndex];
+      if (!rect || !weapon) return;
       const centerX = rect.x + rect.width / 2;
       const frame = this.add
         .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('navy'))
@@ -406,7 +426,7 @@ export class BattleScene extends Scene {
   /** Nút của vũ khí đang cầm có viền xanh lá và chữ sáng; các nút khác mờ đi. */
   private syncWeaponBar(state: BattleState): void {
     this.weaponButtons.forEach((button, i) => {
-      const selected = i === state.weaponIndex;
+      const selected = state.loadout.weapons[i] === state.weaponIndex;
       button.frame.setStrokeStyle(selected ? 3 : 1, colorNumber(selected ? 'lime' : 'slate'));
       button.name.setColor(selected ? PALETTE.white : PALETTE.mist);
       button.range.setColor(selected ? PALETTE.sand : PALETTE.mist);

@@ -1,29 +1,84 @@
 // Phần điều khiển riêng của tính năng "battle" (F01–F06): đổi vũ khí, ngắm vùng xanh, chém.
-import type { BattleSnapshot } from '../../src/features/battle';
+// B4: màn chuẩn bị trận — chọn món, chạm "VÀO TRẬN".
+import type { BattleSnapshot, LoadoutSnapshot } from '../../src/features/battle';
 import * as autoPlay from '../../src/features/battle/logic/autoPlay';
 import type { Move } from '../../src/features/battle/logic/autoPlay';
 import { BATTLE_CONFIG } from '../../src/features/battle/logic/battleConfig';
 import { WEAPON_BAR, weaponButtonRects } from '../../src/features/battle/view/battleLayout';
+import { LOADOUT_LAYOUT, optionRects } from '../../src/features/battle/view/loadoutLayout';
 import { GameDriver } from './gameDriver';
 
 const FRAME_MS = 16;
+/** Đổi scene (scene.start) cần vài khung hình mới xong. */
+const SCENE_SWITCH_MS = 100;
 
 export type { Move };
 
 export class BattleDriver extends GameDriver {
-  /** Mở trận với seed cố định để ván chơi lặp lại y hệt. */
-  async openBattle(seed: number): Promise<void> {
-    await this.open(`/?seed=${seed}`);
+  /**
+   * Mở game ở màn chuẩn bị với seed cố định để ván chơi lặp lại y hệt; `level` (đếm từ 1) mở thẳng
+   * màn đó qua `?level=`.
+   */
+  async openLoadout(seed: number, level?: number): Promise<void> {
+    await this.open(`/?seed=${seed}${level === undefined ? '' : `&level=${level}`}`);
+  }
+
+  /** Mở game rồi vào trận ngay với bộ đồ mặc định. */
+  async openBattle(seed: number, level?: number): Promise<void> {
+    await this.openLoadout(seed, level);
+    await this.startBattle();
   }
 
   snapshot(): Promise<BattleSnapshot> {
     return this.snapshotOf<BattleSnapshot>('battle');
   }
 
-  /** Chạm vào nút vũ khí thứ `index` ở đáy màn hình. */
-  async selectWeapon(index: number): Promise<void> {
-    const rect = weaponButtonRects(BATTLE_CONFIG.weapons.length, WEAPON_BAR)[index];
-    if (!rect) throw new Error(`Không có nút vũ khí số ${index}`);
+  loadoutSnapshot(): Promise<LoadoutSnapshot> {
+    return this.snapshotOf<LoadoutSnapshot>('loadout');
+  }
+
+  /** Cho vài khung hình chạy để scene vừa gọi scene.start() kịp mở. */
+  async waitSceneSwitch(): Promise<void> {
+    await this.advance(SCENE_SWITCH_MS);
+  }
+
+  /** Màn chuẩn bị vừa mở chưa nhận chạm (chống chạm nhầm): cho thời gian trôi tới khi nhận. */
+  async waitLoadoutReady(): Promise<LoadoutSnapshot> {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const snapshot = await this.loadoutSnapshot();
+      if (snapshot.canTap) return snapshot;
+      await this.advance(SCENE_SWITCH_MS);
+    }
+    throw new Error('Màn chuẩn bị không nhận chạm sau 2 giây');
+  }
+
+  /** Màn chuẩn bị: chạm nút của vũ khí `weaponIndex` (chỉ số trong config.weapons). */
+  async chooseWeapon(weaponIndex: number): Promise<void> {
+    const { rows } = await this.waitLoadoutReady();
+    const row = rows.findIndex((r) => r.weapons.includes(weaponIndex));
+    const rowInfo = rows[row];
+    if (!rowInfo) throw new Error(`Màn chuẩn bị không có vũ khí số ${weaponIndex}`);
+    const rect = optionRects(row, rowInfo.weapons.length, LOADOUT_LAYOUT)[
+      rowInfo.weapons.indexOf(weaponIndex)
+    ];
+    if (!rect) throw new Error(`Không có nút cho vũ khí số ${weaponIndex}`);
+    await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
+  }
+
+  /** Màn chuẩn bị: chạm "VÀO TRẬN", chờ scene trận mở. */
+  async startBattle(): Promise<void> {
+    await this.waitLoadoutReady();
+    const { start } = LOADOUT_LAYOUT;
+    await this.tapAt(start.x + start.width / 2, start.y + start.height / 2);
+    await this.waitSceneSwitch();
+    await this.snapshot();
+  }
+
+  /** Chạm vào nút của vũ khí `weaponIndex` (chỉ số trong config.weapons) ở đáy màn hình. */
+  async selectWeapon(weaponIndex: number): Promise<void> {
+    const { weapons } = (await this.snapshot()).battle.loadout;
+    const rect = weaponButtonRects(weapons.length, WEAPON_BAR)[weapons.indexOf(weaponIndex)];
+    if (!rect) throw new Error(`Không mang vũ khí số ${weaponIndex} vào trận`);
     await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
   }
 

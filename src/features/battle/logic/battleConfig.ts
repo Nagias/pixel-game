@@ -7,10 +7,12 @@ export const BATTLE_CONFIG: BattleConfig = {
   ringCount: 6,
   arcPeriodMs: 2_400,
   // F02: vũ khí theo tầm; quái mới ở vòng 5 nên lúc đầu chỉ Cung với tới. B2 thêm Rìu (hai phía).
+  // B4: mỗi trận mang một món mỗi tầm — ô gần chọn Kiếm hoặc Rìu; món đầu mỗi tầm là mặc định.
   weapons: [
     // F05: Kiếm đẩy lùi ra xa, Giáo đẩy lệch phải, Cung kéo vào gần.
     {
       name: 'Kiếm',
+      slot: 'near',
       rangeLabel: 'gần',
       push: 'out',
       widthSectors: 5,
@@ -20,6 +22,7 @@ export const BATTLE_CONFIG: BattleConfig = {
     },
     {
       name: 'Giáo',
+      slot: 'mid',
       rangeLabel: 'vừa',
       push: 'clockwise',
       widthSectors: 3,
@@ -29,6 +32,7 @@ export const BATTLE_CONFIG: BattleConfig = {
     },
     {
       name: 'Cung',
+      slot: 'far',
       rangeLabel: 'xa',
       push: 'in',
       widthSectors: 1,
@@ -39,6 +43,7 @@ export const BATTLE_CONFIG: BattleConfig = {
     // B2 (chủ dự án duyệt 26/10/2026): Rìu chém hai nêm đối nhau — trước mặt và sau lưng.
     {
       name: 'Rìu',
+      slot: 'near',
       rangeLabel: '2 phía',
       push: 'out',
       widthSectors: 3,

@@ -12,7 +12,8 @@ Unit test và E2E điều khiển game qua cầu nối `window.__PIXEL_GAME__` v
 ## Cách làm
 
 1. Mở game bằng preview `game-dev` (`.claude/launch.json`) trong trình duyệt của Claude Desktop, đường
-   dẫn `/?seed=42` (ván lặp lại được) và thêm một ván không seed.
+   dẫn `/?seed=42` (ván lặp lại được) và thêm một ván không seed. Thêm `&level=N` để mở thẳng màn N
+   (vd. thử màn 4 mà không phải chơi lại màn 1–3).
 2. Đặt khung điện thoại **375×760** (`resize_window`), mở lại trang cho game co giãn theo khung. Không
    dùng khung máy tính. Không dùng khung lớn hơn ô trình duyệt (vd. 412×839 của Pixel 7): ô thu nhỏ hình
    và cú bấm rơi sai chỗ (đo 26/10/2026). Khung 375×760 không bị thu nhỏ. Tọa độ bấm theo "coordinate
@@ -28,13 +29,13 @@ Unit test và E2E điều khiển game qua cầu nối `window.__PIXEL_GAME__` v
 
 ## Kịch bản chung (chạy mọi lần)
 
-| #   | Làm                                | Đạt khi                                                                           |
-| --- | ---------------------------------- | --------------------------------------------------------------------------------- |
-| C1  | Mở game                            | Thấy sân tròn, nhân vật giữa, quái ở rìa, thanh trên đọc rõ, các nút vũ khí ở đáy |
-| C2  | Chạm từng nút vũ khí               | Viền xanh lá chuyển sang nút vừa chạm; vùng xanh đổi hình; số lượt không đổi      |
-| C3  | Chạm vào sân                       | Số lượt giảm 1; quái trong vùng xanh mất máu (số bay lên)                         |
-| C4  | Chơi tới hết màn (thắng hoặc thua) | Có màn kết quả, ghi rõ chạm để làm gì; chạm thì đi đúng nơi đã ghi                |
-| C5  | Soát hình mọi màn hình đã đi qua   | Chữ không đè, không tràn khung; chỉ màu bảng Sweetie 16; không lỗi console        |
+| #   | Làm                                | Đạt khi                                                                                                  |
+| --- | ---------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| C1  | Mở game, chạm "VÀO TRẬN"           | Thấy màn chuẩn bị (F07) rồi sân tròn, nhân vật giữa, quái ở rìa, thanh trên đọc rõ, các nút vũ khí ở đáy |
+| C2  | Chạm từng nút vũ khí               | Viền xanh lá chuyển sang nút vừa chạm; vùng xanh đổi hình; số lượt không đổi                             |
+| C3  | Chạm vào sân                       | Số lượt giảm 1; quái trong vùng xanh mất máu (số bay lên)                                                |
+| C4  | Chơi tới hết màn (thắng hoặc thua) | Có màn kết quả, ghi rõ chạm để làm gì; chạm thì đi đúng nơi đã ghi                                       |
+| C5  | Soát hình mọi màn hình đã đi qua   | Chữ không đè, không tràn khung; chỉ màu bảng Sweetie 16; không lỗi console                               |
 
 Cộng thêm **kịch bản riêng** của từng việc (ghi trong kế hoạch của việc đó).
 
