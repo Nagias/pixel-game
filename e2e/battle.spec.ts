@@ -4,6 +4,7 @@ import { expect, test } from '@playwright/test';
 import { isGameCleared, isThreatening, levelAt } from '../src/features/battle/logic/battle';
 import { BATTLE_CONFIG } from '../src/features/battle/logic/battleConfig';
 import { WEAPON_BAR, weaponButtonRects } from '../src/features/battle/view/battleLayout';
+import { LOADOUT_LAYOUT } from '../src/features/battle/view/loadoutLayout';
 import { BattleDriver, bestMove, hitIds, missMove } from './support/battleDriver';
 
 // Seed cố định để ván chơi lặp lại y hệt (màn nào cũng dùng seed này). Đổi cân bằng mà ván này
@@ -377,7 +378,14 @@ test('B4: mở game là màn chuẩn bị màn 1 — chọn Rìu thay Kiếm, v�
   await game.tap();
   await game.waitSceneSwitch();
   const next = await game.loadoutSnapshot();
-  expect(next).toMatchObject({ level: 1, loadout: { weapons: [axeIndex, 1, 2] } });
+  expect(next).toMatchObject({ level: 1, loadout: { weapons: [axeIndex, 1, 2] }, canTap: false });
+
+  // Chạm đúp ở màn kết quả: chạm thứ hai rơi đúng chỗ nút "VÀO TRẬN" lúc màn chuẩn bị vừa mở — không
+  // được vào trận (chống chạm nhầm).
+  const { start } = LOADOUT_LAYOUT;
+  await game.tapAt(start.x + start.width / 2, start.y + start.height / 2);
+  await game.waitSceneSwitch();
+  expect((await game.loadoutSnapshot()).level).toBe(1);
 });
 
 test('B4: ?level=4 mở thẳng màn chuẩn bị màn 4 (thử tay / E2E nhanh), vào trận đúng màn 4', async ({

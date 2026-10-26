@@ -29,10 +29,17 @@ export interface LoadoutSnapshot {
   readonly loadout: Loadout;
   /** Các hàng trên màn hình, trên xuống: tầm và các món chọn được (chỉ số trong config.weapons). */
   readonly rows: readonly { readonly slot: WeaponSlot; readonly weapons: readonly number[] }[];
+  /** Màn đã hiện đủ lâu để nhận chạm (chống chạm nhầm nối từ màn kết quả). */
+  readonly canTap: boolean;
 }
 
 const GAME_WIDTH = 360;
 const GAME_HEIGHT = 640;
+/**
+ * Hành vi giao diện, không phải luật chơi: màn vừa mở chờ chút mới nhận chạm — chạm đúp ở màn kết quả
+ * không được lọt thành chạm "VÀO TRẬN" (nút này nằm đúng chỗ thanh vũ khí trong trận).
+ */
+const TAP_DELAY_MS = 500;
 
 const SLOT_LABEL: Record<WeaponSlot, string> = { near: 'Gần', mid: 'Vừa', far: 'Xa' };
 
@@ -56,6 +63,13 @@ export class LoadoutScene extends Scene {
     range: GameObjects.Text;
   }[] = [];
   private descriptions: GameObjects.Text[] = [];
+  /**
+   * Thời gian màn đã hiện, cộng dồn theo khung hình. Không dùng this.time.now lúc create(): scene mở lại
+   * thì đồng hồ của nó còn giữ giờ của lần trước, mới cập nhật ở khung hình đầu.
+   */
+  private openElapsedMs = 0;
+  /** Đã chạm "VÀO TRẬN" — bỏ qua mọi chạm sau đó (tránh mở trận hai lần). */
+  private starting = false;
 
   constructor() {
     super('loadout');
@@ -74,6 +88,8 @@ export class LoadoutScene extends Scene {
     // Phaser dùng lại cùng đối tượng scene mỗi lần mở: bỏ tham chiếu tới hình của lần trước.
     this.buttons = [];
     this.descriptions = [];
+    this.openElapsedMs = 0;
+    this.starting = false;
 
     this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, colorNumber('teal')).setOrigin(0);
     this.add
@@ -97,10 +113,20 @@ export class LoadoutScene extends Scene {
     this.sync();
   }
 
+  override update(_time: number, delta: number): void {
+    this.openElapsedMs += delta;
+  }
+
+  private canTap(): boolean {
+    return !this.starting && this.openElapsedMs >= TAP_DELAY_MS;
+  }
+
   private handleTap(x: number, y: number): void {
+    if (!this.canTap()) return;
     const counts = this.rows.map((row) => row.weapons.length);
     const tap = loadoutTapAt(x, y, counts, LOADOUT_LAYOUT);
     if (tap?.kind === 'start') {
+      this.starting = true;
       const data: LoadoutSceneData = { level: this.level, loadout: this.loadout };
       this.scene.start('battle', data);
     } else if (tap?.kind === 'option') {
@@ -112,7 +138,13 @@ export class LoadoutScene extends Scene {
   }
 
   private snapshot(): LoadoutSnapshot {
-    return { scene: 'loadout', level: this.level, loadout: this.loadout, rows: this.rows };
+    return {
+      scene: 'loadout',
+      level: this.level,
+      loadout: this.loadout,
+      rows: this.rows,
+      canTap: this.canTap(),
+    };
   }
 
   // ---------- Vẽ ----------

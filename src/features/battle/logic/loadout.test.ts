@@ -82,6 +82,8 @@ describe('B4 — đồ mang vào trận', () => {
       { weapons: [0, 1, 2] },
       { weapons: [3, 1, 2] },
     ]);
+    // Không sở hữu món nào: không có bộ nào (không phải một bộ rỗng).
+    expect(allLoadouts(CONFIG, [])).toEqual([]);
   });
 
   it('chọn vũ khí không tồn tại thì báo lỗi', () => {
@@ -94,6 +96,7 @@ describe('B4 — đồ mang vào trận', () => {
     ['chỉ số không nguyên', [0.5]],
     ['mang trùng một món', [0, 0]],
     ['hai món cùng tầm (Kiếm và Rìu)', [0, 3]],
+    ['sai thứ tự tầm (Cung trước Kiếm)', [2, 0, 1]],
   ])('từ chối bộ đồ: %s', (_label, weapons) => {
     expect(() => validateLoadout({ weapons }, CONFIG)).toThrow(RangeError);
   });

@@ -39,7 +39,9 @@ export function defaultLoadout(
 
 /** Mọi bộ đồ chọn được — mỗi tầm một món, đủ mọi cách ghép (để mô phỏng so các bộ với nhau). */
 export function allLoadouts(config: BattleConfig, owned: readonly number[]): Loadout[] {
-  return slotOptions(config, owned).reduce<Loadout[]>(
+  const options = slotOptions(config, owned);
+  if (options.length === 0) return [];
+  return options.reduce<Loadout[]>(
     (loadouts, option) =>
       loadouts.flatMap((loadout) =>
         option.weapons.map((index) => ({ weapons: [...loadout.weapons, index] })),
@@ -64,20 +66,27 @@ export function chooseWeapon(loadout: Loadout, weaponIndex: number, config: Batt
   return { weapons: [...others, weaponIndex].sort((a, b) => order(a) - order(b)) };
 }
 
-/** Chặn bộ đồ sai ngay lúc mở trận: rỗng, vũ khí không có, mang trùng, hai món cùng tầm. */
+/**
+ * Chặn bộ đồ sai ngay lúc mở trận: rỗng, vũ khí không có, mang trùng, hai món cùng tầm, sai thứ tự tầm
+ * (thanh nút luôn gần → xa, trận cầm món đầu).
+ */
 export function validateLoadout(loadout: Loadout, config: BattleConfig): void {
   const problems: string[] = [];
   if (loadout.weapons.length === 0) problems.push('phải mang ít nhất 1 vũ khí');
   const slots = new Set<WeaponSlot>();
   const seen = new Set<number>();
+  let lastOrder = -1;
   for (const index of loadout.weapons) {
     const weapon = Number.isInteger(index) ? config.weapons[index] : undefined;
     if (!weapon) {
       problems.push(`không có vũ khí số ${index}`);
       continue;
     }
+    const order = WEAPON_SLOTS.indexOf(weapon.slot);
     if (seen.has(index)) problems.push(`mang trùng "${weapon.name}"`);
     else if (slots.has(weapon.slot)) problems.push(`hai món cùng tầm "${weapon.slot}"`);
+    else if (order < lastOrder) problems.push(`"${weapon.name}" sai thứ tự tầm (gần → xa)`);
+    lastOrder = Math.max(lastOrder, order);
     seen.add(index);
     slots.add(weapon.slot);
   }

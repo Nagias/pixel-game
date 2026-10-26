@@ -42,9 +42,19 @@ export class BattleDriver extends GameDriver {
     await this.advance(SCENE_SWITCH_MS);
   }
 
+  /** Màn chuẩn bị vừa mở chưa nhận chạm (chống chạm nhầm): cho thời gian trôi tới khi nhận. */
+  async waitLoadoutReady(): Promise<LoadoutSnapshot> {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const snapshot = await this.loadoutSnapshot();
+      if (snapshot.canTap) return snapshot;
+      await this.advance(SCENE_SWITCH_MS);
+    }
+    throw new Error('Màn chuẩn bị không nhận chạm sau 2 giây');
+  }
+
   /** Màn chuẩn bị: chạm nút của vũ khí `weaponIndex` (chỉ số trong config.weapons). */
   async chooseWeapon(weaponIndex: number): Promise<void> {
-    const { rows } = await this.loadoutSnapshot();
+    const { rows } = await this.waitLoadoutReady();
     const row = rows.findIndex((r) => r.weapons.includes(weaponIndex));
     const rowInfo = rows[row];
     if (!rowInfo) throw new Error(`Màn chuẩn bị không có vũ khí số ${weaponIndex}`);
@@ -57,7 +67,7 @@ export class BattleDriver extends GameDriver {
 
   /** Màn chuẩn bị: chạm "VÀO TRẬN", chờ scene trận mở. */
   async startBattle(): Promise<void> {
-    await this.loadoutSnapshot();
+    await this.waitLoadoutReady();
     const { start } = LOADOUT_LAYOUT;
     await this.tapAt(start.x + start.width / 2, start.y + start.height / 2);
     await this.waitSceneSwitch();
