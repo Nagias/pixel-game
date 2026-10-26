@@ -22,10 +22,13 @@ describe('B4 — bố cục màn chuẩn bị trận', () => {
     }
   });
 
-  it('4 hàng (3 tầm + 1 hàng skill sau này) và dòng mô tả đều nằm trên nút "VÀO TRẬN"', () => {
+  // Mô tả tới 2 dòng chữ 12px (~32px): không đè hàng dưới, không đè nút VÀO TRẬN.
+  it('4 hàng (3 tầm + hàng skill B6) và mô tả 2 dòng đều nằm trên nút "VÀO TRẬN"', () => {
+    const TWO_LINES = 32;
     for (let row = 0; row < 4; row++) {
-      expect(rowTop(row + 1, L)).toBeGreaterThan(descriptionY(row, L));
-      expect(descriptionY(row, L) + 10).toBeLessThan(L.start.y);
+      expect(descriptionY(row, L)).toBeGreaterThan(rowTop(row, L) + L.buttonHeight);
+      expect(rowTop(row + 1, L)).toBeGreaterThan(descriptionY(row, L) + TWO_LINES);
+      expect(descriptionY(row, L) + TWO_LINES).toBeLessThan(L.start.y);
     }
     expect(L.start.y + L.start.height).toBeLessThanOrEqual(640);
   });

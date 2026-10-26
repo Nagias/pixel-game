@@ -1,6 +1,7 @@
 // Luật trận đấu: hàm thuần (state cũ + hành động → state mới). Không Phaser, không đồng hồ.
-// Thứ tự một lượt: đánh → kiểm thắng → đẩy quái (F05) → quái áp sát đánh (F04) → quái di chuyển
-// → kiểm hết máu → kiểm hết lượt. F06: mỗi màn mở bằng createBattle(seed, config, màn).
+// Thứ tự một lượt: đánh (B6: chí mạng) → kiểm thắng → hồi máu (B6) → đẩy quái (F05) → quái áp sát
+// đánh (F04) → quái di chuyển → hết đóng băng (B6) → kiểm hết máu → kiểm hết lượt. F06: mỗi màn mở
+// bằng createBattle(seed, config, màn). B6: castSkill đánh cả sân giữa hai nhát chém, không tốn lượt.
 import { nextFloat, nextInt, seedRng, type RngState } from '../../../shared/random';
 import { isInZone, knockbackCell, wrapSector } from './arena';
 import { defaultLoadout, validateLoadout } from './loadout';
@@ -12,6 +13,7 @@ import {
   type LevelConfig,
   type Loadout,
   type Monster,
+  type SkillConfig,
   type WeaponConfig,
 } from './battleTypes';
 
@@ -40,6 +42,22 @@ function validateBattleConfig(config: BattleConfig): void {
     if (!PUSH_DIRECTIONS.includes(weapon.push)) {
       problems.push(`${label}: kiểu đẩy "${String(weapon.push)}" không tồn tại`);
     }
+    const crit = weapon.critChance ?? 0;
+    if (!(crit >= 0 && crit <= 1)) problems.push(`${label}: chí mạng ${crit} nằm ngoài [0, 1]`);
+  }
+  if (!(config.critMultiplier >= 1)) problems.push('hệ số chí mạng phải từ 1 trở lên');
+  for (const [kind, skill] of Object.entries(config.skills)) {
+    const label = `skill "${kind}"`;
+    if (!(skill.damage >= 1)) problems.push(`${label}: phải gây ít nhất 1 sát thương`);
+    if (!Number.isInteger(skill.freezeTurns) || skill.freezeTurns < 0) {
+      problems.push(`${label}: số lượt đóng băng phải là số nguyên ≥ 0`);
+    }
+    if (!Number.isInteger(skill.chargeTurns) || skill.chargeTurns < 1) {
+      problems.push(`${label}: số nhát nạp phải là số nguyên ≥ 1`);
+    }
+  }
+  if (!Number.isInteger(config.skillUnlockLevel) || config.skillUnlockLevel < 0) {
+    problems.push('màn mở skill phải là số nguyên ≥ 0');
   }
   for (const [kind, rule] of Object.entries(monsterKinds)) {
     const label = `quái "${kind}"`;
@@ -59,6 +77,12 @@ function validateBattleConfig(config: BattleConfig): void {
     }
   }
   if (config.hero.hp < 1) problems.push('nhân vật phải có ít nhất 1 máu');
+  if (!Number.isInteger(config.hero.healMinHits) || config.hero.healMinHits < 1) {
+    problems.push('hồi máu phải cần ít nhất 1 con trúng');
+  }
+  if (!Number.isInteger(config.hero.healAmount) || config.hero.healAmount < 0) {
+    problems.push('số máu hồi phải là số nguyên ≥ 0');
+  }
   if (levels.length === 0) problems.push('phải có ít nhất 1 màn');
   levels.forEach((level, i) => {
     const label = `màn ${i + 1}`;
@@ -128,6 +152,11 @@ export function createBattle(
 ): BattleState {
   validateBattleConfig(config);
   validateLoadout(loadout, config);
+  if (loadout.skill !== undefined && level < config.skillUnlockLevel) {
+    throw new RangeError(
+      `Màn ${level + 1} chưa được mang skill (mở từ màn ${config.skillUnlockLevel + 1})`,
+    );
+  }
   const { turnLimit, monsters: lineup, spread, splitOpposite } = levelAt(level, config);
 
   const [center, rngAfterCenter] = nextInt(seedRng(seed), config.sectorCount);
@@ -160,6 +189,8 @@ export function createBattle(
     phase: 'playing',
     lossReason: null,
     lastAttack: null,
+    skillCharge: 0,
+    lastSkill: null,
   };
 }
 
@@ -215,13 +246,25 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
 
   // F03 — combo gom cụm: con thứ n bị chém ăn n × sát thương vũ khí. Con ít máu bị chém trước để
   // nhát mạnh nhất dồn vào con trâu nhất; bằng máu thì con gần nhân vật hơn trước, rồi theo id.
-  const hits: Hit[] = [...state.monsters]
+  const targets = [...state.monsters]
     .filter((monster) => isInZone(monster, aimSector, weapon, config.sectorCount))
-    .sort((a, b) => a.hp - b.hp || a.ring - b.ring || a.id - b.id)
-    .map((monster, order) => {
-      const damage = weapon.damage * (order + 1);
-      return { monsterId: monster.id, damage, killed: monster.hp - damage <= 0 };
-    });
+    .sort((a, b) => a.hp - b.hp || a.ring - b.ring || a.id - b.id);
+
+  // B6 — chí mạng: tung một lần cho cả nhát, chỉ khi có trúng và vũ khí có % chí mạng (0% không tung
+  // số, để ván không chí mạng y như trước).
+  let rng = state.rng;
+  let crit = false;
+  const critChance = weapon.critChance ?? 0;
+  if (targets.length > 0 && critChance > 0) {
+    let roll: number;
+    [roll, rng] = nextFloat(rng);
+    crit = roll < critChance;
+  }
+  const multiplier = crit ? config.critMultiplier : 1;
+  const hits: Hit[] = targets.map((monster, order) => {
+    const damage = weapon.damage * (order + 1) * multiplier;
+    return { monsterId: monster.id, damage, killed: monster.hp - damage <= 0 };
+  });
 
   const damageById = new Map(hits.map((hit) => [hit.monsterId, hit.damage]));
   const survivors: Monster[] = [];
@@ -230,11 +273,26 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
     if (hp > 0) survivors.push(hp === monster.hp ? monster : { ...monster, hp });
   }
 
-  const lastAttack = { aimSector, hits };
+  // B6 — hồi máu: nhát trúng đủ nhiều con thì hồi, không quá máu tối đa, trước khi quái đánh.
+  const { hp: maxHp, healMinHits, healAmount } = config.hero;
+  const healed = hits.length >= healMinHits ? Math.min(healAmount, maxHp - state.heroHp) : 0;
+  const lastAttack = { aimSector, hits, crit, healed };
   const turnsLeft = state.turnsLeft - 1;
+  const skill = state.loadout.skill;
+  const skillCharge =
+    skill === undefined ? 0 : Math.min(state.skillCharge + 1, config.skills[skill].chargeTurns);
+  const common = { turnsLeft, skillCharge, lastAttack, lastSkill: null };
 
   if (survivors.length === 0) {
-    return { ...state, turnsLeft, monsters: [], phase: 'won', lossReason: null, lastAttack };
+    return {
+      ...state,
+      ...common,
+      rng,
+      heroHp: state.heroHp + healed,
+      monsters: [],
+      phase: 'won',
+      lossReason: null,
+    };
   }
 
   // F05: đẩy quái ngay sau nhát chém, trước khi quái hành động.
@@ -254,19 +312,20 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
       )
       .map((m) => m.id),
   );
+  // B6: quái bị đóng băng không đánh, không bắn (willAttack).
   const damageTaken = knocked.monsters
-    .filter((m) => isThreatening(m, config) && !stunnedIds.has(m.id))
+    .filter((m) => willAttack(m, config) && !stunnedIds.has(m.id))
     .reduce((sum, m) => sum + config.monsterKinds[m.kind].attack, 0);
-  const heroHp = Math.max(0, state.heroHp - damageTaken);
+  const heroHp = Math.max(0, state.heroHp + healed - damageTaken);
 
-  const moved = moveMonsters(knocked.monsters, state.rng, config, knocked.pushedIds);
+  const moved = moveMonsters(knocked.monsters, rng, config, knocked.pushedIds);
   const base = {
     ...state,
-    turnsLeft,
+    ...common,
     heroHp,
-    monsters: moved.monsters,
+    // B6: hết lượt này thì bớt một lượt đóng băng.
+    monsters: moved.monsters.map(thaw),
     rng: moved.rng,
-    lastAttack,
   };
 
   if (heroHp <= 0) {
@@ -320,6 +379,71 @@ export function isThreatening(monster: Monster, config: BattleConfig): boolean {
   return monster.ring <= (config.monsterKinds[monster.kind].shootRing ?? 0);
 }
 
+/** B6: quái đang bị đóng băng — đứng im, không đánh, không bắn. */
+function isFrozen(monster: Monster): boolean {
+  return (monster.frozenTurns ?? 0) > 0;
+}
+
+/**
+ * Quái sẽ đánh (hoặc bắn) sau nhát chém tới nếu không bị choáng: đang ở vị trí đánh (isThreatening) và
+ * không bị đóng băng (B6). View hiện dấu "!" cho đúng những con này.
+ */
+export function willAttack(monster: Monster, config: BattleConfig): boolean {
+  return isThreatening(monster, config) && !isFrozen(monster);
+}
+
+/** B6: bớt một lượt đóng băng; hết băng thì bỏ hẳn dấu băng. */
+function thaw(monster: Monster): Monster {
+  if (monster.frozenTurns === undefined) return monster;
+  const { frozenTurns, ...rest } = monster;
+  return frozenTurns > 1 ? { ...rest, frozenTurns: frozenTurns - 1 } : rest;
+}
+
+function skillAt(state: BattleState, config: BattleConfig): SkillConfig | null {
+  const kind = state.loadout.skill;
+  return kind === undefined ? null : config.skills[kind];
+}
+
+/** B6: skill đang mang đã nạp đầy và trận còn đang chơi — nút skill sáng, bấm được. */
+export function canCastSkill(state: BattleState, config: BattleConfig): boolean {
+  const skill = skillAt(state, config);
+  return state.phase === 'playing' && skill !== null && state.skillCharge >= skill.chargeTurns;
+}
+
+/**
+ * B6: bấm skill — mọi quái trên sân mất `damage` máu (không combo, không chí mạng, không đẩy), con còn
+ * sống bị đóng băng `freezeTurns` lượt. Không tốn lượt, quái không di chuyển, không tung số ngẫu nhiên;
+ * nạp lại từ 0. Hạ hết quái thì thắng ngay.
+ */
+export function castSkill(state: BattleState, config: BattleConfig): BattleState {
+  if (state.phase !== 'playing') {
+    throw new Error(`Trận đã kết thúc (${state.phase}), không thể bấm skill`);
+  }
+  const kind = state.loadout.skill;
+  const skill = skillAt(state, config);
+  if (kind === undefined || skill === null) throw new Error('Không mang skill vào trận này');
+  if (state.skillCharge < skill.chargeTurns) {
+    throw new Error(`Skill mới nạp ${state.skillCharge}/${skill.chargeTurns}, chưa bấm được`);
+  }
+
+  const hits: Hit[] = [...state.monsters]
+    .sort((a, b) => a.id - b.id)
+    .map((m) => ({ monsterId: m.id, damage: skill.damage, killed: m.hp - skill.damage <= 0 }));
+  const monsters: Monster[] = state.monsters
+    .filter((m) => m.hp - skill.damage > 0)
+    .map((m) => {
+      const hp = m.hp - skill.damage;
+      if (skill.freezeTurns === 0) return { ...m, hp };
+      return { ...m, hp, frozenTurns: Math.max(m.frozenTurns ?? 0, skill.freezeTurns) };
+    });
+  const lastSkill = { skill: kind, hits };
+
+  if (monsters.length === 0) {
+    return { ...state, monsters, skillCharge: 0, lastSkill, phase: 'won', lossReason: null };
+  }
+  return { ...state, monsters, skillCharge: 0, lastSkill };
+}
+
 /**
  * Quái "đi lung tung": mỗi con tiến vào 1 vòng với xác suất advanceChance, còn lại đi ngang 1 lát.
  * Xét lần lượt theo id; không đi vào ô đang có quái khác (đứng yên). Quái áp sát (vòng 0) đứng yên
@@ -338,7 +462,8 @@ function moveMonsters(
   const positions = new Map(monsters.map((m) => [m.id, m]));
 
   for (const monster of [...monsters].sort((a, b) => a.id - b.id)) {
-    if (isThreatening(monster, config) || pushedIds.has(monster.id)) continue;
+    // B6: quái bị đóng băng đứng im, không tung số ngẫu nhiên.
+    if (isThreatening(monster, config) || isFrozen(monster) || pushedIds.has(monster.id)) continue;
     let roll: number;
     [roll, rng] = nextFloat(rng);
 

@@ -4,9 +4,14 @@ import type { BattleConfig, WeaponConfig } from './battleTypes';
 import {
   allLoadouts,
   allWeapons,
+  chooseSkill,
   chooseWeapon,
   defaultLoadout,
+  describeSkill,
   describeWeapon,
+  isSkillUnlocked,
+  loadoutForLevel,
+  skillOptions,
   slotOptions,
   validateLoadout,
 } from './loadout';
@@ -40,7 +45,13 @@ const CONFIG: BattleConfig = {
     slimeKing: { name: 'Vua thử', hp: 6, advanceChance: 1, attack: 2 },
     slimeCannon: { name: 'Pháo thử', hp: 2, advanceChance: 1, attack: 1, shootRing: 4 },
   },
-  hero: { hp: 5 },
+  hero: { hp: 5, healMinHits: 3, healAmount: 0 },
+  critMultiplier: 2,
+  skills: {
+    iceRain: { name: 'Băng thử', damage: 1, freezeTurns: 1, chargeTurns: 2 },
+    fireball: { name: 'Lửa thử', damage: 2, freezeTurns: 0, chargeTurns: 3 },
+  },
+  skillUnlockLevel: 0,
   levels: [{ turnLimit: 5, monsters: ['slime'], spread: 2 }],
 };
 
@@ -126,5 +137,44 @@ describe('B4 — đồ mang vào trận', () => {
       'Giáo: vòng 0–1, rộng 3 lát, đẩy lệch phải',
     );
     expect(describeWeapon(weapon('Gậy', 'mid'))).toBe('Gậy: vòng 0–1, rộng 3 lát, không đẩy');
+    // B6: có chí mạng thì ghi thêm.
+    expect(describeWeapon(weapon('Gậy', 'mid', { critChance: 0.1 }))).toBe(
+      'Gậy: vòng 0–1, rộng 3 lát, không đẩy, chí mạng 10%',
+    );
+  });
+});
+
+describe('B6 — skill mang vào trận', () => {
+  it('danh sách skill theo thứ tự cấu hình; màn mở skill theo cấu hình', () => {
+    expect(skillOptions(CONFIG)).toEqual(['iceRain', 'fireball']);
+    expect(isSkillUnlocked(0, { ...CONFIG, skillUnlockLevel: 1 })).toBe(false);
+    expect(isSkillUnlocked(1, { ...CONFIG, skillUnlockLevel: 1 })).toBe(true);
+  });
+
+  it('chọn skill thì thay skill đang mang, giữ nguyên vũ khí', () => {
+    const base = { weapons: [3, 1, 2], skill: 'iceRain' as const };
+    expect(chooseSkill(base, 'fireball')).toEqual({ weapons: [3, 1, 2], skill: 'fireball' });
+  });
+
+  it('bộ đồ cho màn: màn chưa mở thì bỏ skill; màn đã mở mà chưa chọn thì mang skill đầu tiên', () => {
+    const config = { ...CONFIG, skillUnlockLevel: 1 };
+    expect(loadoutForLevel({ weapons: [0, 1, 2], skill: 'fireball' }, 0, config)).toEqual({
+      weapons: [0, 1, 2],
+    });
+    expect(loadoutForLevel({ weapons: [0, 1, 2] }, 1, config)).toEqual({
+      weapons: [0, 1, 2],
+      skill: 'iceRain',
+    });
+    expect(loadoutForLevel({ weapons: [0, 1, 2], skill: 'fireball' }, 1, config)).toEqual({
+      weapons: [0, 1, 2],
+      skill: 'fireball',
+    });
+  });
+
+  it('mô tả skill sinh từ con số cấu hình', () => {
+    expect(describeSkill(CONFIG.skills.iceRain)).toBe(
+      'Băng thử: mọi quái mất 1 máu, đứng im 1 lượt; nạp 2 nhát',
+    );
+    expect(describeSkill(CONFIG.skills.fireball)).toBe('Lửa thử: mọi quái mất 2 máu; nạp 3 nhát');
   });
 });

@@ -3,7 +3,7 @@
 // Không phải luật chơi — game không dùng file này.
 import { nextInt, type RngState } from '../../../shared/random';
 import { isInZone } from './arena';
-import { isThreatening } from './battle';
+import { willAttack } from './battle';
 import type { BattleConfig, BattleState } from './battleTypes';
 
 /** Một nước đi: cầm vũ khí nào, chém vào lát nào. */
@@ -23,16 +23,15 @@ export function hitIds(state: BattleState, move: Move, config: BattleConfig): nu
 
 /**
  * Người chơi ngắm chuẩn: trước hết chém trúng nhiều quái bắn đang có "!" nhất (B3 — hạ hoặc làm nó
- * choáng); rồi vũ khí + lát trúng nhiều quái nhất; hòa thì ưu tiên quái đang ở gần nhân vật hơn (nguy
- * hiểm hơn); vẫn hòa thì vũ khí và lát đứng trước. B4: chỉ xét vũ khí đã mang vào trận.
+ * choáng; quái đang bị đóng băng thì không — B6); rồi vũ khí + lát trúng nhiều quái nhất; hòa thì
+ * ưu tiên quái đang ở gần nhân vật hơn (nguy hiểm hơn); vẫn hòa thì vũ khí và lát đứng trước. B4: chỉ
+ * xét vũ khí đã mang vào trận. B6: bấm skill thì xem canCastSkill (bot bấm ngay khi đầy).
  */
 export function bestMove(state: BattleState, config: BattleConfig): Move {
   const byId = new Map(state.monsters.map((m) => [m.id, m]));
   const aimingShooters = new Set(
     state.monsters
-      .filter(
-        (m) => config.monsterKinds[m.kind].shootRing !== undefined && isThreatening(m, config),
-      )
+      .filter((m) => config.monsterKinds[m.kind].shootRing !== undefined && willAttack(m, config))
       .map((m) => m.id),
   );
   let best: Move = { weaponIndex: state.weaponIndex, sector: 0 };

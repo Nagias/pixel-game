@@ -15,6 +15,7 @@
 | F06  | Màn chơi nối tiếp + trùm Slime Vua               | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 | F07a | Rìu chém hai phía + màn 4 quái tới từ hai phía   | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 | F07  | Màn chuẩn bị trận: chọn mỗi tầm một vũ khí       | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
+| F08  | Skill bấm đánh cả sân + máu, hồi máu, chí mạng   | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 | F09  | Quái bắn xa Slime Pháo + màn 5                   | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 
 ## F01 — Trận đấu tối thiểu
@@ -134,16 +135,17 @@ thắng 0,2%. Seed 42 thắng, dư 4 lượt.
 
 ## F04 — Máu nhân vật + dấu "!" báo quái sắp đánh
 
-**Người chơi thấy và làm gì:** đầu màn hình hiện "Máu: 5/5". Quái lọt vào sát người (vòng 0) có dấu
+**Người chơi thấy và làm gì:** đầu màn hình hiện "Máu: 10/10" (F08; trước đó 5/5). Quái lọt vào sát người (vòng 0) có dấu
 "!" đỏ trên đầu: nếu không diệt nó bằng nhát chém tới thì nó sẽ đánh. Người chơi không thua ngay khi
 một con lọt vào, mà phải cân nhắc chém con nào trước — Kiếm (vòng 0–1) là vũ khí để dọn chúng.
 
 **Luật** (nguồn sự thật: `logic/battle.ts` + `logic/battle.test.ts`, mục F04; chủ dự án duyệt ngày
 22/10/2026; **thay** luật cũ "quái chạm tới là thua ngay"):
 
-1. Nhân vật có 5 máu khi mở trận.
+1. Nhân vật có đầy máu khi mở trận (10 máu từ F08).
 2. Quái ở vòng 0 không di chuyển nữa (không tiến, không đi ngang, không tung số ngẫu nhiên) mà đánh:
-   sau mỗi nhát chém, mỗi con còn sống ở vòng 0 trừ 1 máu nhân vật.
+   sau mỗi nhát chém, mỗi con còn sống ở vòng 0 trừ máu nhân vật theo sức đánh của loại nó (F06; F08:
+   slime 2). Quái đang bị đóng băng (F08) không đánh.
 3. Quái vừa tiến vào vòng 0 trong lượt này chưa đánh ngay — lượt sau mới đánh (đúng những con đã có
    dấu "!" trước khi người chơi chém). Quái bị diệt trong nhát chém thì không kịp đánh.
 4. Hết máu → **thua** ("Bạn đã gục"); cùng lúc hết máu và hết lượt thì báo hết máu.
@@ -214,13 +216,13 @@ trâu và đánh đau hơn. Hạ hết màn cuối là "PHÁ ĐẢO!", chạm đ
 **Luật** (nguồn sự thật: `logic/battle.ts` `createBattle` / `nextLevelIndex` / `isGameCleared` +
 test mục F06; chủ dự án duyệt ngày 23/10/2026):
 
-1. Màn 1: 4 slime, 8 lượt (y như trận trước F06) · Màn 2: 6 slime, 10 lượt · Màn 3: Slime Vua + 3
-   slime, 10 lượt (chủ dự án duyệt 26/10/2026 — trước đó 2 slime, 12 lượt, dễ hơn màn 2) · Màn 4: xem
-   F07a.
-2. Slime Vua: 6 máu, áp sát thì mỗi lượt đánh mất 2 máu; còn lại y như slime (đi lung tung, combo, bị
+1. Màn 1: 4 slime · Màn 2: 6 slime · Màn 3: Slime Vua + 3 slime (chủ dự án duyệt 26/10/2026 — trước
+   đó 2 slime, dễ hơn màn 2) · Màn 4: xem F07a · Màn 5: xem F09. Số lượt màn 1–5: 10/12/9/8/8 (F08 —
+   trước đó 8/10/10/10/10).
+2. Slime Vua: 6 máu, áp sát thì mỗi lượt đánh mất 4 máu (F08; trước đó 2); còn lại y như slime (đi lung tung, combo, bị
    đẩy, dấu "!"). Không có luật trùm riêng.
 3. Mỗi loại quái có máu, sức đánh, xác suất tiến vào riêng; quái áp sát đánh theo sức đánh của loại nó.
-4. Màn nào cũng bắt đầu đầy máu, cầm Kiếm, đủ lượt của màn.
+4. Màn nào cũng bắt đầu đầy máu, cầm món tầm gần đã mang (F07), đủ lượt của màn, skill nạp 0 (F08).
 5. Thắng màn chưa phải cuối → sang màn kế; thắng màn cuối → phá đảo, chơi lại từ màn 1; thua → chơi
    lại đúng màn đó.
 6. Màn 2 có 6 con nên cụm quái rộng ±3 lát (cụm ±2 chỉ có 5 chỗ); màn 1 và 3 giữ ±2.
@@ -247,7 +249,7 @@ thêm một dòng; thêm loại quái = thêm tên vào `MonsterKind` + con số
   đảo, chạm thì về màn 1 (ảnh `3-thang.png` "Chạm để sang màn 2", `6-man-trum.png`, `7-pha-dao.png`);
   qua màn 1 rồi chém trượt ở màn 2 → thua → chạm thì chơi lại đúng màn 2 (ảnh `4-thua.png`).
 
-**Cân bằng (`npm run sim` — 500 ván mỗi màn, seed 1…500, cùng bot với E2E):** ngắm chuẩn với bộ mặc định (Kiếm + Giáo + Cung, từ F07) thắng màn 1 / 2 / 3 / 4 / 5 = 100% / 99,8% / 94,6% / 86,2% / 84,4%,
+**Cân bằng (`npm run sim` — 500 ván mỗi màn, seed 1…500, cùng bot với E2E; số **trước F08** — số mới ở mục F08):** ngắm chuẩn với bộ mặc định (Kiếm + Giáo + Cung, từ F07) thắng màn 1 / 2 / 3 / 4 / 5 = 100% / 99,8% / 94,6% / 86,2% / 84,4%,
 dư trung bình ~2,36 / ~2,89 / ~2,56 / ~1,21 / ~1,05 lượt — màn trùm khó hơn màn 2, màn 4 khó hơn màn 3, màn 5 khó hơn màn 4 (unit test `balance.test.ts` giữ ba quan hệ này, cùng 500 ván với `npm run sim`). Chém bừa (từ khi có 4 vũ khí) thắng 0,2% / 0% / 0% / 0% / 0%.
 Seed 42 của E2E qua cả 5 màn (dư 4 / 4 / 4 / 4 / 3 lượt).
 
@@ -334,6 +336,68 @@ thử.
 
 **Nợ liên quan:** DEBT-009, DEBT-011.
 
+## F08 — Skill bấm đánh cả sân + máu, hồi máu, chí mạng
+
+**Người chơi thấy và làm gì:** từ màn 3, màn chuẩn bị có hàng **Skill**: chọn **Mưa băng** hoặc **Cầu
+lửa**. Trong trận, ô cuối thanh nút là ô skill: tô màu dần từ đáy lên theo số nhát chém đã nạp ("1/3"),
+đầy thì viền vàng và chữ **"BẤM!"**. Chạm ô skill khi đầy: sân chớp màu skill, mọi quái mất máu (số bay
+lên), không tốn lượt. Mưa băng làm quái còn sống đổi màu băng, không có "!" và đứng im lượt tới. Nhân
+vật có **10 máu**; nhát chém trúng từ 3 con trở lên hồi 1 máu (hiện "+1"); thỉnh thoảng nhát chém là
+**"CHÍ MẠNG!"** — sát thương ×2.
+
+**Luật** (nguồn sự thật: `logic/battle.ts` `castSkill` / `canCastSkill` / `willAttack` / `playTurn` +
+`logic/skill.test.ts`; chủ dự án duyệt ngày 27/10/2026 phương án "2 skill, chọn trước trận" và "máu,
+hồi máu, chí mạng làm luôn"):
+
+1. Nạp: mỗi nhát chém (trúng hay trượt) +1, tối đa số nhát của skill; trận mới nạp 0. Đầy thì bấm được;
+   bấm xong nạp lại từ 0. Bấm skill **không tốn lượt**, quái không di chuyển, không tung số ngẫu nhiên.
+2. Skill trúng **mọi quái trên sân** (không combo, không chí mạng, không đẩy). Hạ hết quái thì thắng ngay.
+3. Mưa băng: 1 sát thương, quái còn sống **đóng băng 1 lượt** — lượt ngay sau không đi, không đánh, không
+   bắn; hết lượt đó thì hết băng. Quái băng bị chém trúng vẫn bị đẩy theo vũ khí.
+4. Cầu lửa: 2 sát thương, không đóng băng, nạp lâu hơn.
+5. Skill mở từ màn 3 (`skillUnlockLevel`); màn chưa mở mà mang skill thì bị từ chối.
+6. Hồi máu: nhát trúng ≥ 3 con hồi 1 máu, không quá máu tối đa, **trước** khi quái đánh.
+7. Chí mạng: tung **một lần cho cả nhát** bằng RNG có seed của trận, chỉ khi nhát có trúng và vũ khí có %
+   chí mạng; chí mạng thì mọi con trúng ăn ×2 (combo vẫn 1×, 2×, 3×…). Vũ khí 0% không tung số.
+8. Thứ tự một lượt: đánh (chí mạng) → kiểm thắng → hồi máu → đẩy → quái đánh → quái đi → hết đóng băng →
+   kiểm thua.
+9. Cấu hình sai bị từ chối: skill 0 sát thương / nạp 0 nhát / đóng băng âm, chí mạng ngoài [0, 1], hệ số
+   chí mạng < 1, hồi máu khi trúng 0 con hoặc hồi âm, màn mở skill âm, skill không tồn tại.
+
+**Hành vi giao diện:** ô skill là nút thứ 4 của thanh (rộng 72); chưa đầy thì chạm không làm gì. Quái
+băng nhuộm màu `cyan` (ra hơi tối vì Phaser nhuộm kiểu nhân màu — xem lại ở đợt đồ họa thật). Máy không có WebGL (Phaser rơi về Canvas) thì không nhuộm được — chỉ còn dấu hiệu là mất "!"; đồ họa thật sẽ thay bằng hình băng riêng. Màn chuẩn bị nhớ skill chọn gần nhất qua các màn chưa mở skill (vd. sau phá đảo) trong lúc đang chơi. Mô tả
+skill / vũ khí trên màn chuẩn bị sinh từ con số (`describeSkill`, `describeWeapon` có "chí mạng 10%").
+
+**Con số** (`src/features/battle/logic/battleConfig.ts`, agent chọn bằng mô phỏng ngày 27/10/2026 theo ủy
+quyền của chủ dự án — giữ độ khó gần như trước B6): nhân vật 10 máu, hồi 1 máu khi trúng ≥ 3 con; mọi vũ
+khí chí mạng 10%, ×2; Mưa băng nạp 3 nhát, Cầu lửa nạp 5 nhát; **quái mạnh lên**: slime và Slime Pháo
+2 → 3 máu, sức đánh ×2 (slime 2, Slime Vua 4, Slime Pháo 2); **số lượt** màn 1–5: 8/10/10/10/10 →
+10/12/9/8/8. Vì sao máu quái lên 3: với 2 máu, Cầu lửa (2 sát thương) dọn sạch sân trong một lần bấm —
+màn 4–5 thắng 100%.
+
+**Kiểm chứng tự động:**
+
+- Unit (`skill.test.ts`): bấm skill trừ máu mọi quái, quái chết biến mất, đóng băng, không tốn lượt / không
+  tung số / nạp về 0; Cầu lửa thắng ngay; không bấm được khi chưa đầy / không mang / trận xong; nạp +1 mỗi
+  nhát, tối đa; nhát chém xóa dấu skill; quái băng không đánh / không đi / không bắn, lượt sau bình thường,
+  vẫn bị đẩy; hồi máu ≥ 3 con, không hồi 2 con, không quá tối đa, hồi trước khi bị đánh; chí mạng 100% ×2
+  combo, trượt không tung số, 0% y như không khai báo, theo seed; từ chối mang skill ở màn chưa mở, skill
+  không tồn tại, cấu hình sai. `loadout.test.ts`: chọn skill, bộ đồ theo màn, mô tả. `autoPlay.test.ts`:
+  bot không ưu tiên quái bắn đang băng. `battleLayout.test.ts`: ô skill trên thanh.
+- E2E: màn 1 chưa có skill, màn 3 có hàng skill Mưa băng chọn sẵn, chọn Cầu lửa thì mang Cầu lửa vào trận
+  (ảnh `15-chuan-bi-skill.png`); chưa đầy chạm ô skill không làm gì; chém 3 nhát nạp đầy (ảnh
+  `16-skill-day.png`), bấm thì mọi quái mất máu, lượt không đổi, quái còn sống bị băng (ảnh
+  `17-mua-bang.png`), lượt sau máu nhân vật không giảm và hết băng; ván seed 42 đi đủ 5 màn, bot bấm
+  skill khi đầy, sát thương kiểm cả chí mạng.
+
+**Cân bằng (`npm run sim`, 500 ván, ngắm chuẩn, bộ Kiếm + Giáo + Cung):** thắng màn 1 / 2 = 98,2% /
+98,6% (dư 3,04 / 3,43); màn 3 / 4 / 5 với Mưa băng = 97,8% / 81,6% / 78,2% (dư 2,40 / 0,65 / 0,50), với
+Cầu lửa = 98,6% / 91,4% / 82,4% (dư 2,65 / 0,88 / 0,48). Trước B6: 100% / 99,8% / 94,6% / 86,2% / 84,4%.
+Cầu lửa vẫn nhỉnh hơn Mưa băng ở màn 4 (bot bấm ngay khi đầy, chưa biết để dành Mưa băng lúc quái áp
+sát). Lõi mô phỏng dùng chung: `scripts/simCore.ts`.
+
+**Nợ liên quan:** DEBT-007 (chưa có hình hiệu ứng skill thật), DEBT-009.
+
 ## F09 — Quái bắn xa Slime Pháo + màn 5
 
 **Người chơi thấy và làm gì:** màn 5 có **Slime Pháo** (slime cam, có nòng pháo trên đầu). Nó không cần
@@ -349,7 +413,7 @@ ngày 26/10/2026):
 2. Vừa tới vòng bắn trong lượt này thì lượt sau mới bắn (như quái áp sát F04).
 3. **Choáng:** bị chém trúng lúc đang có "!" mà còn sống → lượt đó không bắn. Bị Kiếm đẩy ra ngoài vòng
    bắn thì hết "!", phải tiến vào lại. Quái cận chiến (slime, Slime Vua) không bị choáng.
-4. Slime Pháo: 2 máu, vòng bắn 4, mỗi phát bắn mất 1 máu, 60% tiến vào.
+4. Slime Pháo: 3 máu, vòng bắn 4, mỗi phát bắn mất 2 máu (F08; trước đó 2 máu, bắn mất 1), 60% tiến vào.
 5. Màn 5: 6 slime + 2 Slime Pháo trong một cụm ±4 lát, 10 lượt.
 6. Cấu hình sai bị từ chối: vòng bắn không nguyên, nhỏ hơn 1, hoặc từ vòng xuất hiện trở ra.
 
@@ -374,9 +438,8 @@ lúc đề xuất bằng bot không ưu tiên) — đúng là một câu đố.
 
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
-| Mã  | Tính năng | Ghi chú                                    |
-| --- | --------- | ------------------------------------------ |
-| F08 | Skill     | Chủ dự án nêu ngày 22/10; chờ mô tả cơ chế |
+Trống. Việc tiếp theo nằm trong kế hoạch sau B6 (`docs/plans/2026-10-27-ke-hoach-sau-b6.md`, chờ chủ
+dự án duyệt).
 
 ## Mẫu cho tính năng mới (copy khối này)
 

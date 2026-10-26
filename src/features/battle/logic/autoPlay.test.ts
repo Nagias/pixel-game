@@ -36,7 +36,13 @@ const CONFIG: BattleConfig = {
     slimeKing: { name: 'Vua thử', hp: 6, advanceChance: 0.6, attack: 2 },
     slimeCannon: { name: 'Pháo thử', hp: 2, advanceChance: 0.6, attack: 1, shootRing: 4 },
   },
-  hero: { hp: 5 },
+  hero: { hp: 5, healMinHits: 3, healAmount: 0 },
+  critMultiplier: 2,
+  skills: {
+    iceRain: { name: 'Băng thử', damage: 1, freezeTurns: 1, chargeTurns: 2 },
+    fireball: { name: 'Lửa thử', damage: 2, freezeTurns: 0, chargeTurns: 3 },
+  },
+  skillUnlockLevel: 0,
   levels: [{ turnLimit: 8, monsters: ['slime'], spread: 2 }],
 };
 
@@ -61,6 +67,8 @@ function stateWith(monsters: Monster[], weaponIndex = 0, weapons = [0, 1, 2]): B
     phase: 'playing',
     lossReason: null,
     lastAttack: null,
+    skillCharge: 0,
+    lastSkill: null,
   };
 }
 
@@ -135,6 +143,21 @@ describe('bot chơi thử — dùng chung cho E2E và mô phỏng cân bằng', 
     const far: Monster = { id: 3, kind: 'slimeKing', sector: 3, ring: 4, hp: 6 };
     const state = stateWith([monster(1, 10, 1), monster(2, 11, 1), far]);
     expect(bestMove(state, withShooter)).toEqual(bestMove(state, CONFIG));
+  });
+
+  // B6: quái bắn đang bị đóng băng lượt tới không bắn — không cần ưu tiên nó.
+  it('ngắm chuẩn: quái bắn đang bị đóng băng thì không được ưu tiên', () => {
+    const withShooter: BattleConfig = {
+      ...CONFIG,
+      monsterKinds: {
+        ...CONFIG.monsterKinds,
+        slimeKing: { ...CONFIG.monsterKinds.slimeKing, shootRing: 4 },
+      },
+    };
+    const frozen: Monster = { id: 3, kind: 'slimeKing', sector: 3, ring: 4, hp: 6, frozenTurns: 1 };
+    const state = stateWith([monster(1, 10, 1), monster(2, 11, 1), frozen]);
+    expect(bestMove(state, withShooter)).toEqual(bestMove(state, CONFIG));
+    expect(hitIds(state, bestMove(state, withShooter), withShooter)).not.toContain(3);
   });
 
   // B4: bot chỉ dùng vũ khí đã mang vào trận — nếu không, E2E chạm nút không có và số mô phỏng sai.

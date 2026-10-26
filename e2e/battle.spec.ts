@@ -1,9 +1,18 @@
 // F01–F06 — Trận đấu: mở game → đổi vũ khí → chạm sân để chém → thắng/thua → sang màn / chơi lại.
 // B4: mở game và mỗi lần hết màn là màn chuẩn bị trận (chọn đồ) trước, rồi mới vào trận.
 import { expect, test } from '@playwright/test';
-import { isGameCleared, isThreatening, levelAt } from '../src/features/battle/logic/battle';
+import {
+  canCastSkill,
+  isGameCleared,
+  levelAt,
+  willAttack,
+} from '../src/features/battle/logic/battle';
 import { BATTLE_CONFIG } from '../src/features/battle/logic/battleConfig';
-import { WEAPON_BAR, weaponButtonRects } from '../src/features/battle/view/battleLayout';
+import {
+  barButtonCount,
+  WEAPON_BAR,
+  weaponButtonRects,
+} from '../src/features/battle/view/battleLayout';
 import { LOADOUT_LAYOUT } from '../src/features/battle/view/loadoutLayout';
 import { BattleDriver, bestMove, hitIds, missMove } from './support/battleDriver';
 
@@ -27,12 +36,20 @@ async function playBestUntilOver(
 ): Promise<number> {
   let mostHitsInOneStrike = 0;
   while ((await game.snapshot()).battle.phase === 'playing') {
+    // B6: bot bấm skill ngay khi đầy (không tốn lượt) — cùng cách chơi với `npm run sim`.
+    if (canCastSkill((await game.snapshot()).battle, BATTLE_CONFIG)) {
+      await game.castSkill();
+      if ((await game.snapshot()).battle.phase !== 'playing') break;
+    }
     await beforeStrike?.(await game.snapshot());
     const move = bestMove(await game.snapshot());
     await game.play(move);
 
-    const hits = (await game.snapshot()).battle.lastAttack?.hits ?? [];
-    const weaponDamage = BATTLE_CONFIG.weapons[move.weaponIndex]?.damage ?? 0;
+    const { lastAttack } = (await game.snapshot()).battle;
+    const hits = lastAttack?.hits ?? [];
+    // B6: nhát chí mạng nhân hệ số cho mọi con trúng.
+    const multiplier = lastAttack?.crit ? BATTLE_CONFIG.critMultiplier : 1;
+    const weaponDamage = (BATTLE_CONFIG.weapons[move.weaponIndex]?.damage ?? 0) * multiplier;
     expect(hits.map((hit) => hit.damage)).toEqual(hits.map((_, i) => weaponDamage * (i + 1)));
     mostHitsInOneStrike = Math.max(mostHitsInOneStrike, hits.length);
   }
@@ -105,8 +122,8 @@ test('F02: chạm vào khe giữa hai nút vũ khí không làm gì — không c
   const game = new BattleDriver(page);
   await game.openBattle(SEED);
   const before = (await game.snapshot()).battle;
-  const gaps = weaponGapCenters(before.loadout.weapons.length);
-  expect(gaps).toHaveLength(before.loadout.weapons.length - 1);
+  const gaps = weaponGapCenters(barButtonCount(before.loadout));
+  expect(gaps).toHaveLength(barButtonCount(before.loadout) - 1);
 
   for (const gap of gaps) {
     await game.tapAt(gap.x, gap.y);
@@ -135,7 +152,7 @@ test('F02: ở màn kết quả, chạm vào chỗ khe giữa hai nút vẫn là
   expect((await game.snapshot()).battle.phase).toBe('lost');
 
   await game.advance(RESULT_SCREEN_WAIT_MS);
-  const [gap] = weaponGapCenters((await game.snapshot()).battle.loadout.weapons.length);
+  const [gap] = weaponGapCenters(barButtonCount((await game.snapshot()).battle.loadout));
   if (!gap) throw new Error('Không có khe giữa hai nút');
   await game.tapAt(gap.x, gap.y);
   await game.waitSceneSwitch();
@@ -233,7 +250,7 @@ test('F06: ngắm chuẩn thắng màn nào sang màn kế, hạ trùm ở màn 
       mostHitsInOneStrike,
       await playBestUntilOver(game, async (snapshot) => {
         const aiming = snapshot.battle.monsters.find(
-          (m) => m.kind === 'slimeCannon' && isThreatening(m, BATTLE_CONFIG),
+          (m) => m.kind === 'slimeCannon' && willAttack(m, BATTLE_CONFIG),
         );
         if (!aiming || cannonShot) return;
         cannonShot = true;
@@ -290,7 +307,7 @@ test('F06: thua thì chơi lại đúng màn đó — qua màn 1, chém trượt
     const before = await game.snapshot();
     if (before.battle.phase !== 'playing') break;
     const damage = before.battle.monsters
-      .filter((m) => isThreatening(m, BATTLE_CONFIG))
+      .filter((m) => willAttack(m, BATTLE_CONFIG))
       .reduce((sum, m) => sum + BATTLE_CONFIG.monsterKinds[m.kind].attack, 0);
     await game.play(missMove(before));
 
@@ -400,4 +417,107 @@ test('B4: ?level=4 mở thẳng màn chuẩn bị màn 4 (thử tay / E2E nhanh)
   const { battle } = await game.snapshot();
   expect(battle.level).toBe(3);
   expect(battle.monsters.map((m) => m.kind)).toEqual(levelAt(3, BATTLE_CONFIG).monsters);
+});
+
+test('B6: màn chuẩn bị từ màn 3 có hàng skill (Mưa băng chọn sẵn), chọn Cầu lửa thì mang Cầu lửa vào trận', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  // Màn 1–2 chưa có skill.
+  await game.openLoadout(SEED);
+  expect(await game.waitLoadoutReady()).toMatchObject({
+    skills: [],
+    loadout: { weapons: [0, 1, 2] },
+  });
+
+  const unlock = BATTLE_CONFIG.skillUnlockLevel + 1;
+  await game.openLoadout(SEED, unlock);
+  const prep = await game.waitLoadoutReady();
+  expect(prep).toMatchObject({
+    level: unlock - 1,
+    skills: ['iceRain', 'fireball'],
+    loadout: { weapons: [0, 1, 2], skill: 'iceRain' },
+  });
+  await page.screenshot({ path: test.info().outputPath('15-chuan-bi-skill.png') });
+
+  await game.chooseSkill('fireball');
+  expect((await game.loadoutSnapshot()).loadout.skill).toBe('fireball');
+  await game.startBattle();
+  const { battle } = await game.snapshot();
+  expect(battle).toMatchObject({ skillCharge: 0, loadout: { skill: 'fireball' } });
+});
+
+test('B6: skill nạp theo nhát chém, đầy thì bấm — mọi quái mất máu, không tốn lượt; Mưa băng đóng băng đúng 1 lượt', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.openLoadout(SEED, BATTLE_CONFIG.skillUnlockLevel + 1);
+  await game.startBattle();
+  const { chargeTurns, damage } = BATTLE_CONFIG.skills.iceRain;
+
+  // Chưa đầy: chạm ô skill không làm gì.
+  const fresh = (await game.snapshot()).battle;
+  await game.castSkill();
+  expect((await game.snapshot()).battle).toEqual(fresh);
+
+  // Chém tới khi nạp đầy.
+  for (let strike = 1; strike <= chargeTurns; strike++) {
+    await game.play(bestMove(await game.snapshot()));
+    const { battle } = await game.snapshot();
+    expect(battle.phase).toBe('playing');
+    expect(battle.skillCharge).toBe(strike);
+  }
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('16-skill-day.png') });
+
+  const before = (await game.snapshot()).battle;
+  expect(canCastSkill(before, BATTLE_CONFIG)).toBe(true);
+  await game.castSkill();
+  const after = (await game.snapshot()).battle;
+  expect(after).toMatchObject({ turnsLeft: before.turnsLeft, skillCharge: 0 });
+  expect(after.lastSkill?.hits.map((h) => h.monsterId)).toEqual(before.monsters.map((m) => m.id));
+  for (const monster of before.monsters) {
+    const now = after.monsters.find((m) => m.id === monster.id);
+    if (monster.hp <= damage) expect(now).toBeUndefined();
+    else expect(now).toMatchObject({ hp: monster.hp - damage, frozenTurns: 1 });
+  }
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('17-mua-bang.png') });
+
+  // Lượt ngay sau: mọi quái đang băng không đánh (máu nhân vật không giảm), hết lượt thì hết băng.
+  await game.play(bestMove(await game.snapshot()));
+  const next = (await game.snapshot()).battle;
+  expect(next.heroHp).toBeGreaterThanOrEqual(after.heroHp);
+  expect(next.monsters.every((m) => m.frozenTurns === undefined)).toBe(true);
+});
+
+test('B6: màn chuẩn bị nhớ skill đã chọn qua các màn chưa có skill — phá đảo bằng Cầu lửa, lên lại màn 3 vẫn chọn Cầu lửa', async ({
+  page,
+}) => {
+  test.slow(); // chơi 3 màn (màn 5 rồi màn 1, 2) qua màn chuẩn bị
+  const game = new BattleDriver(page);
+  await game.openLoadout(SEED, BATTLE_CONFIG.levels.length);
+  await game.chooseSkill('fireball');
+  await game.startBattle();
+  await playBestUntilOver(game);
+  expect(isGameCleared((await game.snapshot()).battle, BATTLE_CONFIG)).toBe(true);
+
+  // Phá đảo → màn 1, 2 chưa có skill.
+  for (let level = 0; level < BATTLE_CONFIG.skillUnlockLevel; level++) {
+    await continueFromResult(game);
+    const { battle } = await game.snapshot();
+    expect(battle.level).toBe(level);
+    expect(battle.loadout.skill).toBeUndefined();
+    await playBestUntilOver(game);
+    expect((await game.snapshot()).battle.phase).toBe('won');
+  }
+
+  await game.advance(RESULT_SCREEN_WAIT_MS);
+  await game.tap();
+  await game.waitSceneSwitch();
+  const prep = await game.waitLoadoutReady();
+  expect(prep).toMatchObject({
+    level: BATTLE_CONFIG.skillUnlockLevel,
+    loadout: { skill: 'fireball' },
+  });
 });

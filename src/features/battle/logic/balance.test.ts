@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { bestMove } from './autoPlay';
-import { createBattle, playTurn, selectWeapon } from './battle';
+import { canCastSkill, castSkill, createBattle, playTurn, selectWeapon } from './battle';
 import { BATTLE_CONFIG } from './battleConfig';
+import { defaultLoadout, loadoutForLevel } from './loadout';
 
 // Kiểm quan hệ độ khó chủ dự án đã duyệt trên con số THẬT của game (khác các test luật dùng cấu
 // hình riêng). Chỉ kiểm quan hệ giữa các màn, không ghim con số — số nằm trong battleConfig.ts.
@@ -9,13 +10,21 @@ import { BATTLE_CONFIG } from './battleConfig';
 // kết quả khi hai màn chênh nhau ít (màn 4 và 5 lệch ~0,2 lượt dư: 200 ván thì đảo chiều).
 const GAMES = 500;
 
-/** Người chơi ngắm chuẩn chơi `GAMES` ván của màn: tỉ lệ thắng và số lượt dư trung bình khi thắng. */
+/**
+ * Người chơi ngắm chuẩn chơi `GAMES` ván của màn với bộ đồ mặc định của game (B6: từ màn mở skill thì
+ * mang skill đầu, bấm ngay khi đầy — như `npm run sim`): tỉ lệ thắng và số lượt dư trung bình khi thắng.
+ */
 function playLevel(level: number): { winRate: number; spareTurns: number } {
   let won = 0;
   let spare = 0;
   for (let seed = 1; seed <= GAMES; seed++) {
-    let state = createBattle(seed, BATTLE_CONFIG, level);
+    const loadout = loadoutForLevel(defaultLoadout(BATTLE_CONFIG), level, BATTLE_CONFIG);
+    let state = createBattle(seed, BATTLE_CONFIG, level, loadout);
     while (state.phase === 'playing') {
+      if (canCastSkill(state, BATTLE_CONFIG)) {
+        state = castSkill(state, BATTLE_CONFIG);
+        if (state.phase !== 'playing') break;
+      }
       const move = bestMove(state, BATTLE_CONFIG);
       if (move.weaponIndex !== state.weaponIndex) {
         state = selectWeapon(state, move.weaponIndex, BATTLE_CONFIG);

@@ -48,7 +48,14 @@ const CONFIG: BattleConfig = {
     slimeKing: { name: 'Vua thử', hp: 6, advanceChance: 1, attack: 2 },
     slimeCannon: { name: 'Pháo thử', hp: 2, advanceChance: 1, attack: 1, shootRing: 4 },
   },
-  hero: { hp: 5 },
+  // B6: hồi máu 0 để các test luật cũ không đổi; test hồi máu / skill nằm ở skill.test.ts.
+  hero: { hp: 5, healMinHits: 3, healAmount: 0 },
+  critMultiplier: 2,
+  skills: {
+    iceRain: { name: 'Băng thử', damage: 1, freezeTurns: 1, chargeTurns: 2 },
+    fireball: { name: 'Lửa thử', damage: 2, freezeTurns: 0, chargeTurns: 3 },
+  },
+  skillUnlockLevel: 0,
   levels: [LEVEL_1],
 };
 
@@ -139,6 +146,8 @@ function stateWith(monsters: Monster[], overrides: Partial<BattleState> = {}): B
     phase: 'playing',
     lossReason: null,
     lastAttack: null,
+    skillCharge: 0,
+    lastSkill: null,
     ...overrides,
   };
 }
@@ -266,7 +275,7 @@ describe('createBattle — chặn cấu hình sai trước khi mở trận', () 
     ['quái không có máu', kindRule('slime', { hp: 0 })],
     ['xác suất tiến vào lớn hơn 1', kindRule('slime', { advanceChance: 1.5 })],
     ['xác suất tiến vào âm', kindRule('slime', { advanceChance: -0.1 })],
-    ['nhân vật không có máu', { ...CONFIG, hero: { hp: 0 } }],
+    ['nhân vật không có máu', { ...CONFIG, hero: { ...CONFIG.hero, hp: 0 } }],
     ['quái không có sức đánh', kindRule('slime', { attack: 0 })],
     ['kiểu đẩy không tồn tại', weapon({ push: 'xoay' as WeaponConfig['push'] })],
     // B2: nêm sau lưng nằm đúng lát đối diện → số lát phải chẵn; hai nêm không được chồng nhau.
@@ -380,6 +389,9 @@ describe('playTurn — một nhát đánh', () => {
         { monsterId: 1, damage: 1, killed: true },
         { monsterId: 2, damage: 2, killed: true },
       ],
+      // B6: vũ khí thử không chí mạng, cấu hình thử không hồi máu.
+      crit: false,
+      healed: 0,
     });
   });
 
