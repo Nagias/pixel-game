@@ -1,0 +1,139 @@
+diff --git a/FEATURE_MAP.md b/FEATURE_MAP.md
+index b1769a5..974e3e2 100644
+--- a/FEATURE_MAP.md
++++ b/FEATURE_MAP.md
+@@ -138,6 +138,8 @@ một con lọt vào, mà phải cân nhắc chém con nào trước — Kiếm
+    dấu "!" trước khi người chơi chém). Quái bị diệt trong nhát chém thì không kịp đánh.
+ 4. Hết máu → **thua** ("Bạn đã gục"); cùng lúc hết máu và hết lượt thì báo hết máu.
+ 5. `isThreatening` (vòng 0) là nguồn duy nhất quyết định con nào có dấu "!".
++6. Một nhát chém diệt từ 3 quái trở lên thì nhân vật hồi 1 máu (không vượt máu tối đa), ngay sau nhát
++   chém và trước khi quái áp sát đánh.
+ 
+ **Hành vi giao diện:** dấu "!" đỏ trên đầu quái sắp đánh; ô "Máu" giữa thanh trên cùng. Không thêm
+ hiệu ứng mới.
+diff --git a/src/features/battle/logic/battle.test.ts b/src/features/battle/logic/battle.test.ts
+index e9fec07..cee6f4e 100644
+--- a/src/features/battle/logic/battle.test.ts
++++ b/src/features/battle/logic/battle.test.ts
+@@ -24,7 +24,7 @@ const CONFIG: BattleConfig = {
+   arcPeriodMs: 2_400,
+   weapons: [ALL_REACH],
+   monster: { name: 'Slime thử', hp: 2, advanceChance: 1, attack: 1 },
+-  hero: { hp: 5 },
++  hero: { hp: 5, healKillThreshold: 3, healAmount: 1 },
+   spawn: { count: 4, spread: 2 },
+ };
+ 
+@@ -177,7 +177,9 @@ describe('createBattle — chặn cấu hình sai trước khi mở trận', ()
+     ['quái không có máu', monsterRule({ hp: 0 })],
+     ['xác suất tiến vào lớn hơn 1', monsterRule({ advanceChance: 1.5 })],
+     ['xác suất tiến vào âm', monsterRule({ advanceChance: -0.1 })],
+-    ['nhân vật không có máu', { ...CONFIG, hero: { hp: 0 } }],
++    ['nhân vật không có máu', { ...CONFIG, hero: { ...CONFIG.hero, hp: 0 } }],
++    ['ngưỡng hồi máu dưới 1 quái', { ...CONFIG, hero: { ...CONFIG.hero, healKillThreshold: 0 } }],
++    ['lượng hồi máu âm', { ...CONFIG, hero: { ...CONFIG.hero, healAmount: -1 } }],
+     ['quái không có sức đánh', monsterRule({ attack: 0 })],
+     ['kiểu đẩy không tồn tại', weapon({ push: 'xoay' as WeaponConfig['push'] })],
+   ])('từ chối: %s', (_label, config) => {
+@@ -551,3 +553,44 @@ describe('F05 — đẩy quái theo vũ khí', () => {
+     expect(playTurn(before, 0, config).rng).toBe(before.rng);
+   });
+ });
++
++describe('hồi máu khi một nhát diệt nhiều quái', () => {
++  // Quái 1 máu: combo 1×/2×/3× nên trúng là chết. Quái 9 ở xa (vòng 5) để trận chưa thắng.
++  const far = monster(9, 12, 5);
++
++  it('diệt 3 quái trong một nhát → hồi 1 máu', () => {
++    const before = stateWith(
++      [monster(1, 0, 3, 1), monster(2, 1, 4, 1), monster(3, 23, 5, 1), far],
++      {
++        heroHp: 2,
++      },
++    );
++    expect(playTurn(before, 0, CONFIG).heroHp).toBe(3);
++  });
++
++  it('diệt 2 quái → không hồi', () => {
++    const before = stateWith([monster(1, 0, 3, 1), monster(2, 1, 4, 1), far], { heroHp: 2 });
++    expect(playTurn(before, 0, CONFIG).heroHp).toBe(2);
++  });
++
++  it('trúng 3 mà chỉ diệt 2 → không hồi (tính số diệt, không tính số trúng)', () => {
++    const before = stateWith(
++      [monster(1, 0, 3, 1), monster(2, 1, 4, 1), monster(3, 23, 5, 10), far],
++      {
++        heroHp: 2,
++      },
++    );
++    expect(playTurn(before, 0, CONFIG).heroHp).toBe(2);
++  });
++
++  it('không hồi vượt máu tối đa; hồi trước khi quái áp sát đánh', () => {
++    const adjacent = monster(9, 12, 0);
++    const before = stateWith([
++      monster(1, 0, 3, 1),
++      monster(2, 1, 4, 1),
++      monster(3, 23, 5, 1),
++      adjacent,
++    ]);
++    expect(playTurn(before, 0, CONFIG).heroHp).toBe(4);
++  });
++});
+diff --git a/src/features/battle/logic/battle.ts b/src/features/battle/logic/battle.ts
+index 58877df..ed0b058 100644
+--- a/src/features/battle/logic/battle.ts
++++ b/src/features/battle/logic/battle.ts
+@@ -39,6 +39,8 @@ function validateBattleConfig(config: BattleConfig): void {
+   if (monster.hp < 1) problems.push('quái phải có ít nhất 1 máu');
+   if (monster.attack < 1) problems.push('quái phải có sức đánh ít nhất 1');
+   if (config.hero.hp < 1) problems.push('nhân vật phải có ít nhất 1 máu');
++  if (config.hero.healKillThreshold < 1) problems.push('ngưỡng hồi máu phải từ 1 quái trở lên');
++  if (config.hero.healAmount < 0) problems.push('lượng hồi máu không được âm');
+   if (monster.advanceChance < 0 || monster.advanceChance > 1) {
+     problems.push('xác suất tiến vào phải trong [0, 1]');
+   }
+@@ -145,7 +147,13 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
+   // F04: quái đang áp sát (còn sống sau nhát chém và sau khi bị đẩy) đánh; quái vừa tiến vào vòng 0
+   // lượt này chỉ đánh từ lượt sau — đúng những con người chơi đã thấy dấu "!" trước khi chém.
+   const attackers = knocked.monsters.filter(isThreatening).length;
+-  const heroHp = Math.max(0, state.heroHp - attackers * config.monster.attack);
++  // Hồi máu ngay sau nhát chém, trước khi quái áp sát đánh; không vượt máu tối đa.
++  const kills = hits.filter((hit) => hit.killed).length;
++  const healed =
++    kills >= config.hero.healKillThreshold
++      ? Math.min(config.hero.hp, state.heroHp + config.hero.healAmount)
++      : state.heroHp;
++  const heroHp = Math.max(0, healed - attackers * config.monster.attack);
+ 
+   const moved = moveMonsters(knocked.monsters, state.rng, config, knocked.pushedIds);
+   const base = {
+diff --git a/src/features/battle/logic/battleConfig.ts b/src/features/battle/logic/battleConfig.ts
+index 886cabb..9dd4f59 100644
+--- a/src/features/battle/logic/battleConfig.ts
++++ b/src/features/battle/logic/battleConfig.ts
+@@ -47,6 +47,9 @@ export const BATTLE_CONFIG: BattleConfig = {
+   },
+   hero: {
+     hp: 5,
++    // Một nhát diệt từ 3 quái trở lên thì hồi 1 máu.
++    healKillThreshold: 3,
++    healAmount: 1,
+   },
+   spawn: {
+     count: 4,
+diff --git a/src/features/battle/logic/battleTypes.ts b/src/features/battle/logic/battleTypes.ts
+index a9648bf..9571281 100644
+--- a/src/features/battle/logic/battleTypes.ts
++++ b/src/features/battle/logic/battleTypes.ts
+@@ -36,6 +36,10 @@ export interface MonsterConfig {
+ export interface HeroConfig {
+   /** F04: máu ban đầu của nhân vật. */
+   readonly hp: number;
++  /** Một nhát diệt từ chừng này quái trở lên thì nhân vật hồi máu. */
++  readonly healKillThreshold: number;
++  /** Số máu hồi mỗi lần (không vượt máu tối đa). */
++  readonly healAmount: number;
+ }
+ 
+ export interface BattleConfig {

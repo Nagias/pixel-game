@@ -17,7 +17,8 @@ repo vì là tài sản của game khác).
    phổ biến trong cộng đồng pixel art, màu tươi và tách bạch → nhân vật luôn "màu sắc rõ ràng".
 2. Mọi sprite có viền màu `ink` (gần đen). Nhân vật chính tông xanh dương/vàng, quái tông
    đỏ/tím/hồng → nhìn là phân biệt phe.
-3. Vùng tấn công luôn là **xanh lá** (`grass`/`leaf`), đúng mô tả "khoảng màu xanh" của chủ dự án.
+3. Vùng tấn công luôn là **xanh lá sáng** (`lime`, phủ 60% lên nền sân màu `grass`, viền `white`),
+   đúng mô tả "khoảng màu xanh" của chủ dự án.
 4. Sprite 16×16 pixel, phóng to nguyên lần (×2, ×3) và tắt làm mịn (`pixelArt: true`) để giữ nét.
 5. Số sát thương: chữ đậm, viền `ink`, bay lên rồi mờ dần.
 
