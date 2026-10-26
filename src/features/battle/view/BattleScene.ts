@@ -530,10 +530,10 @@ export class BattleScene extends Scene {
       .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('navy'))
       .setOrigin(0)
       .setDepth(DEPTH.hud);
-    // Mức nạp: hình chữ nhật mọc từ đáy ô lên (chiều cao đổi theo số nhát đã nạp).
+    // Mức nạp: hình chữ nhật mọc từ đáy ô lên (syncSkillButton đặt chiều cao và mép trên).
     const fill = this.add
       .rectangle(rect.x, rect.y + rect.height, rect.width, 0, colorNumber(SKILL_COLOR[kind]), 0.55)
-      .setOrigin(0, 1)
+      .setOrigin(0)
       .setDepth(DEPTH.hud);
     const name = this.add
       .text(centerX, rect.y + 24, this.config.skills[kind].name, { ...TEXT, fontSize: '13px' })
@@ -553,8 +553,11 @@ export class BattleScene extends Scene {
     if (!button || kind === undefined) return;
     const { chargeTurns } = this.config.skills[kind];
     const ready = canCastSkill(state, this.config);
-    button.fill.height =
-      (button.frame.height * Math.min(state.skillCharge, chargeTurns)) / chargeTurns;
+    // Đổi cả kích thước lẫn mép trên (setSize): gán .height trực tiếp thì Phaser không tính lại tâm hình
+    // nên khối nạp mọc tràn xuống dưới ô.
+    const { frame } = button;
+    const height = (frame.height * Math.min(state.skillCharge, chargeTurns)) / chargeTurns;
+    button.fill.setSize(frame.width, height).setPosition(frame.x, frame.y + frame.height - height);
     button.frame.setStrokeStyle(ready ? 3 : 1, colorNumber(ready ? 'sand' : 'slate'));
     button.name.setColor(ready ? PALETTE.white : PALETTE.mist);
     button.charge
