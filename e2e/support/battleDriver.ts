@@ -1,17 +1,14 @@
 // Phần điều khiển riêng của tính năng "battle" (F01–F06): đổi vũ khí, ngắm vùng xanh, chém.
 import type { BattleSnapshot } from '../../src/features/battle';
-import { isInZone } from '../../src/features/battle/logic/arena';
+import * as autoPlay from '../../src/features/battle/logic/autoPlay';
+import type { Move } from '../../src/features/battle/logic/autoPlay';
 import { BATTLE_CONFIG } from '../../src/features/battle/logic/battleConfig';
 import { WEAPON_BAR, weaponButtonRects } from '../../src/features/battle/view/battleLayout';
 import { GameDriver } from './gameDriver';
 
 const FRAME_MS = 16;
 
-/** Một nước đi của người chơi: cầm vũ khí nào, chém vào lát nào. */
-export interface Move {
-  readonly weaponIndex: number;
-  readonly sector: number;
-}
+export type { Move };
 
 export class BattleDriver extends GameDriver {
   /** Mở trận với seed cố định để ván chơi lặp lại y hệt. */
@@ -65,51 +62,17 @@ export class BattleDriver extends GameDriver {
   }
 }
 
-/** Id các quái sẽ trúng nếu chém bằng vũ khí `weaponIndex` vào lát `sector`. */
+/** Id các quái sẽ trúng nếu chém bằng vũ khí `move.weaponIndex` vào lát `move.sector`. */
 export function hitIds(snapshot: BattleSnapshot, move: Move): number[] {
-  const weapon = BATTLE_CONFIG.weapons[move.weaponIndex];
-  if (!weapon) throw new Error(`Không có vũ khí số ${move.weaponIndex}`);
-  return snapshot.battle.monsters
-    .filter((m) => isInZone(m, move.sector, weapon, BATTLE_CONFIG.sectorCount))
-    .map((m) => m.id);
+  return autoPlay.hitIds(snapshot.battle, move, BATTLE_CONFIG);
 }
 
-/**
- * Người chơi ngắm chuẩn: vũ khí + lát trúng nhiều quái nhất; hòa thì ưu tiên chém quái đang ở
- * gần nhân vật hơn (nguy hiểm hơn). Cùng cách chơi với mô phỏng cân bằng ghi ở DEBT-009.
- */
+/** Người chơi ngắm chuẩn — cùng bot với mô phỏng cân bằng (`npm run sim`). */
 export function bestMove(snapshot: BattleSnapshot): Move {
-  const byId = new Map(snapshot.battle.monsters.map((m) => [m.id, m]));
-  let best: Move = { weaponIndex: 0, sector: 0 };
-  let bestScore = [-1, -1];
-  BATTLE_CONFIG.weapons.forEach((_, weaponIndex) => {
-    for (let sector = 0; sector < BATTLE_CONFIG.sectorCount; sector++) {
-      const ids = hitIds(snapshot, { weaponIndex, sector });
-      const closeness = ids.reduce(
-        (sum, id) => sum + (BATTLE_CONFIG.ringCount - (byId.get(id)?.ring ?? 0)),
-        0,
-      );
-      const [hits = -1, close = -1] = bestScore;
-      if (ids.length > hits || (ids.length === hits && closeness > close)) {
-        best = { weaponIndex, sector };
-        bestScore = [ids.length, closeness];
-      }
-    }
-  });
-  return best;
+  return autoPlay.bestMove(snapshot.battle, BATTLE_CONFIG);
 }
 
-/**
- * Người chơi chém trượt: một lát không trúng con quái nào — ưu tiên vũ khí đang cầm; quái phủ kín
- * vùng của nó (màn đông quái) thì đổi sang vũ khí khác.
- */
+/** Người chơi chém trượt: một lát không trúng con quái nào. */
 export function missMove(snapshot: BattleSnapshot): Move {
-  const current = snapshot.battle.weaponIndex;
-  const weapons = BATTLE_CONFIG.weapons.map((_, i) => i);
-  for (const weaponIndex of [current, ...weapons.filter((i) => i !== current)]) {
-    for (let sector = 0; sector < BATTLE_CONFIG.sectorCount; sector++) {
-      if (hitIds(snapshot, { weaponIndex, sector }).length === 0) return { weaponIndex, sector };
-    }
-  }
-  throw new Error('Không còn lát trống để chém trượt');
+  return autoPlay.missMove(snapshot.battle, BATTLE_CONFIG);
 }

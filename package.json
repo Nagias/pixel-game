@@ -19,7 +19,8 @@
     "format:check": "prettier --check .",
     "e2e:setup": "cross-env PLAYWRIGHT_BROWSERS_PATH=0 NODE_OPTIONS=--dns-result-order=ipv4first playwright install chromium",
     "e2e": "npm run build && cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright test",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run e2e"
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run e2e",
+    "sim": "vite build --ssr scripts/simulate.ts --outDir .cache/sim --emptyOutDir --logLevel warn && node .cache/sim/simulate.js"
   },
   "dependencies": {
     "phaser": "3.90.0"
