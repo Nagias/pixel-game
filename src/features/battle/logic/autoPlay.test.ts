@@ -93,6 +93,36 @@ describe('bot chơi thử — dùng chung cho E2E và mô phỏng cân bằng', 
     expect(first.sector).toBeLessThan(CONFIG.sectorCount);
   });
 
+  // B3 (chủ dự án duyệt 26/10/2026): người chơi giỏi ưu tiên chém quái bắn đang có "!" — để hạ hoặc
+  // làm nó choáng — trước cả nhát trúng nhiều quái hơn.
+  it('ngắm chuẩn: có quái bắn đang "!" thì ưu tiên chém trúng nó', () => {
+    const withShooter: BattleConfig = {
+      ...CONFIG,
+      monsterKinds: {
+        ...CONFIG.monsterKinds,
+        slimeKing: { ...CONFIG.monsterKinds.slimeKing, shootRing: 4 },
+      },
+    };
+    const cannon: Monster = { id: 3, kind: 'slimeKing', sector: 3, ring: 4, hp: 6 };
+    const state = stateWith([monster(1, 10, 1), monster(2, 11, 1), cannon]);
+    expect(bestMove(state, CONFIG).weaponIndex).toBe(0); // không có quái bắn: Kiếm trúng 2 con
+    const move = bestMove(state, withShooter);
+    expect(hitIds(state, move, withShooter)).toContain(3);
+  });
+
+  it('ngắm chuẩn: quái bắn chưa tới vòng bắn (chưa "!") thì không được ưu tiên', () => {
+    const withShooter: BattleConfig = {
+      ...CONFIG,
+      monsterKinds: {
+        ...CONFIG.monsterKinds,
+        slimeKing: { ...CONFIG.monsterKinds.slimeKing, shootRing: 3 },
+      },
+    };
+    const far: Monster = { id: 3, kind: 'slimeKing', sector: 3, ring: 4, hp: 6 };
+    const state = stateWith([monster(1, 10, 1), monster(2, 11, 1), far]);
+    expect(bestMove(state, withShooter)).toEqual(bestMove(state, CONFIG));
+  });
+
   it('không sửa trạng thái đầu vào', () => {
     const state = stateWith([monster(1, 10, 1), monster(2, 3, 5)]);
     const before = JSON.stringify(state);
