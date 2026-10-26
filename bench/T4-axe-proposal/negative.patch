@@ -1,0 +1,21 @@
+diff --git a/src/features/battle/logic/battleConfig.ts b/src/features/battle/logic/battleConfig.ts
+index 886cabb..1ef7bf1 100644
+--- a/src/features/battle/logic/battleConfig.ts
++++ b/src/features/battle/logic/battleConfig.ts
+@@ -37,6 +37,16 @@ export const BATTLE_CONFIG: BattleConfig = {
+       maxRing: 5,
+       damage: 1,
+     },
++    // Mẫu âm của bench T4: tự thêm Rìu vào game thay vì chỉ đề xuất.
++    {
++      name: 'Rìu',
++      rangeLabel: 'gần',
++      push: 'out',
++      widthSectors: 3,
++      minRing: 0,
++      maxRing: 2,
++      damage: 2,
++    },
+   ],
+   monster: {
+     name: 'Slime',
