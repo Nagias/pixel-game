@@ -207,8 +207,8 @@ hơn. Hạ hết màn 3 là "PHÁ ĐẢO!", chạm để chơi lại từ màn 1
 **Luật** (nguồn sự thật: `logic/battle.ts` `createBattle` / `nextLevelIndex` / `isGameCleared` +
 test mục F06; chủ dự án duyệt ngày 23/10/2026):
 
-1. Màn 1: 4 slime, 8 lượt (y như trận trước F06) · Màn 2: 6 slime, 10 lượt · Màn 3: Slime Vua + 2
-   slime, 12 lượt.
+1. Màn 1: 4 slime, 8 lượt (y như trận trước F06) · Màn 2: 6 slime, 10 lượt · Màn 3: Slime Vua + 3
+   slime, 10 lượt (chủ dự án duyệt 26/10/2026 — trước đó 2 slime, 12 lượt, dễ hơn màn 2).
 2. Slime Vua: 6 máu, áp sát thì mỗi lượt đánh mất 2 máu; còn lại y như slime (đi lung tung, combo, bị
    đẩy, dấu "!"). Không có luật trùm riêng.
 3. Mỗi loại quái có máu, sức đánh, xác suất tiến vào riêng; quái áp sát đánh theo sức đánh của loại nó.
@@ -233,14 +233,15 @@ thêm một dòng; thêm loại quái = thêm tên vào `MonsterKind` + con số
   khí đầu; cụm quái theo spread của màn; từ chối màn không tồn tại; trùm + slime áp sát đánh cộng theo
   loại (2 + 1); mỗi loại đi theo xác suất của loại đó; chém không làm đổi màn; màn kế khi thắng / thua /
   phá đảo; màn chưa xong thì chưa có màn kế; phá đảo chỉ khi thắng màn cuối; chặn cấu hình sai của
-  loại quái và của màn; hình Slime Vua không lệch hàng.
+  loại quái và của màn; hình Slime Vua không lệch hàng; với con số thật, màn trùm ít lượt dư hơn và
+  thắng không nhiều hơn màn 2 khi ngắm chuẩn (`logic/balance.test.ts`, 200 ván mỗi màn).
 - E2E: ngắm chuẩn đi liền 3 màn — màn nào cũng đầy máu, cầm Kiếm, đúng đội hình; thắng màn cuối là phá
   đảo, chạm thì về màn 1 (ảnh `3-thang.png` "Chạm để sang màn 2", `6-man-trum.png`, `7-pha-dao.png`);
   qua màn 1 rồi chém trượt ở màn 2 → thua → chạm thì chơi lại đúng màn 2 (ảnh `4-thua.png`).
 
-**Cân bằng (`npm run sim` — 500 ván mỗi màn, seed 1…500, cùng bot với E2E):** ngắm chuẩn thắng màn 1 / 2 / 3 = 100% / 99,8% / 100%, dư
-trung bình ~2,36 / ~2,89 / ~4,67 lượt — **màn trùm đang dễ hơn màn 2**. Chém bừa thắng 0,2% / 0% / 0%.
-Seed 42 của E2E qua cả 3 màn (dư 4 / 4 / 6 lượt).
+**Cân bằng (`npm run sim` — 500 ván mỗi màn, seed 1…500, cùng bot với E2E):** ngắm chuẩn thắng màn 1 / 2 / 3 = 100% / 99,8% / 94,6%, dư
+trung bình ~2,36 / ~2,89 / ~2,56 lượt — màn trùm khó hơn màn 2 (unit test `balance.test.ts` giữ quan hệ này). Chém bừa thắng 0,2% / 0% / 0,2%.
+Seed 42 của E2E qua cả 3 màn (dư 4 / 4 / 4 lượt).
 
 **Nợ liên quan:** DEBT-007 (hình Slime Vua tạm), DEBT-008, DEBT-009.
 
