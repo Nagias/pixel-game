@@ -228,6 +228,13 @@ Lần đo nào điểm giảm thì không giữ thay đổi đó, hoặc sửa t
   tắt cố ý). Tạo khi cài skill.
 - **Skill của dự án được ưu tiên hơn skill superpowers** khi trùng việc — ghi vào CLAUDE.md khi cài.
 
+Đã chốt ngày 26/10/2026:
+
+- **Chưa áp dụng đội.** Đo bài T6 và T2, mỗi bản 1 lần: chưa có đội 19/20, có đội 19/20, nhưng đội
+  tốn ~3,5 lần token và ~2,7 lần thời gian (`bench/results.md`). Cấu hình đội giữ ở nhánh
+  `chore/doi-agent` để dùng sau. Bộ việc mẫu gần chạm trần nên chưa đo được lợi ích của đội — muốn đo
+  lại cần đề khó hơn.
+
 Còn chờ quyết:
 
 - Luật mới "nút chạm phải đủ to cho ngón tay".

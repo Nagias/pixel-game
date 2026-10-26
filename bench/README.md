@@ -66,7 +66,10 @@ bộ nhớ máy. Đóng bớt ứng dụng nặng trước khi chạy.
 
    Vì sao phải ngoài dự án: Claude tự đọc cả `CLAUDE.md` của **các thư mục cha**. Chỗ làm bài nằm trong
    dự án thì phiên làm bài đọc cả CLAUDE.md của bản đang mở — cấu hình bị trộn, so trước/sau mất ý
-   nghĩa. `--config working` lấy cấu hình agent đang sửa dở trong thư mục dự án; `--config <git ref>`
+   nghĩa. Cùng lý do, mỗi bài làm là một **bản sao git độc lập** (`git clone --shared`), không phải
+   `git worktree`: với worktree, Claude Code nạp skill, agent và sổ ghi nhớ của thư mục dự án chính
+   (phát hiện 26/10/2026 — lượt chạy trước đó bị lẫn cấu hình). Sau khi giao việc, kiểm phiên làm bài
+   chỉ thấy đúng skill/agent của cấu hình đang chấm. `--config working` lấy cấu hình agent đang sửa dở trong thư mục dự án; `--config <git ref>`
    lấy từ một commit/nhánh.
 
 2. **Giao việc**: mở một phiên Claude **mới** trong thư mục `<tên-lượt>/<việc>`, gửi nguyên văn nội dung
