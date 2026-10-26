@@ -23,6 +23,7 @@ const CONFIG: BattleConfig = {
   monsterKinds: {
     slime: { name: 'Slime thử', hp: 2, advanceChance: 0.6, attack: 1 },
     slimeKing: { name: 'Vua thử', hp: 6, advanceChance: 0.6, attack: 2 },
+    slimeCannon: { name: 'Pháo thử', hp: 2, advanceChance: 0.6, attack: 1, shootRing: 4 },
   },
   hero: { hp: 5 },
   levels: [{ turnLimit: 8, monsters: ['slime'], spread: 2 }],
@@ -91,6 +92,36 @@ describe('bot chơi thử — dùng chung cho E2E và mô phỏng cân bằng', 
     expect(first.weaponIndex).toBeLessThan(CONFIG.weapons.length);
     expect(first.sector).toBeGreaterThanOrEqual(0);
     expect(first.sector).toBeLessThan(CONFIG.sectorCount);
+  });
+
+  // B3 (chủ dự án duyệt 26/10/2026): người chơi giỏi ưu tiên chém quái bắn đang có "!" — để hạ hoặc
+  // làm nó choáng — trước cả nhát trúng nhiều quái hơn.
+  it('ngắm chuẩn: có quái bắn đang "!" thì ưu tiên chém trúng nó', () => {
+    const withShooter: BattleConfig = {
+      ...CONFIG,
+      monsterKinds: {
+        ...CONFIG.monsterKinds,
+        slimeKing: { ...CONFIG.monsterKinds.slimeKing, shootRing: 4 },
+      },
+    };
+    const cannon: Monster = { id: 3, kind: 'slimeKing', sector: 3, ring: 4, hp: 6 };
+    const state = stateWith([monster(1, 10, 1), monster(2, 11, 1), cannon]);
+    expect(bestMove(state, CONFIG).weaponIndex).toBe(0); // không có quái bắn: Kiếm trúng 2 con
+    const move = bestMove(state, withShooter);
+    expect(hitIds(state, move, withShooter)).toContain(3);
+  });
+
+  it('ngắm chuẩn: quái bắn chưa tới vòng bắn (chưa "!") thì không được ưu tiên', () => {
+    const withShooter: BattleConfig = {
+      ...CONFIG,
+      monsterKinds: {
+        ...CONFIG.monsterKinds,
+        slimeKing: { ...CONFIG.monsterKinds.slimeKing, shootRing: 3 },
+      },
+    };
+    const far: Monster = { id: 3, kind: 'slimeKing', sector: 3, ring: 4, hp: 6 };
+    const state = stateWith([monster(1, 10, 1), monster(2, 11, 1), far]);
+    expect(bestMove(state, withShooter)).toEqual(bestMove(state, CONFIG));
   });
 
   it('không sửa trạng thái đầu vào', () => {

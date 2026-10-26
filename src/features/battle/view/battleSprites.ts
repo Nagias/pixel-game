@@ -55,8 +55,23 @@ const slimeKing: PixelSprite = [
   '..000000000000..',
 ];
 
+/** B3: Slime Pháo — quái bắn xa: slime cam, có nòng pháo trên đầu (chủ dự án duyệt hình A). 12×11. */
+const slimeCannon: PixelSprite = [
+  '.....00.....',
+  '....0330....',
+  '..00333300..',
+  '.0333C33330.',
+  '.03CC333330.',
+  '033333333330',
+  '033003300330',
+  '033333333330',
+  '032333333230',
+  '.0222222220.',
+  '..00000000..',
+];
+
 /** Tên hình quái trùng tên loại quái (MonsterKind) để view lấy hình theo `monster.kind`. */
-export const BATTLE_SPRITES = { hero, slime, slimeKing } as const;
+export const BATTLE_SPRITES = { hero, slime, slimeKing, slimeCannon } as const;
 
 /** Phóng to nguyên lần để giữ nét pixel. */
-export const SPRITE_SCALE = { hero: 2, slime: 2, slimeKing: 2 } as const;
+export const SPRITE_SCALE = { hero: 2, slime: 2, slimeKing: 2, slimeCannon: 2 } as const;

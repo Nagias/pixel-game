@@ -18,9 +18,14 @@ const LAST_LEVEL = BATTLE_CONFIG.levels.length - 1;
  * Ngắm chuẩn tới khi màn kết thúc. F03: mỗi nhát, sát thương phải tăng dần 1×, 2×, 3×… sát thương
  * vũ khí (combo gom cụm). Trả về số quái nhiều nhất trúng trong một nhát.
  */
-async function playBestUntilOver(game: BattleDriver): Promise<number> {
+async function playBestUntilOver(
+  game: BattleDriver,
+  /** Gọi trước mỗi nhát chém (vd. để chụp ảnh đúng lúc). */
+  beforeStrike?: (snapshot: Awaited<ReturnType<BattleDriver['snapshot']>>) => Promise<void>,
+): Promise<number> {
   let mostHitsInOneStrike = 0;
   while ((await game.snapshot()).battle.phase === 'playing') {
+    await beforeStrike?.(await game.snapshot());
     const move = bestMove(await game.snapshot());
     await game.play(move);
 
@@ -192,6 +197,10 @@ test('F06: ngắm chuẩn thắng màn nào sang màn kế, hạ trùm ở màn 
       await game.advance(50);
       await page.screenshot({ path: test.info().outputPath('6-man-trum.png') });
     }
+    if (monsters.includes('slimeCannon')) {
+      await game.advance(50);
+      await page.screenshot({ path: test.info().outputPath('10-man-slime-phao.png') });
+    }
     if (levelAt(level, BATTLE_CONFIG).splitOpposite) {
       // B2: nửa đầu đội hình ở một phía, nửa sau ở phía đối diện (lệch nửa vòng).
       const half = Math.ceil(start.monsters.length / 2);
@@ -204,7 +213,25 @@ test('F06: ngắm chuẩn thắng màn nào sang màn kế, hạ trùm ở màn 
       await page.screenshot({ path: test.info().outputPath('8-man-hai-phia.png') });
     }
 
-    mostHitsInOneStrike = Math.max(mostHitsInOneStrike, await playBestUntilOver(game));
+    // B3: lần đầu một Slime Pháo đứng ở vòng bắn (có "!") thì chụp ảnh làm bằng chứng.
+    let cannonShot = false;
+    mostHitsInOneStrike = Math.max(
+      mostHitsInOneStrike,
+      await playBestUntilOver(game, async (snapshot) => {
+        const aiming = snapshot.battle.monsters.find(
+          (m) => m.kind === 'slimeCannon' && isThreatening(m, BATTLE_CONFIG),
+        );
+        if (!aiming || cannonShot) return;
+        cannonShot = true;
+        expect(aiming.ring).toBeLessThanOrEqual(
+          BATTLE_CONFIG.monsterKinds.slimeCannon.shootRing ?? -1,
+        );
+        // Chờ hết hoạt ảnh quái trượt sang ô mới (180ms) để ảnh đúng vị trí.
+        await game.advance(300);
+        await page.screenshot({ path: test.info().outputPath('11-slime-phao-ngam.png') });
+      }),
+    );
+    if (monsters.includes('slimeCannon')) expect(cannonShot).toBe(true);
 
     const won = (await game.snapshot()).battle;
     expect(won.phase).toBe('won');
@@ -249,7 +276,7 @@ test('F06: thua thì chơi lại đúng màn đó — qua màn 1, chém trượt
     const before = await game.snapshot();
     if (before.battle.phase !== 'playing') break;
     const damage = before.battle.monsters
-      .filter(isThreatening)
+      .filter((m) => isThreatening(m, BATTLE_CONFIG))
       .reduce((sum, m) => sum + BATTLE_CONFIG.monsterKinds[m.kind].attack, 0);
     await game.play(missMove(before));
 

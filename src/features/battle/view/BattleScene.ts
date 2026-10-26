@@ -281,7 +281,7 @@ export class BattleScene extends Scene {
   /** F04: dấu "!" đỏ trên đầu đúng những con luật coi là sắp đánh (isThreatening). */
   private syncThreatMarks(state: BattleState): void {
     const threatening = new Map(
-      state.monsters.filter(isThreatening).map((m) => [m.id, m] as const),
+      state.monsters.filter((m) => isThreatening(m, this.config)).map((m) => [m.id, m] as const),
     );
     for (const [id, mark] of this.threatMarks) {
       if (threatening.has(id)) continue;

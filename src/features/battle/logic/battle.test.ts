@@ -45,6 +45,7 @@ const CONFIG: BattleConfig = {
   monsterKinds: {
     slime: { name: 'Slime thử', hp: 2, advanceChance: 1, attack: 1 },
     slimeKing: { name: 'Vua thử', hp: 6, advanceChance: 1, attack: 2 },
+    slimeCannon: { name: 'Pháo thử', hp: 2, advanceChance: 1, attack: 1, shootRing: 4 },
   },
   hero: { hp: 5 },
   levels: [LEVEL_1],
@@ -108,6 +109,7 @@ const withAdvanceChance = (advanceChance: number): BattleConfig => ({
   monsterKinds: {
     slime: { ...CONFIG.monsterKinds.slime, advanceChance },
     slimeKing: { ...CONFIG.monsterKinds.slimeKing, advanceChance },
+    slimeCannon: { ...CONFIG.monsterKinds.slimeCannon, advanceChance },
   },
 });
 
@@ -548,8 +550,91 @@ describe('F04 — máu nhân vật và quái áp sát đánh', () => {
   });
 
   it('isThreatening: chỉ quái ở vòng 0 là sắp đánh (để hiện dấu "!")', () => {
-    expect(isThreatening(monster(1, 12, 0))).toBe(true);
-    expect(isThreatening(monster(1, 12, 1))).toBe(false);
+    expect(isThreatening(monster(1, 12, 0), CONFIG)).toBe(true);
+    expect(isThreatening(monster(1, 12, 1), CONFIG)).toBe(false);
+  });
+});
+
+describe('B3 — quái bắn xa (shootRing)', () => {
+  // Chủ dự án duyệt 26/10/2026. Cấu hình thử: slime có vòng bắn 3, luôn tiến (advanceChance 1).
+  const shooter = (patch: Partial<MonsterConfig> = {}): BattleConfig => ({
+    ...CONFIG,
+    monsterKinds: {
+      ...CONFIG.monsterKinds,
+      slime: { ...CONFIG.monsterKinds.slime, shootRing: 3, ...patch },
+    },
+  });
+
+  it('ngoài vòng bắn thì đi như slime', () => {
+    const after = playTurn(stateWith([monster(1, 12, 5)]), 0, shooter());
+    expect(byId(after, 1)).toMatchObject({ sector: 12, ring: 4 });
+    expect(after.heroHp).toBe(5);
+  });
+
+  it('vừa tới vòng bắn thì đứng yên, lượt sau mới bắn', () => {
+    const arrived = playTurn(stateWith([monster(1, 12, 4)]), 0, shooter());
+    expect(byId(arrived, 1)?.ring).toBe(3);
+    expect(arrived.heroHp).toBe(5);
+    const next = playTurn(arrived, 0, shooter());
+    expect(byId(next, 1)).toMatchObject({ sector: 12, ring: 3 });
+    expect(next.heroHp).toBe(4);
+  });
+
+  it('ở vòng bắn: không tiến, không đi ngang, bắn mỗi lượt theo sức đánh, không tung số ngẫu nhiên', () => {
+    const before = stateWith([monster(1, 12, 3)]);
+    const after = playTurn(before, 0, shooter({ attack: 2, advanceChance: 0 }));
+    expect(byId(after, 1)).toMatchObject({ sector: 12, ring: 3 });
+    expect(after.heroHp).toBe(3);
+    expect(after.rng).toBe(before.rng);
+  });
+
+  it('bị kéo vào gần hơn vòng bắn vẫn đứng yên và bắn', () => {
+    const after = playTurn(stateWith([monster(1, 12, 2)]), 0, shooter());
+    expect(byId(after, 1)).toMatchObject({ sector: 12, ring: 2 });
+    expect(after.heroHp).toBe(4);
+  });
+
+  it('choáng: bị chém trúng lúc có "!" mà còn sống thì lượt đó không bắn', () => {
+    const after = playTurn(stateWith([monster(1, 0, 3, 5)]), 0, shooter());
+    expect(byId(after, 1)).toMatchObject({ sector: 0, ring: 3, hp: 4 });
+    expect(after.heroHp).toBe(5);
+  });
+
+  it('không bị chém trúng thì vẫn bắn; bị giết thì không bắn', () => {
+    const before = stateWith([monster(1, 0, 3, 1), monster(2, 12, 3, 5)]);
+    const after = playTurn(before, 0, shooter());
+    expect(byId(after, 1)).toBeUndefined();
+    expect(after.heroHp).toBe(4); // chỉ con 2 bắn
+  });
+
+  it('bị Kiếm đẩy ra ngoài vòng bắn thì hết "!" và phải tiến vào lại', () => {
+    const config = { ...shooter(), weapons: pushing('out').weapons };
+    const pushed = playTurn(stateWith([monster(1, 0, 3, 5)]), 0, config);
+    expect(byId(pushed, 1)?.ring).toBe(4);
+    expect(isThreatening(byId(pushed, 1) ?? monster(0, 0, 0), config)).toBe(false);
+    const next = playTurn(pushed, 12, config);
+    expect(byId(next, 1)?.ring).toBe(3); // tiến vào lại, lượt sau mới bắn
+    expect(next.heroHp).toBe(5);
+  });
+
+  it('quái cận chiến không bị choáng: bị chém trúng ở vòng 0 mà còn sống vẫn đánh (F04)', () => {
+    const after = playTurn(stateWith([monster(1, 0, 0, 5)]), 0, CONFIG);
+    expect(after.heroHp).toBe(4);
+  });
+
+  it('isThreatening theo vòng bắn của loại quái', () => {
+    const config = shooter();
+    expect(isThreatening(monster(1, 12, 3), config)).toBe(true);
+    expect(isThreatening(monster(1, 12, 1), config)).toBe(true);
+    expect(isThreatening(monster(1, 12, 4), config)).toBe(false);
+  });
+
+  it.each([
+    ['vòng bắn 0 (đã là cận chiến)', 0],
+    ['vòng bắn không nguyên', 2.5],
+    ['vòng bắn ở vòng xuất hiện (bắn ngay khi ra)', 5],
+  ])('từ chối: %s', (_label, shootRing) => {
+    expect(() => createBattle(1, shooter({ shootRing }), 0)).toThrow(RangeError);
   });
 });
 
@@ -716,6 +801,7 @@ describe('F06 — màn chơi nối tiếp + trùm', () => {
     const config = {
       ...CONFIG,
       monsterKinds: {
+        ...CONFIG.monsterKinds,
         slime: { ...CONFIG.monsterKinds.slime, advanceChance: 1 },
         slimeKing: { ...CONFIG.monsterKinds.slimeKing, advanceChance: 0 },
       },

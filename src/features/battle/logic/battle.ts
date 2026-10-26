@@ -46,6 +46,15 @@ function validateBattleConfig(config: BattleConfig): void {
     if (rule.advanceChance < 0 || rule.advanceChance > 1) {
       problems.push(`${label}: xác suất tiến vào phải trong [0, 1]`);
     }
+    // Quái xuất hiện ở vòng ngoài cùng (ringCount − 1): vòng bắn phải nằm phía trong để nó còn phải tiến.
+    if (
+      rule.shootRing !== undefined &&
+      (!Number.isInteger(rule.shootRing) || rule.shootRing < 1 || rule.shootRing > ringCount - 2)
+    ) {
+      problems.push(
+        `${label}: vòng bắn ${rule.shootRing} phải là số nguyên trong [1, ${ringCount - 2}]`,
+      );
+    }
   }
   if (config.hero.hp < 1) problems.push('nhân vật phải có ít nhất 1 máu');
   if (levels.length === 0) problems.push('phải có ít nhất 1 màn');
@@ -219,8 +228,19 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
   // F04: quái đang áp sát (còn sống sau nhát chém và sau khi bị đẩy) đánh; quái vừa tiến vào vòng 0
   // lượt này chỉ đánh từ lượt sau — đúng những con người chơi đã thấy dấu "!" trước khi chém.
   // F06: mỗi con trừ máu theo sức đánh của loại nó (trùm đánh đau hơn slime).
+  // B3: quái bắn đánh từ vòng bắn; bị chém trúng lúc đang có "!" mà còn sống thì choáng, không bắn.
+  const stunnedIds = new Set(
+    state.monsters
+      .filter(
+        (m) =>
+          config.monsterKinds[m.kind].shootRing !== undefined &&
+          damageById.has(m.id) &&
+          isThreatening(m, config),
+      )
+      .map((m) => m.id),
+  );
   const damageTaken = knocked.monsters
-    .filter(isThreatening)
+    .filter((m) => isThreatening(m, config) && !stunnedIds.has(m.id))
     .reduce((sum, m) => sum + config.monsterKinds[m.kind].attack, 0);
   const heroHp = Math.max(0, state.heroHp - damageTaken);
 
@@ -277,9 +297,12 @@ function applyKnockback(
   return { monsters: survivors.map((m) => positions.get(m.id) ?? m), pushedIds };
 }
 
-/** F04: quái đang áp sát nhân vật (vòng 0) sẽ đánh sau nhát chém tới — view hiện dấu "!" cho nó. */
-export function isThreatening(monster: Monster): boolean {
-  return monster.ring === 0;
+/**
+ * Quái sắp đánh sau nhát chém tới — view hiện dấu "!" cho nó. F04: quái cận chiến ở vòng 0. B3: quái
+ * bắn ở vòng bắn của loại nó hoặc gần hơn. Quái sắp đánh thì đứng yên, không di chuyển.
+ */
+export function isThreatening(monster: Monster, config: BattleConfig): boolean {
+  return monster.ring <= (config.monsterKinds[monster.kind].shootRing ?? 0);
 }
 
 /**
@@ -300,7 +323,7 @@ function moveMonsters(
   const positions = new Map(monsters.map((m) => [m.id, m]));
 
   for (const monster of [...monsters].sort((a, b) => a.id - b.id)) {
-    if (isThreatening(monster) || pushedIds.has(monster.id)) continue;
+    if (isThreatening(monster, config) || pushedIds.has(monster.id)) continue;
     let roll: number;
     [roll, rng] = nextFloat(rng);
 

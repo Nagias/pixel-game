@@ -63,6 +63,14 @@ export const BATTLE_CONFIG: BattleConfig = {
       advanceChance: 0.6,
       attack: 2,
     },
+    // B3 (chủ dự án duyệt 26/10/2026): quái bắn xa — tới vòng 4 thì đứng yên, hiện "!" và bắn.
+    slimeCannon: {
+      name: 'Slime Pháo',
+      hp: 2,
+      advanceChance: 0.6,
+      attack: 1,
+      shootRing: 4,
+    },
   },
   hero: {
     hp: 5,
@@ -83,6 +91,21 @@ export const BATTLE_CONFIG: BattleConfig = {
       monsters: ['slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slime'],
       spread: 2,
       splitOpposite: true,
+    },
+    // B3 (chủ dự án duyệt 26/10/2026): 6 slime + 2 Slime Pháo trong một cụm ±4 lát.
+    {
+      turnLimit: 10,
+      monsters: [
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slimeCannon',
+        'slimeCannon',
+      ],
+      spread: 4,
     },
   ],
 };

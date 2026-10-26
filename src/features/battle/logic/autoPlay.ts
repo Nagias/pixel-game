@@ -3,6 +3,7 @@
 // Không phải luật chơi — game không dùng file này.
 import { nextInt, type RngState } from '../../../shared/random';
 import { isInZone } from './arena';
+import { isThreatening } from './battle';
 import type { BattleConfig, BattleState } from './battleTypes';
 
 /** Một nước đi: cầm vũ khí nào, chém vào lát nào. */
@@ -21,25 +22,33 @@ export function hitIds(state: BattleState, move: Move, config: BattleConfig): nu
 }
 
 /**
- * Người chơi ngắm chuẩn: vũ khí + lát trúng nhiều quái nhất; hòa thì ưu tiên chém quái đang ở gần
- * nhân vật hơn (nguy hiểm hơn); vẫn hòa thì vũ khí và lát đứng trước.
+ * Người chơi ngắm chuẩn: trước hết chém trúng nhiều quái bắn đang có "!" nhất (B3 — hạ hoặc làm nó
+ * choáng); rồi vũ khí + lát trúng nhiều quái nhất; hòa thì ưu tiên quái đang ở gần nhân vật hơn (nguy
+ * hiểm hơn); vẫn hòa thì vũ khí và lát đứng trước.
  */
 export function bestMove(state: BattleState, config: BattleConfig): Move {
   const byId = new Map(state.monsters.map((m) => [m.id, m]));
+  const aimingShooters = new Set(
+    state.monsters
+      .filter(
+        (m) => config.monsterKinds[m.kind].shootRing !== undefined && isThreatening(m, config),
+      )
+      .map((m) => m.id),
+  );
   let best: Move = { weaponIndex: 0, sector: 0 };
-  let bestHits = -1;
-  let bestCloseness = -1;
+  let bestScore = [-1, -1, -1];
   config.weapons.forEach((_, weaponIndex) => {
     for (let sector = 0; sector < config.sectorCount; sector++) {
       const ids = hitIds(state, { weaponIndex, sector }, config);
-      const closeness = ids.reduce(
-        (sum, id) => sum + (config.ringCount - (byId.get(id)?.ring ?? 0)),
-        0,
-      );
-      if (ids.length > bestHits || (ids.length === bestHits && closeness > bestCloseness)) {
+      const score = [
+        ids.filter((id) => aimingShooters.has(id)).length,
+        ids.length,
+        ids.reduce((sum, id) => sum + (config.ringCount - (byId.get(id)?.ring ?? 0)), 0),
+      ];
+      const better = score.findIndex((value, i) => value !== bestScore[i]);
+      if (better !== -1 && (score[better] ?? 0) > (bestScore[better] ?? 0)) {
         best = { weaponIndex, sector };
-        bestHits = ids.length;
-        bestCloseness = closeness;
+        bestScore = score;
       }
     }
   });
