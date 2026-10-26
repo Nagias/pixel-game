@@ -41,15 +41,16 @@ nhận chạm "chơi lại" (chống chạm nhầm). Game chỉ cho mobile: mọ
 
 **Con số:** `src/features/battle/logic/battleConfig.ts`.
 
-| File                    | Vai trò                                                                               |
-| ----------------------- | ------------------------------------------------------------------------------------- |
-| `logic/battleTypes.ts`  | Kiểu dữ liệu: cấu hình, trạng thái trận                                               |
-| `logic/battleConfig.ts` | Con số cân bằng, danh sách vũ khí                                                     |
-| `logic/arena.ts`        | Hình học sân: lát quấn vòng, vùng đánh, vị trí vùng xanh theo thời gian               |
-| `logic/battle.ts`       | `createBattle`, `selectWeapon`, `playTurn`, `nextLevelIndex`, `isGameCleared`         |
-| `view/BattleScene.ts`   | Vẽ, nhận chạm, thanh nút vũ khí, số sát thương, màn thắng/thua, `BattleSnapshot`      |
-| `view/battleLayout.ts`  | Đổi (lát, vòng) sang tọa độ màn hình; hình nêm xanh khớp vùng luật; vị trí nút vũ khí |
-| `view/battleSprites.ts` | Hình hiệp sĩ, slime, Slime Vua                                                        |
+| File                    | Vai trò                                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| `logic/battleTypes.ts`  | Kiểu dữ liệu: cấu hình, trạng thái trận                                                                |
+| `logic/battleConfig.ts` | Con số cân bằng, danh sách vũ khí                                                                      |
+| `logic/arena.ts`        | Hình học sân: lát quấn vòng, vùng đánh, vị trí vùng xanh theo thời gian                                |
+| `logic/battle.ts`       | `createBattle`, `selectWeapon`, `playTurn`, `nextLevelIndex`, `isGameCleared`                          |
+| `logic/autoPlay.ts`     | Bot chơi thử (ngắm chuẩn, chém trượt, chém bừa) — dùng chung cho E2E và `npm run sim`; không phải luật |
+| `view/BattleScene.ts`   | Vẽ, nhận chạm, thanh nút vũ khí, số sát thương, màn thắng/thua, `BattleSnapshot`                       |
+| `view/battleLayout.ts`  | Đổi (lát, vòng) sang tọa độ màn hình; hình nêm xanh khớp vùng luật; vị trí nút vũ khí                  |
+| `view/battleSprites.ts` | Hình hiệp sĩ, slime, Slime Vua                                                                         |
 
 **Kiểm chứng tự động:**
 
@@ -237,7 +238,7 @@ thêm một dòng; thêm loại quái = thêm tên vào `MonsterKind` + con số
   đảo, chạm thì về màn 1 (ảnh `3-thang.png` "Chạm để sang màn 2", `6-man-trum.png`, `7-pha-dao.png`);
   qua màn 1 rồi chém trượt ở màn 2 → thua → chạm thì chơi lại đúng màn 2 (ảnh `4-thua.png`).
 
-**Cân bằng (mô phỏng 500 ván mỗi màn):** ngắm chuẩn thắng màn 1 / 2 / 3 = 100% / 99,8% / 100%, dư
+**Cân bằng (`npm run sim` — 500 ván mỗi màn, seed 1…500, cùng bot với E2E):** ngắm chuẩn thắng màn 1 / 2 / 3 = 100% / 99,8% / 100%, dư
 trung bình ~2,36 / ~2,89 / ~4,67 lượt — **màn trùm đang dễ hơn màn 2**. Chém bừa thắng 0,2% / 0% / 0%.
 Seed 42 của E2E qua cả 3 màn (dư 4 / 4 / 6 lượt).
 
