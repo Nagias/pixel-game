@@ -34,8 +34,13 @@ export interface MonsterConfig {
   readonly hp: number;
   /** Xác suất mỗi lượt quái tiến vào 1 vòng; còn lại nó đi ngang 1 lát (đi lung tung). */
   readonly advanceChance: number;
-  /** F04: số máu nhân vật mất mỗi lần một con quái áp sát (vòng 0) đánh. */
+  /** F04: số máu nhân vật mất mỗi lần một con quái áp sát (vòng 0) đánh — hoặc mỗi phát bắn (B3). */
   readonly attack: number;
+  /**
+   * B3: quái bắn xa — tới vòng này (hoặc gần hơn) thì đứng yên, hiện "!" và bắn mỗi lượt; bị chém
+   * trúng lúc đang có "!" mà còn sống thì choáng, lượt đó không bắn. Không có = quái cận chiến (vòng 0).
+   */
+  readonly shootRing?: number;
 }
 
 export interface HeroConfig {

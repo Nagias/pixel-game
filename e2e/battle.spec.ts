@@ -249,7 +249,7 @@ test('F06: thua thì chơi lại đúng màn đó — qua màn 1, chém trượt
     const before = await game.snapshot();
     if (before.battle.phase !== 'playing') break;
     const damage = before.battle.monsters
-      .filter(isThreatening)
+      .filter((m) => isThreatening(m, BATTLE_CONFIG))
       .reduce((sum, m) => sum + BATTLE_CONFIG.monsterKinds[m.kind].attack, 0);
     await game.play(missMove(before));
 
