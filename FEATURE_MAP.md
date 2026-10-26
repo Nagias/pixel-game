@@ -365,7 +365,7 @@ hồi máu, chí mạng làm luôn"):
    chí mạng < 1, hồi máu khi trúng 0 con hoặc hồi âm, màn mở skill âm, skill không tồn tại.
 
 **Hành vi giao diện:** ô skill là nút thứ 4 của thanh (rộng 72); chưa đầy thì chạm không làm gì. Quái
-băng nhuộm màu `cyan` (ra hơi tối vì Phaser nhuộm kiểu nhân màu — xem lại ở đợt đồ họa thật). Mô tả
+băng nhuộm màu `cyan` (ra hơi tối vì Phaser nhuộm kiểu nhân màu — xem lại ở đợt đồ họa thật). Máy không có WebGL (Phaser rơi về Canvas) thì không nhuộm được — chỉ còn dấu hiệu là mất "!"; đồ họa thật sẽ thay bằng hình băng riêng. Màn chuẩn bị nhớ skill chọn gần nhất qua các màn chưa mở skill (vd. sau phá đảo) trong lúc đang chơi. Mô tả
 skill / vũ khí trên màn chuẩn bị sinh từ con số (`describeSkill`, `describeWeapon` có "chí mạng 10%").
 
 **Con số** (`src/features/battle/logic/battleConfig.ts`, agent chọn bằng mô phỏng ngày 27/10/2026 theo ủy

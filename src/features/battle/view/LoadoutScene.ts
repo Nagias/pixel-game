@@ -82,6 +82,11 @@ export class LoadoutScene extends Scene {
   private openElapsedMs = 0;
   /** Đã chạm "VÀO TRẬN" — bỏ qua mọi chạm sau đó (tránh mở trận hai lần). */
   private starting = false;
+  /**
+   * B6: skill người chơi chọn gần nhất. Cố ý KHÔNG xóa khi mở lại scene (Phaser dùng lại cùng đối tượng
+   * scene): đó chính là trí nhớ qua các màn chưa mở skill. Tắt game là mất (lưu thật ở đợt lưu tiến trình).
+   */
+  private lastSkill: SkillKind | undefined = undefined;
 
   constructor() {
     super('loadout');
@@ -94,12 +99,15 @@ export class LoadoutScene extends Scene {
     this.rows = slotOptions(this.config, owned);
     this.level = data.level ?? parseLevelParam(window.location.search, this.config.levels.length);
     this.skills = isSkillUnlocked(this.level, this.config) ? skillOptions(this.config) : [];
-    // B6: màn chưa mở skill thì bỏ skill; màn đã mở mà chưa chọn thì chọn sẵn skill đầu.
-    this.loadout = loadoutForLevel(
-      data.loadout ?? defaultLoadout(this.config, owned),
-      this.level,
-      this.config,
-    );
+    // B6: màn chưa mở skill thì bỏ skill; màn đã mở thì chọn sẵn skill người chơi chọn lần gần nhất
+    // (nhớ qua cả các màn chưa có skill, vd. sau phá đảo), chưa từng chọn thì skill đầu.
+    const previous = data.loadout ?? defaultLoadout(this.config, owned);
+    if (previous.skill !== undefined) this.lastSkill = previous.skill;
+    const remembered =
+      previous.skill === undefined && this.lastSkill !== undefined
+        ? { ...previous, skill: this.lastSkill }
+        : previous;
+    this.loadout = loadoutForLevel(remembered, this.level, this.config);
   }
 
   create(): void {
@@ -153,6 +161,7 @@ export class LoadoutScene extends Scene {
         const skill = this.skills[tap.option];
         if (skill === undefined) return;
         this.loadout = chooseSkill(this.loadout, skill);
+        this.lastSkill = skill;
       } else {
         const weaponIndex = this.rows[tap.row]?.weapons[tap.option];
         if (weaponIndex === undefined) return;

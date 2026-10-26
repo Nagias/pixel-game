@@ -4,7 +4,6 @@ import { expect, test } from '@playwright/test';
 import {
   canCastSkill,
   isGameCleared,
-  isThreatening,
   levelAt,
   willAttack,
 } from '../src/features/battle/logic/battle';
@@ -251,7 +250,7 @@ test('F06: ngắm chuẩn thắng màn nào sang màn kế, hạ trùm ở màn 
       mostHitsInOneStrike,
       await playBestUntilOver(game, async (snapshot) => {
         const aiming = snapshot.battle.monsters.find(
-          (m) => m.kind === 'slimeCannon' && isThreatening(m, BATTLE_CONFIG),
+          (m) => m.kind === 'slimeCannon' && willAttack(m, BATTLE_CONFIG),
         );
         if (!aiming || cannonShot) return;
         cannonShot = true;
@@ -490,4 +489,35 @@ test('B6: skill nạp theo nhát chém, đầy thì bấm — mọi quái mất 
   const next = (await game.snapshot()).battle;
   expect(next.heroHp).toBeGreaterThanOrEqual(after.heroHp);
   expect(next.monsters.every((m) => m.frozenTurns === undefined)).toBe(true);
+});
+
+test('B6: màn chuẩn bị nhớ skill đã chọn qua các màn chưa có skill — phá đảo bằng Cầu lửa, lên lại màn 3 vẫn chọn Cầu lửa', async ({
+  page,
+}) => {
+  test.slow(); // chơi 3 màn (màn 5 rồi màn 1, 2) qua màn chuẩn bị
+  const game = new BattleDriver(page);
+  await game.openLoadout(SEED, BATTLE_CONFIG.levels.length);
+  await game.chooseSkill('fireball');
+  await game.startBattle();
+  await playBestUntilOver(game);
+  expect(isGameCleared((await game.snapshot()).battle, BATTLE_CONFIG)).toBe(true);
+
+  // Phá đảo → màn 1, 2 chưa có skill.
+  for (let level = 0; level < BATTLE_CONFIG.skillUnlockLevel; level++) {
+    await continueFromResult(game);
+    const { battle } = await game.snapshot();
+    expect(battle.level).toBe(level);
+    expect(battle.loadout.skill).toBeUndefined();
+    await playBestUntilOver(game);
+    expect((await game.snapshot()).battle.phase).toBe('won');
+  }
+
+  await game.advance(RESULT_SCREEN_WAIT_MS);
+  await game.tap();
+  await game.waitSceneSwitch();
+  const prep = await game.waitLoadoutReady();
+  expect(prep).toMatchObject({
+    level: BATTLE_CONFIG.skillUnlockLevel,
+    loadout: { skill: 'fireball' },
+  });
 });

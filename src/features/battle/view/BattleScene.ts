@@ -424,7 +424,9 @@ export class BattleScene extends Scene {
     const { centerX, centerY } = ARENA_LAYOUT;
     if (state.lastAttack?.crit) this.popText(centerX, centerY - 44, 'CHÍ MẠNG!', PALETTE.crimson);
     const healed = state.lastAttack?.healed ?? 0;
-    if (healed > 0) this.popText(centerX + 34, centerY - 6, `+${healed}`, PALETTE.lime, '20px');
+    // Hồi máu rồi vẫn gục trong cùng lượt: không hiện "+n" chồng lên màn THUA.
+    if (healed > 0 && state.phase !== 'lost')
+      this.popText(centerX + 34, centerY - 6, `+${healed}`, PALETTE.lime, '20px');
   }
 
   /** B6: chớp cả sân màu của skill vừa bấm. */
