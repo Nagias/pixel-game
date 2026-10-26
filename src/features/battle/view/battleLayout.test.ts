@@ -84,6 +84,7 @@ describe('zoneArc — hình nêm xanh khớp đúng vùng luật chơi', () => {
 describe('zoneArcs — mọi nêm vẽ ra khớp đúng vùng luật, kể cả vũ khí chém hai phía (B2)', () => {
   const weapon = (patch: Partial<WeaponConfig>): WeaponConfig => ({
     name: 'thử',
+    slot: 'near',
     rangeLabel: 'thử',
     push: 'none',
     widthSectors: 3,

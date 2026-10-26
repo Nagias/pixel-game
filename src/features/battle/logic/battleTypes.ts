@@ -10,8 +10,15 @@ export type PushDirection = 'none' | 'out' | 'in' | 'clockwise';
 
 export const PUSH_DIRECTIONS: readonly PushDirection[] = ['none', 'out', 'in', 'clockwise'];
 
+/** B4: tầm của vũ khí — mỗi trận mang đúng một món mỗi tầm (theo thứ tự này trên thanh nút). */
+export type WeaponSlot = 'near' | 'mid' | 'far';
+
+export const WEAPON_SLOTS: readonly WeaponSlot[] = ['near', 'mid', 'far'];
+
 export interface WeaponConfig {
   readonly name: string;
+  /** B4: ô tầm của vũ khí trên màn chuẩn bị trận. */
+  readonly slot: WeaponSlot;
   /** Chữ ngắn hiện trên nút vũ khí: "gần", "vừa", "xa". */
   readonly rangeLabel: string;
   readonly push: PushDirection;
@@ -80,6 +87,12 @@ export interface BattleConfig {
 
 // ---------- Trạng thái trận đấu (dữ liệu thuần, JSON được) ----------
 
+/** B4: đồ người chơi mang vào trận (chọn ở màn chuẩn bị). */
+export interface Loadout {
+  /** Chỉ số trong config.weapons, theo thứ tự trên thanh nút (tầm gần → xa). */
+  readonly weapons: readonly number[];
+}
+
 /** Vị trí trên sân: lát (0 = hướng 12 giờ, tăng theo chiều kim đồng hồ) và vòng (0 = sát nhân vật). */
 export interface Cell {
   readonly sector: number;
@@ -116,6 +129,8 @@ export interface BattleState {
   readonly turnsLeft: number;
   /** F04: máu còn lại của nhân vật. */
   readonly heroHp: number;
+  /** B4: đồ mang vào trận — chỉ được cầm vũ khí có trong đây. */
+  readonly loadout: Loadout;
   /** Vũ khí đang cầm: chỉ số trong config.weapons. */
   readonly weaponIndex: number;
   readonly monsters: readonly Monster[];

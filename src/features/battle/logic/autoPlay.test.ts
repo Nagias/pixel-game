@@ -4,9 +4,16 @@ import { bestMove, hitIds, missMove, randomMove } from './autoPlay';
 import type { BattleConfig, BattleState, Monster, WeaponConfig } from './battleTypes';
 
 // Cấu hình riêng cho test (không phụ thuộc battleConfig.ts): 3 vũ khí theo tầm như F02.
-const weapon = (name: string, widthSectors: number, minRing: number, maxRing: number) =>
+const weapon = (
+  name: string,
+  slot: WeaponConfig['slot'],
+  widthSectors: number,
+  minRing: number,
+  maxRing: number,
+) =>
   ({
     name,
+    slot,
     rangeLabel: name,
     push: 'none',
     widthSectors,
@@ -19,7 +26,11 @@ const CONFIG: BattleConfig = {
   sectorCount: 24,
   ringCount: 6,
   arcPeriodMs: 2_400,
-  weapons: [weapon('Kiếm', 5, 0, 1), weapon('Giáo', 3, 2, 3), weapon('Cung', 1, 4, 5)],
+  weapons: [
+    weapon('Kiếm', 'near', 5, 0, 1),
+    weapon('Giáo', 'mid', 3, 2, 3),
+    weapon('Cung', 'far', 1, 4, 5),
+  ],
   monsterKinds: {
     slime: { name: 'Slime thử', hp: 2, advanceChance: 0.6, attack: 1 },
     slimeKing: { name: 'Vua thử', hp: 6, advanceChance: 0.6, attack: 2 },
@@ -37,13 +48,14 @@ const monster = (id: number, sector: number, ring: number): Monster => ({
   hp: 2,
 });
 
-function stateWith(monsters: Monster[], weaponIndex = 0): BattleState {
+function stateWith(monsters: Monster[], weaponIndex = 0, weapons = [0, 1, 2]): BattleState {
   return {
     seed: 1,
     rng: seedRng(1),
     level: 0,
     turnsLeft: 8,
     heroHp: 5,
+    loadout: { weapons },
     weaponIndex,
     monsters,
     phase: 'playing',
@@ -85,8 +97,9 @@ describe('bot chơi thử — dùng chung cho E2E và mô phỏng cân bằng', 
 
   it('chém bừa: cùng trạng thái ngẫu nhiên → cùng nước đi, nằm trong giới hạn', () => {
     const rng = seedRng(7);
-    const [first, next] = randomMove(rng, CONFIG);
-    expect(randomMove(rng, CONFIG)).toEqual([first, next]);
+    const state = stateWith([monster(1, 0, 4)]);
+    const [first, next] = randomMove(state, rng, CONFIG);
+    expect(randomMove(state, rng, CONFIG)).toEqual([first, next]);
     expect(next).not.toBe(rng);
     expect(first.weaponIndex).toBeGreaterThanOrEqual(0);
     expect(first.weaponIndex).toBeLessThan(CONFIG.weapons.length);
@@ -122,6 +135,20 @@ describe('bot chơi thử — dùng chung cho E2E và mô phỏng cân bằng', 
     const far: Monster = { id: 3, kind: 'slimeKing', sector: 3, ring: 4, hp: 6 };
     const state = stateWith([monster(1, 10, 1), monster(2, 11, 1), far]);
     expect(bestMove(state, withShooter)).toEqual(bestMove(state, CONFIG));
+  });
+
+  // B4: bot chỉ dùng vũ khí đã mang vào trận — nếu không, E2E chạm nút không có và số mô phỏng sai.
+  it('ngắm chuẩn, chém trượt, chém bừa chỉ dùng vũ khí đã mang', () => {
+    // Cụm 3 con sát người: Kiếm (không mang) trúng cả 3; chỉ mang Giáo + Cung.
+    const state = stateWith([monster(1, 10, 1), monster(2, 11, 1), monster(3, 12, 1)], 1, [1, 2]);
+    expect([1, 2]).toContain(bestMove(state, CONFIG).weaponIndex);
+    expect([1, 2]).toContain(missMove(state, CONFIG).weaponIndex);
+    let rng = seedRng(3);
+    for (let i = 0; i < 50; i++) {
+      const [move, next] = randomMove(state, rng, CONFIG);
+      expect([1, 2]).toContain(move.weaponIndex);
+      rng = next;
+    }
   });
 
   it('không sửa trạng thái đầu vào', () => {

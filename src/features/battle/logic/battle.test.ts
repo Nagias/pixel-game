@@ -24,6 +24,7 @@ import type {
 // Một vũ khí với tới cả sân — để các test luật đánh/di chuyển không phụ thuộc chuyện đổi vũ khí.
 const ALL_REACH: WeaponConfig = {
   name: 'Kiếm thử',
+  slot: 'near',
   rangeLabel: 'cả sân',
   push: 'none',
   widthSectors: 3,
@@ -69,6 +70,7 @@ const THREE_WEAPONS: BattleConfig = {
   weapons: [
     {
       name: 'Kiếm',
+      slot: 'near',
       rangeLabel: 'gần',
       push: 'none',
       widthSectors: 5,
@@ -78,6 +80,7 @@ const THREE_WEAPONS: BattleConfig = {
     },
     {
       name: 'Giáo',
+      slot: 'mid',
       rangeLabel: 'vừa',
       push: 'none',
       widthSectors: 3,
@@ -87,6 +90,7 @@ const THREE_WEAPONS: BattleConfig = {
     },
     {
       name: 'Cung',
+      slot: 'far',
       rangeLabel: 'xa',
       push: 'none',
       widthSectors: 1,
@@ -128,6 +132,8 @@ function stateWith(monsters: Monster[], overrides: Partial<BattleState> = {}): B
     level: 0,
     turnsLeft: 5,
     heroHp: 5,
+    // Đủ cho cấu hình thử 1–3 vũ khí: playTurn chỉ đọc weaponIndex, selectWeapon kiểm thêm loadout.
+    loadout: { weapons: [0, 1, 2] },
     weaponIndex: 0,
     monsters,
     phase: 'playing',
@@ -287,6 +293,29 @@ describe('createBattle — chặn cấu hình sai trước khi mở trận', () 
 describe('selectWeapon — đổi vũ khí (F02)', () => {
   it('trận mới cầm vũ khí đầu tiên trong danh sách', () => {
     expect(createBattle(1, THREE_WEAPONS, 0).weaponIndex).toBe(0);
+  });
+
+  // B4: trận chỉ mang bộ đồ đã chọn ở màn chuẩn bị.
+  it('mở trận với bộ đồ đã chọn: mang đúng bộ đó, cầm món đầu tiên của bộ', () => {
+    const battle = createBattle(1, THREE_WEAPONS, 0, { weapons: [1, 2] });
+    expect(battle.loadout).toEqual({ weapons: [1, 2] });
+    expect(battle.weaponIndex).toBe(1);
+  });
+
+  it('không truyền bộ đồ thì mang bộ mặc định: món đầu mỗi tầm', () => {
+    expect(createBattle(1, THREE_WEAPONS, 0).loadout).toEqual({ weapons: [0, 1, 2] });
+  });
+
+  it('bộ đồ sai bị từ chối lúc mở trận', () => {
+    expect(() => createBattle(1, THREE_WEAPONS, 0, { weapons: [] })).toThrow(RangeError);
+    expect(() => createBattle(1, THREE_WEAPONS, 0, { weapons: [0, 5] })).toThrow(RangeError);
+    expect(() => createBattle(1, THREE_WEAPONS, 0, { weapons: [2, 2] })).toThrow(RangeError);
+  });
+
+  it('không được cầm vũ khí không mang vào trận', () => {
+    const battle = createBattle(1, THREE_WEAPONS, 0, { weapons: [1, 2] });
+    expect(() => selectWeapon(battle, 0, THREE_WEAPONS)).toThrow(RangeError);
+    expect(selectWeapon(battle, 2, THREE_WEAPONS).weaponIndex).toBe(2);
   });
 
   it('đổi vũ khí không tốn lượt, quái không di chuyển, không tung số ngẫu nhiên', () => {

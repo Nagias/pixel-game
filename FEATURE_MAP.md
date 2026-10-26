@@ -14,6 +14,7 @@
 | F05  | Đẩy quái theo vũ khí (knockback)                 | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 | F06  | Màn chơi nối tiếp + trùm Slime Vua               | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 | F07a | Rìu chém hai phía + màn 4 quái tới từ hai phía   | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
+| F07  | Màn chuẩn bị trận: chọn mỗi tầm một vũ khí       | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 | F09  | Quái bắn xa Slime Pháo + màn 5                   | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 
 ## F01 — Trận đấu tối thiểu
@@ -70,18 +71,19 @@ nhận chạm "chơi lại" (chống chạm nhầm). Game chỉ cho mobile: mọ
 ## F02 — Thanh 3 nút vũ khí theo tầm
 
 **Người chơi thấy và làm gì:** đáy màn hình có 3 nút Kiếm (gần) · Giáo (vừa) · Cung (xa) — từ F07a
-thêm nút thứ 4 Rìu (2 phía). Chạm một
+thêm Rìu (2 phía); từ F07 thanh nút chỉ hiện 3 món đã mang vào trận (mỗi tầm một món). Chạm một
 nút là cầm vũ khí đó, vùng xanh đổi hình ngay. Chạm vào sân là chém bằng vũ khí đang cầm. Quái mới
 xuất hiện ở rìa sân nên lúc đầu chỉ Cung với tới; quái càng áp sát càng phải đổi sang Giáo, Kiếm.
 Đây là cách "phạm vi vòng tròn thay đổi" trong ý tưởng ban đầu: phạm vi đổi theo vũ khí đang chọn.
 
 **Luật** (nguồn sự thật: `logic/battle.ts` + `logic/battle.test.ts`, mục `selectWeapon`):
 
-1. Trận mới cầm vũ khí đầu tiên (Kiếm).
+1. Trận mới cầm món đầu tiên của bộ đồ mang vào (món tầm gần — F07).
 2. Đổi vũ khí **không tốn lượt**, quái không di chuyển; chỉ chém mới tốn lượt.
 3. Nhát chém dùng vùng của vũ khí đang cầm: Kiếm vòng 0–1 rộng 5 lát; Giáo vòng 2–3 rộng 3 lát;
    Cung vòng 4–5 rộng 1 lát; cùng 1 sát thương.
-4. Không đổi được sang vũ khí không có trong danh sách, không đổi khi trận đã kết thúc.
+4. Không đổi được sang vũ khí không có trong danh sách hoặc không mang vào trận (F07), không đổi khi
+   trận đã kết thúc.
 
 **Hành vi giao diện:** nút đang cầm có viền xanh lá; chạm vào khe giữa hai nút không làm gì (không
 tính là chém).
@@ -245,8 +247,8 @@ thêm một dòng; thêm loại quái = thêm tên vào `MonsterKind` + con số
   đảo, chạm thì về màn 1 (ảnh `3-thang.png` "Chạm để sang màn 2", `6-man-trum.png`, `7-pha-dao.png`);
   qua màn 1 rồi chém trượt ở màn 2 → thua → chạm thì chơi lại đúng màn 2 (ảnh `4-thua.png`).
 
-**Cân bằng (`npm run sim` — 500 ván mỗi màn, seed 1…500, cùng bot với E2E):** ngắm chuẩn thắng màn 1 / 2 / 3 / 4 / 5 = 100% / 99,8% / 94,6% / 86,8% / 84,8%,
-dư trung bình ~2,36 / ~2,89 / ~2,56 / ~1,25 / ~1,07 lượt — màn trùm khó hơn màn 2, màn 4 khó hơn màn 3, màn 5 khó hơn màn 4 (unit test `balance.test.ts` giữ ba quan hệ này, cùng 500 ván với `npm run sim`). Chém bừa (từ khi có 4 vũ khí) thắng 0,2% / 0% / 0% / 0% / 0%.
+**Cân bằng (`npm run sim` — 500 ván mỗi màn, seed 1…500, cùng bot với E2E):** ngắm chuẩn với bộ mặc định (Kiếm + Giáo + Cung, từ F07) thắng màn 1 / 2 / 3 / 4 / 5 = 100% / 99,8% / 94,6% / 86,2% / 84,4%,
+dư trung bình ~2,36 / ~2,89 / ~2,56 / ~1,21 / ~1,05 lượt — màn trùm khó hơn màn 2, màn 4 khó hơn màn 3, màn 5 khó hơn màn 4 (unit test `balance.test.ts` giữ ba quan hệ này, cùng 500 ván với `npm run sim`). Chém bừa (từ khi có 4 vũ khí) thắng 0,2% / 0% / 0% / 0% / 0%.
 Seed 42 của E2E qua cả 5 màn (dư 4 / 4 / 4 / 4 / 3 lượt).
 
 **Nợ liên quan:** DEBT-007 (hình Slime Vua tạm), DEBT-008, DEBT-009.
@@ -268,8 +270,8 @@ xuất hiện thành **hai cụm ở hai phía đối diện**; quái áp sát t
 4. Cấu hình sai bị từ chối: vũ khí hai phía trên sân lẻ lát hoặc hai nêm chồng nhau; màn hai phía trên
    sân lẻ lát, cụm không đủ chỗ, hoặc hai cụm chồng nhau.
 
-**Hành vi giao diện:** thanh nút chia 4 nút bằng nhau (mỗi nút rộng 72, khe 12), vẫn "chạm khe không
-làm gì" ở cả 3 khe. Không thêm hiệu ứng mới.
+**Hành vi giao diện:** từ F07 Rìu nằm ở ô "gần" của màn chuẩn bị (thay Kiếm); thanh nút trong trận
+chỉ có 3 món đã mang (mỗi nút rộng 100, khe 12), vẫn "chạm khe không làm gì". Không thêm hiệu ứng mới.
 
 **Con số:** `weapons` (Rìu: `twoSided: true`) và `levels` (màn 4: `splitOpposite: true`) trong
 `src/features/battle/logic/battleConfig.ts`.
@@ -280,13 +282,57 @@ làm gì" ở cả 3 khe. Không thêm hiệu ứng mới.
   chung hai nêm; đẩy lùi cả hai phía; hình nêm vẽ ra trùng khít vùng luật với mọi lát ngắm (vũ khí một
   nêm và hai phía rộng 1/3/5); màn hai phía: mỗi cụm gọn, hai cụm đối diện, không chồng ô, đội hình lẻ;
   màn thường mở y như trước; từ chối cấu hình sai; màn 4 khó hơn màn 3 khi ngắm chuẩn.
-- E2E: chạm nút Rìu cầm Rìu không tốn lượt, chém bằng Rìu đúng vùng luật (ảnh `9-cam-riu.png`); chạm
-  cả 3 khe không làm gì; ván seed 42 đi đủ 4 màn, màn 4 hai cụm đối diện (ảnh `8-man-hai-phia.png`).
+- E2E: mang Rìu vào trận (F07), đổi sang Giáo rồi chạm lại nút Rìu thì cầm Rìu không tốn lượt, chém
+  bằng Rìu đúng vùng luật (ảnh `9-cam-riu.png`); chạm các khe không làm gì; ván seed 42 đi đủ 4 màn, màn 4 hai cụm đối diện (ảnh `8-man-hai-phia.png`).
 
 **Cân bằng:** xem F06 (`npm run sim`). Bot ngắm chuẩn dùng Rìu rất ít (~1% số nhát): nó hạ quái từ xa
 bằng Cung/Giáo nên quái hiếm khi áp sát cả hai phía cùng lúc. Rìu là vũ khí "cứu nguy".
 
 **Nợ liên quan:** DEBT-009.
+
+## F07 — Màn chuẩn bị trận: chọn mỗi tầm một vũ khí
+
+**Người chơi thấy và làm gì:** mở game, và mỗi lần hết màn (thắng hay thua), là **màn chuẩn bị** của
+màn sắp chơi: tiêu đề "MÀN n/5", ba hàng **Gần / Vừa / Xa**, mỗi hàng các nút vũ khí của tầm đó, món
+đang chọn viền xanh lá, dưới mỗi hàng một dòng mô tả món đang chọn. Ô gần chọn **Kiếm hoặc Rìu**; ô vừa
+(Giáo) và ô xa (Cung) mỗi ô một món. Chạm **"VÀO TRẬN"** để vào trận với đúng 3 món đã chọn trên thanh
+nút. Sang màn sau, lựa chọn cũ được chọn sẵn.
+
+**Luật** (nguồn sự thật: `logic/loadout.ts` + `logic/loadout.test.ts`, `logic/battle.ts` `createBattle`
+/ `selectWeapon` + test mục B4; chủ dự án duyệt ngày 27/10/2026 phương án "mỗi tầm 1 món"):
+
+1. Mỗi vũ khí thuộc một tầm (`slot`: gần / vừa / xa). Mang vào trận **mỗi tầm đúng một món**; chọn một
+   món thì thay món cùng tầm.
+2. Bộ mặc định = món đầu tiên của mỗi tầm theo thứ tự cấu hình (Kiếm, Giáo, Cung).
+3. Lựa chọn lấy từ danh sách **vũ khí đang sở hữu**; chưa có túi đồ nên sở hữu = mọi vũ khí.
+4. Trận cầm món đầu của bộ (tầm gần); chỉ đổi được sang món đã mang.
+5. Bộ đồ sai bị từ chối lúc mở trận: rỗng, vũ khí không có, mang trùng, hai món cùng tầm.
+6. Nhớ lựa chọn trong lúc chơi (tắt game là về mặc định — lưu thật khi có "lưu tiến trình").
+
+**Hành vi giao diện:** màn chuẩn bị là scene `loadout` (`view/LoadoutScene.ts`), bố cục thuần ở
+`view/loadoutLayout.ts` (nút cao 56, khe 12; chạm khe/chữ/nền không làm gì). Dòng mô tả sinh từ con số
+cấu hình (`describeWeapon`, vd. "Rìu: vòng 0–1, rộng 3 lát, 2 phía, đẩy lùi"). Đường link `?level=N`
+mở thẳng màn chuẩn bị màn N (thử tay / E2E nhanh, DEBT-011).
+
+**Con số:** `slot` của từng vũ khí trong `src/features/battle/logic/battleConfig.ts`.
+
+**Kiểm chứng tự động:**
+
+- Unit: bộ mặc định (cả khi chỉ sở hữu vài món); lựa chọn theo tầm; chọn món thay đúng món cùng tầm, giữ
+  thứ tự, thêm vào tầm trống; mọi bộ ghép được (cho mô phỏng); từ chối bộ sai; mô tả món; trận mang đúng
+  bộ, cầm món đầu, không cầm được món không mang; bot ngắm chuẩn / chém trượt / chém bừa chỉ dùng món đã
+  mang; bố cục nút (trong khung, không chồng, chạm khe không trúng gì); `?level=` hợp lệ / không hợp lệ.
+- E2E: mở game là màn chuẩn bị màn 1 với bộ mặc định (ảnh `12-chuan-bi.png`); chạm Rìu thì Rìu thay
+  Kiếm (ảnh `13-chon-riu.png`); vào trận thanh nút Rìu / Giáo / Cung, cầm Rìu (ảnh
+  `14-tran-mang-riu.png`); thắng màn 1 thì màn chuẩn bị màn 2 vẫn chọn Rìu; `?level=4` mở thẳng màn 4;
+  ván seed 42 đi đủ 5 màn qua màn chuẩn bị.
+
+**Cân bằng (`npm run sim` theo từng bộ đồ):** ngắm chuẩn với Rìu + Giáo + Cung thắng màn 1–5 = 100% /
+99,8% / 94,6% / 85,6% / 79,0% — **không** dễ hơn bộ Kiếm ở màn 4 (86,2%) dù màn 4 là "đất của Rìu": bot
+chỉ đếm số quái trúng, hạ quái từ xa nên hiếm khi có quái áp sát cả hai phía. Chủ dự án xem lại khi chơi
+thử.
+
+**Nợ liên quan:** DEBT-009, DEBT-011.
 
 ## F09 — Quái bắn xa Slime Pháo + màn 5
 
@@ -328,10 +374,9 @@ lúc đề xuất bằng bot không ưu tiên) — đúng là một câu đố.
 
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
-| Mã  | Tính năng                                                     | Ghi chú                                      |
-| --- | ------------------------------------------------------------- | -------------------------------------------- |
-| F07 | Kho vũ khí + chọn 3 món mang vào trận (phần còn lại sau F07a) | Chủ dự án nêu ngày 22/10; Rìu đã xong ở F07a |
-| F08 | Skill                                                         | Chủ dự án nêu ngày 22/10; chờ mô tả cơ chế   |
+| Mã  | Tính năng | Ghi chú                                    |
+| --- | --------- | ------------------------------------------ |
+| F08 | Skill     | Chủ dự án nêu ngày 22/10; chờ mô tả cơ chế |
 
 ## Mẫu cho tính năng mới (copy khối này)
 

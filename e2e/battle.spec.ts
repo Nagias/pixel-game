@@ -1,4 +1,5 @@
 // F01–F06 — Trận đấu: mở game → đổi vũ khí → chạm sân để chém → thắng/thua → sang màn / chơi lại.
+// B4: mở game và mỗi lần hết màn là màn chuẩn bị trận (chọn đồ) trước, rồi mới vào trận.
 import { expect, test } from '@playwright/test';
 import { isGameCleared, isThreatening, levelAt } from '../src/features/battle/logic/battle';
 import { BATTLE_CONFIG } from '../src/features/battle/logic/battleConfig';
@@ -37,11 +38,16 @@ async function playBestUntilOver(
   return mostHitsInOneStrike;
 }
 
-/** Chờ màn kết quả nhận chạm rồi chạm để đi tiếp (sang màn sau hoặc chơi lại). */
+/**
+ * Chờ màn kết quả nhận chạm rồi chạm để đi tiếp: về màn chuẩn bị của màn sau (hoặc màn vừa thua),
+ * rồi chạm "VÀO TRẬN" với bộ đồ đã chọn sẵn.
+ */
 async function continueFromResult(game: BattleDriver): Promise<void> {
   await game.advance(RESULT_SCREEN_WAIT_MS);
   expect((await game.snapshot()).canRestart).toBe(true);
   await game.tap();
+  await game.waitSceneSwitch();
+  await game.startBattle();
 }
 
 test('mở game: vào màn 1 với đủ lượt, cầm vũ khí đầu tiên, đúng đội hình quái ở vòng ngoài cùng', async ({
@@ -57,6 +63,7 @@ test('mở game: vào màn 1 với đủ lượt, cầm vũ khí đầu tiên, �
     phase: 'playing',
     turnsLeft: LEVEL_1.turnLimit,
     weaponIndex: 0,
+    loadout: { weapons: [0, 1, 2] },
   });
   expect(battle.monsters.map((m) => m.kind)).toEqual(LEVEL_1.monsters);
   for (const monster of battle.monsters) {
@@ -81,9 +88,9 @@ test('chạm nút vũ khí: đổi vũ khí đang cầm, không tốn lượt', 
   expect((await game.snapshot()).battle.weaponIndex).toBe(1);
 });
 
-/** Tâm các khe giữa hai nút vũ khí kề nhau, tính từ đúng bố cục game đang dùng. */
-function weaponGapCenters(): { x: number; y: number }[] {
-  const rects = weaponButtonRects(BATTLE_CONFIG.weapons.length, WEAPON_BAR);
+/** Tâm các khe giữa `count` nút vũ khí kề nhau, tính từ đúng bố cục game đang dùng. */
+function weaponGapCenters(count: number): { x: number; y: number }[] {
+  const rects = weaponButtonRects(count, WEAPON_BAR);
   return rects.slice(1).map((right, i) => {
     const left = rects[i];
     if (!left) throw new Error('Thiếu nút vũ khí bên trái khe');
@@ -97,8 +104,8 @@ test('F02: chạm vào khe giữa hai nút vũ khí không làm gì — không c
   const game = new BattleDriver(page);
   await game.openBattle(SEED);
   const before = (await game.snapshot()).battle;
-  const gaps = weaponGapCenters();
-  expect(gaps).toHaveLength(BATTLE_CONFIG.weapons.length - 1);
+  const gaps = weaponGapCenters(before.loadout.weapons.length);
+  expect(gaps).toHaveLength(before.loadout.weapons.length - 1);
 
   for (const gap of gaps) {
     await game.tapAt(gap.x, gap.y);
@@ -127,21 +134,25 @@ test('F02: ở màn kết quả, chạm vào chỗ khe giữa hai nút vẫn là
   expect((await game.snapshot()).battle.phase).toBe('lost');
 
   await game.advance(RESULT_SCREEN_WAIT_MS);
-  const [gap] = weaponGapCenters();
+  const [gap] = weaponGapCenters((await game.snapshot()).battle.loadout.weapons.length);
   if (!gap) throw new Error('Không có khe giữa hai nút');
   await game.tapAt(gap.x, gap.y);
-  const { battle } = await game.snapshot();
-  expect(battle).toMatchObject({ level: 0, phase: 'playing', turnsLeft: LEVEL_1.turnLimit });
+  await game.waitSceneSwitch();
+  expect((await game.loadoutSnapshot()).level).toBe(0);
 });
 
-test('B2: chạm nút Rìu thì cầm Rìu (không tốn lượt), chém bằng Rìu đúng vùng hai nêm', async ({
+test('B2: mang Rìu vào trận thì cầm Rìu (không tốn lượt), chém bằng Rìu đúng vùng hai nêm', async ({
   page,
 }) => {
   const game = new BattleDriver(page);
-  await game.openBattle(SEED);
+  await game.openLoadout(SEED);
   const axeIndex = BATTLE_CONFIG.weapons.findIndex((w) => w.twoSided);
   expect(axeIndex).toBeGreaterThanOrEqual(0);
+  await game.chooseWeapon(axeIndex);
+  await game.startBattle();
 
+  // Đổi qua Giáo rồi chạm lại nút Rìu: cầm Rìu, không tốn lượt.
+  await game.selectWeapon(1);
   await game.selectWeapon(axeIndex);
   const before = await game.snapshot();
   expect(before.battle).toMatchObject({ weaponIndex: axeIndex, turnsLeft: LEVEL_1.turnLimit });
@@ -251,7 +262,7 @@ test('F06: ngắm chuẩn thắng màn nào sang màn kế, hạ trùm ở màn 
   // Ván này phải có ít nhất một nhát trúng từ 2 quái trở lên, nếu không combo chưa được thử.
   expect(mostHitsInOneStrike).toBeGreaterThanOrEqual(2);
 
-  // Phá đảo xong, chạm là chơi lại từ màn 1.
+  // Phá đảo xong, chạm là chơi lại từ màn 1 (qua màn chuẩn bị).
   expect((await game.snapshot()).battle).toMatchObject({
     level: 0,
     phase: 'playing',
@@ -324,4 +335,59 @@ test('F05: Cung bắn trúng quái ở rìa sân thì kéo nó vào gần đúng
   });
   await game.advance(300); // cho quái kịp lướt tới ô mới rồi chụp
   await page.screenshot({ path: test.info().outputPath('5-cung-keo.png') });
+});
+
+test('B4: mở game là màn chuẩn bị màn 1 — chọn Rìu thay Kiếm, vào trận mang đúng bộ đó, sang màn sau vẫn chọn sẵn', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.openLoadout(SEED);
+  const axeIndex = BATTLE_CONFIG.weapons.findIndex((w) => w.twoSided);
+  const prep = await game.loadoutSnapshot();
+  expect(prep.level).toBe(0);
+  expect(prep.loadout).toEqual({ weapons: [0, 1, 2] });
+  // Ô gần có hai món để chọn (Kiếm, Rìu); ô vừa và ô xa mỗi ô một món.
+  expect(prep.rows.map((row) => [row.slot, row.weapons.length])).toEqual([
+    ['near', 2],
+    ['mid', 1],
+    ['far', 1],
+  ]);
+  await game.advance(50);
+  await page.screenshot({ path: test.info().outputPath('12-chuan-bi.png') });
+
+  await game.chooseWeapon(axeIndex);
+  expect((await game.loadoutSnapshot()).loadout).toEqual({ weapons: [axeIndex, 1, 2] });
+  await game.advance(50);
+  await page.screenshot({ path: test.info().outputPath('13-chon-riu.png') });
+
+  await game.startBattle();
+  const { battle } = await game.snapshot();
+  expect(battle).toMatchObject({
+    level: 0,
+    weaponIndex: axeIndex,
+    loadout: { weapons: [axeIndex, 1, 2] },
+  });
+  await game.advance(50);
+  await page.screenshot({ path: test.info().outputPath('14-tran-mang-riu.png') });
+
+  // Kiếm không mang vào trận: bot (và người) chỉ dùng được 3 món đã mang.
+  await playBestUntilOver(game);
+  expect((await game.snapshot()).battle.phase).toBe('won');
+  await game.advance(RESULT_SCREEN_WAIT_MS);
+  await game.tap();
+  await game.waitSceneSwitch();
+  const next = await game.loadoutSnapshot();
+  expect(next).toMatchObject({ level: 1, loadout: { weapons: [axeIndex, 1, 2] } });
+});
+
+test('B4: ?level=4 mở thẳng màn chuẩn bị màn 4 (thử tay / E2E nhanh), vào trận đúng màn 4', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.openLoadout(SEED, 4);
+  expect((await game.loadoutSnapshot()).level).toBe(3);
+  await game.startBattle();
+  const { battle } = await game.snapshot();
+  expect(battle.level).toBe(3);
+  expect(battle.monsters.map((m) => m.kind)).toEqual(levelAt(3, BATTLE_CONFIG).monsters);
 });
