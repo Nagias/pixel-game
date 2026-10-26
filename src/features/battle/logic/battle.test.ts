@@ -190,6 +190,51 @@ describe('createBattle — mở trận', () => {
   });
 });
 
+describe('B2 — màn quái tới từ hai phía (splitOpposite)', () => {
+  // Chủ dự án duyệt 26/10/2026: nửa đầu đội hình thành một cụm, nửa sau thành cụm ở lát đối diện.
+  const TWO_SIDES = oneLevel({ monsters: slimes(8), spread: 2, splitOpposite: true });
+
+  it('nửa đầu đội hình (id nhỏ) là một cụm, nửa sau là cụm ở lát đối diện, không chồng ô', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const monsters = createBattle(seed, TWO_SIDES, 0).monsters;
+      const front = monsters.slice(0, 4).map((m) => m.sector);
+      const back = monsters.slice(4).map((m) => m.sector);
+      expect(new Set([...front, ...back]).size).toBe(8);
+      // Dời cụm sau nửa vòng thì cả 8 con nằm gọn trong một cụm ±2 lát.
+      const aligned = [...front, ...back.map((s) => (s + 12) % 24)];
+      for (const a of aligned) {
+        for (const b of aligned) expect(circularDistance(a, b, 24)).toBeLessThanOrEqual(4);
+      }
+      for (const m of monsters) expect(m.ring).toBe(5);
+    }
+  });
+
+  it('đội hình lẻ: cụm trước nhiều hơn một con', () => {
+    const odd = oneLevel({ monsters: slimes(5), spread: 2, splitOpposite: true });
+    const monsters = createBattle(3, odd, 0).monsters;
+    const center = monsters[0]?.sector ?? 0;
+    const near = monsters.filter((m) => circularDistance(m.sector, center, 24) <= 4);
+    expect(near.map((m) => m.id)).toEqual([1, 2, 3]);
+  });
+
+  it('màn không chia hai phía mở y như trước (cùng seed ra cùng đội hình)', () => {
+    expect(createBattle(9, CONFIG, 0)).toEqual(
+      createBattle(9, oneLevel({ splitOpposite: false }), 0),
+    );
+  });
+
+  it.each<[string, BattleConfig]>([
+    ['một cụm không đủ chỗ', oneLevel({ monsters: slimes(12), spread: 2, splitOpposite: true })],
+    ['hai cụm chồng lên nhau', oneLevel({ monsters: slimes(8), spread: 6, splitOpposite: true })],
+    [
+      'sân số lát lẻ',
+      { ...oneLevel({ monsters: slimes(4), spread: 2, splitOpposite: true }), sectorCount: 23 },
+    ],
+  ])('từ chối: %s', (_label, config) => {
+    expect(() => createBattle(1, config, 0)).toThrow(RangeError);
+  });
+});
+
 describe('createBattle — chặn cấu hình sai trước khi mở trận', () => {
   // Vũ khí sai nằm ở vị trí thứ 2 để chắc mọi vũ khí đều được kiểm, không chỉ vũ khí đầu.
   const weapon = (patch: Partial<WeaponConfig>): BattleConfig => ({
@@ -216,6 +261,9 @@ describe('createBattle — chặn cấu hình sai trước khi mở trận', () 
     ['nhân vật không có máu', { ...CONFIG, hero: { hp: 0 } }],
     ['quái không có sức đánh', kindRule('slime', { attack: 0 })],
     ['kiểu đẩy không tồn tại', weapon({ push: 'xoay' as WeaponConfig['push'] })],
+    // B2: nêm sau lưng nằm đúng lát đối diện → số lát phải chẵn; hai nêm không được chồng nhau.
+    ['vũ khí hai phía trên sân số lát lẻ', { ...weapon({ twoSided: true }), sectorCount: 23 }],
+    ['vũ khí hai phía có hai nêm chồng nhau', weapon({ twoSided: true, widthSectors: 13 })],
     // F06: mọi loại quái và mọi màn đều được kiểm, kể cả loại/màn chưa dùng tới lúc mở màn 1.
     ['trùm không có máu', kindRule('slimeKing', { hp: 0 })],
     ['trùm không có sức đánh', kindRule('slimeKing', { attack: 0 })],
@@ -594,6 +642,28 @@ describe('F05 — đẩy quái theo vũ khí', () => {
     const before = stateWith([monster(1, 0, 1, 5)]);
     const config = { ...pushing('out'), monsterKinds: withAdvanceChance(0.5).monsterKinds };
     expect(playTurn(before, 0, config).rng).toBe(before.rng);
+  });
+});
+
+describe('B2 — vũ khí chém hai phía (Rìu)', () => {
+  // Rìu thử: một lát mỗi nêm, vòng 0–1. Ngắm lát 0 → nêm trước ở lát 0, nêm sau lưng ở lát 12.
+  const AXE = { twoSided: true, widthSectors: 1, minRing: 0, maxRing: 1 } as const;
+
+  it('một nhát trúng quái ở cả trước mặt và sau lưng; combo đếm chung cả hai nêm', () => {
+    const before = stateWith([monster(1, 0, 0, 2), monster(2, 12, 1, 5), monster(3, 6, 0, 2)]);
+    const after = playTurn(before, 0, pushing('none', AXE));
+    expect(after.lastAttack?.hits).toEqual([
+      { monsterId: 1, damage: 1, killed: false },
+      { monsterId: 2, damage: 2, killed: false },
+    ]);
+    expect(byId(after, 3)?.hp).toBe(2); // lát 6 nằm giữa hai nêm — không trúng
+  });
+
+  it('đẩy lùi áp dụng cho quái ở cả hai nêm', () => {
+    const config = { ...pushing('out', AXE), monsterKinds: withAdvanceChance(1).monsterKinds };
+    const after = playTurn(stateWith([monster(1, 0, 1, 5), monster(2, 12, 1, 5)]), 0, config);
+    expect(byId(after, 1)).toMatchObject({ sector: 0, ring: 2 });
+    expect(byId(after, 2)).toMatchObject({ sector: 12, ring: 2 });
   });
 });
 

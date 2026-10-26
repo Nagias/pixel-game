@@ -29,6 +29,12 @@ function validateBattleConfig(config: BattleConfig): void {
       problems.push(`${label}: tầm vòng ${weapon.minRing}–${weapon.maxRing} không hợp lệ`);
     }
     if (weapon.damage < 1) problems.push(`${label}: phải gây ít nhất 1 sát thương`);
+    if (weapon.twoSided && sectorCount % 2 !== 0) {
+      problems.push(`${label}: chém hai phía cần số lát chẵn để có lát đối diện`);
+    }
+    if (weapon.twoSided && weapon.widthSectors * 2 > sectorCount) {
+      problems.push(`${label}: hai nêm rộng ${weapon.widthSectors} lát chồng lên nhau`);
+    }
     if (!PUSH_DIRECTIONS.includes(weapon.push)) {
       problems.push(`${label}: kiểu đẩy "${String(weapon.push)}" không tồn tại`);
     }
@@ -45,7 +51,10 @@ function validateBattleConfig(config: BattleConfig): void {
   if (levels.length === 0) problems.push('phải có ít nhất 1 màn');
   levels.forEach((level, i) => {
     const label = `màn ${i + 1}`;
-    const count = level.monsters.length;
+    // Màn hai phía: cụm đông nhất là cụm trước (nửa đầu, làm tròn lên).
+    const count = level.splitOpposite
+      ? Math.ceil(level.monsters.length / 2)
+      : level.monsters.length;
     const slotCount = level.spread * 2 + 1;
     if (level.turnLimit < 1) problems.push(`${label}: phải có ít nhất 1 lượt`);
     if (count === 0) problems.push(`${label}: phải có ít nhất 1 quái`);
@@ -53,6 +62,12 @@ function validateBattleConfig(config: BattleConfig): void {
       problems.push(`${label}: không đủ ${count} chỗ trong cụm ${slotCount} lát`);
     if (slotCount > sectorCount) {
       problems.push(`${label}: cụm quái ${slotCount} lát rộng hơn vòng tròn`);
+    }
+    if (level.splitOpposite && sectorCount % 2 !== 0) {
+      problems.push(`${label}: quái hai phía cần số lát chẵn để có lát đối diện`);
+    }
+    if (level.splitOpposite && slotCount * 2 > sectorCount) {
+      problems.push(`${label}: hai cụm ${slotCount} lát chồng lên nhau`);
     }
     for (const kind of level.monsters) {
       if (!Object.hasOwn(monsterKinds, kind)) {
@@ -75,31 +90,43 @@ export function levelAt(index: number, config: BattleConfig): LevelConfig {
   return level;
 }
 
-/**
- * Mở màn `level`: đội hình quái của màn xuất hiện thành cụm ở vòng ngoài cùng, mỗi con một lát
- * khác nhau. Màn nào cũng bắt đầu đầy máu, cầm vũ khí đầu tiên.
- */
-export function createBattle(seed: number, config: BattleConfig, level: number): BattleState {
-  validateBattleConfig(config);
-  const { turnLimit, monsters: lineup, spread } = levelAt(level, config);
+/** Chọn `count` độ lệch khác nhau trong cụm ±spread (xáo một phần Fisher–Yates). */
+function pickOffsets(rng: RngState, count: number, spread: number): [number[], RngState] {
   const slotCount = spread * 2 + 1;
-
-  const [center, rngAfterCenter] = nextInt(seedRng(seed), config.sectorCount);
-  let rng = rngAfterCenter;
-
-  // Xáo một phần (Fisher–Yates) để chọn đủ lát khác nhau trong cụm cho cả đội hình.
   const offsets = Array.from({ length: slotCount }, (_, i) => i - spread);
-  for (let i = 0; i < lineup.length; i++) {
+  let next = rng;
+  for (let i = 0; i < count; i++) {
     let pick: number;
-    [pick, rng] = nextInt(rng, slotCount - i);
+    [pick, next] = nextInt(next, slotCount - i);
     const j = i + pick;
     [offsets[i], offsets[j]] = [offsets[j] as number, offsets[i] as number];
   }
+  return [offsets.slice(0, count), next];
+}
+
+/**
+ * Mở màn `level`: đội hình quái của màn xuất hiện thành cụm ở vòng ngoài cùng, mỗi con một lát
+ * khác nhau — hoặc hai cụm đối diện nếu màn `splitOpposite` (B2). Màn nào cũng bắt đầu đầy máu,
+ * cầm vũ khí đầu tiên.
+ */
+export function createBattle(seed: number, config: BattleConfig, level: number): BattleState {
+  validateBattleConfig(config);
+  const { turnLimit, monsters: lineup, spread, splitOpposite } = levelAt(level, config);
+
+  const [center, rngAfterCenter] = nextInt(seedRng(seed), config.sectorCount);
+  const frontCount = splitOpposite ? Math.ceil(lineup.length / 2) : lineup.length;
+  const [front, rngAfterFront] = pickOffsets(rngAfterCenter, frontCount, spread);
+  const [back, rng] = pickOffsets(rngAfterFront, lineup.length - frontCount, spread);
+  const backCenter = center + config.sectorCount / 2;
+  const sectors = [
+    ...front.map((offset) => center + offset),
+    ...back.map((offset) => backCenter + offset),
+  ];
 
   const monsters: Monster[] = lineup.map((kind, index) => ({
     id: index + 1,
     kind,
-    sector: wrapSector(center + (offsets[index] as number), config.sectorCount),
+    sector: wrapSector(sectors[index] as number, config.sectorCount),
     ring: config.ringCount - 1,
     hp: config.monsterKinds[kind].hp,
   }));

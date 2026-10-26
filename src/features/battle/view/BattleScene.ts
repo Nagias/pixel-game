@@ -29,7 +29,7 @@ import {
   WEAPON_BAR,
   weaponButtonAt,
   weaponButtonRects,
-  zoneArc,
+  zoneArcs,
   zoneRadii,
 } from './battleLayout';
 import { BATTLE_SPRITES, SPRITE_SCALE } from './battleSprites';
@@ -217,31 +217,32 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * Hình nêm xanh của vũ khí đang cầm: đúng các lát và vòng mà luật chơi coi là trúng
-   * (đã kiểm bằng test layout). Đổi vũ khí là vẽ lại ngay.
+   * Các hình nêm xanh của vũ khí đang cầm (hai nêm đối nhau với vũ khí chém hai phía): đúng các lát
+   * và vòng mà luật chơi coi là trúng (đã kiểm bằng test layout). Đổi vũ khí là vẽ lại ngay.
    */
   private drawZone(): void {
     const { sectorCount } = this.config;
     const weapon = this.currentWeapon();
     const { centerX, centerY } = ARENA_LAYOUT;
-    const arc = zoneArc(this.arcSector, weapon.widthSectors, sectorCount);
     const { inner, outer } = zoneRadii(weapon, ARENA_LAYOUT);
-    const start = toPhaserAngle(arc.start);
-    const end = toPhaserAngle(arc.end);
 
     const g = this.zone.clear();
-    const wedge = () => {
-      g.beginPath();
-      g.arc(centerX, centerY, outer, start, end, false);
-      g.arc(centerX, centerY, inner, end, start, true);
-      g.closePath();
-    };
-    g.fillStyle(colorNumber('lime'), 0.6);
-    wedge();
-    g.fillPath();
-    g.lineStyle(2, colorNumber('white'), 0.9);
-    wedge();
-    g.strokePath();
+    for (const arc of zoneArcs(this.arcSector, weapon, sectorCount)) {
+      const start = toPhaserAngle(arc.start);
+      const end = toPhaserAngle(arc.end);
+      const wedge = () => {
+        g.beginPath();
+        g.arc(centerX, centerY, outer, start, end, false);
+        g.arc(centerX, centerY, inner, end, start, true);
+        g.closePath();
+      };
+      g.fillStyle(colorNumber('lime'), 0.6);
+      wedge();
+      g.fillPath();
+      g.lineStyle(2, colorNumber('white'), 0.9);
+      wedge();
+      g.strokePath();
+    }
   }
 
   /**
