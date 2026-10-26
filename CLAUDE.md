@@ -60,7 +60,7 @@ Phân tích game tham chiếu: `docs/research/micro-rpg.md`. Phong cách hình: 
 | Hẹn giờ / hoạt ảnh trong view | `this.time` và `this.tweens` của Phaser (không `setTimeout`)                                                                                                                                                                                              |
 | Cho test E2E đọc trạng thái   | Scene gọi `setSnapshotProvider()` (`src/app/testBridge.ts`) trong `create()`; test đọc qua `e2e/support/gameDriver.ts`                                                                                                                                    |
 | Test E2E điều khiển game      | `GameDriver` (chung: mở game, đồng hồ ảo, chạm theo tọa độ game, kiểm đúng scene) + `e2e/support/<f>Driver.ts` (riêng tính năng, kế thừa `GameDriver`); E2E chỉ import kiểu từ `index.ts` và file thuần không dùng Phaser (`logic/`, `view/<f>Layout.ts`) |
-| Xem game tận mắt              | Claude Desktop: preview `game-dev` (`.claude/launch.json`); hoặc `npm run dev`                                                                                                                                                                            |
+| Xem game tận mắt / thử tay    | Claude Desktop: preview `game-dev` (`.claude/launch.json`), khung 375×760, làm theo `docs/MANUAL_TEST.md`; hoặc `npm run dev`                                                                                                                             |
 | Kiểm tra trước khi báo xong   | `npm run check` (giống hệt CI)                                                                                                                                                                                                                            |
 | Thêm thư viện                 | Ghi lý do vào `docs/ARCHITECTURE.md` và nêu rõ trong PR (chủ dự án duyệt qua PR)                                                                                                                                                                          |
 | Đi tắt                        | Ghi `DEBT.md` trước, comment `// NỢ DEBT-xxx` tại chỗ                                                                                                                                                                                                     |
@@ -124,7 +124,9 @@ Máy Windows: đường dẫn dự án có dấu cách và dấu chấm (`D:\26.
    - [ ] Có test mới cho hành vi mới (unit cho luật, E2E nếu đổi luồng người chơi)
    - [ ] `FEATURE_MAP.md` cập nhật **trong cùng PR**
    - [ ] Đi tắt nào cũng có dòng trong `DEBT.md`
-   - [ ] Mở game thật (`npm run dev`) hoặc xem ảnh E2E trong `test-results/` để nhìn tận mắt
+   - [ ] Xem ảnh E2E trong `test-results/` **và** thử tay theo `docs/MANUAL_TEST.md` (chơi thật trong
+         preview ở khung điện thoại, chỉ thao tác như người) — đủ 3 lớp code, E2E, thử tay mới là xong
+         (chủ dự án chốt 26/10/2026)
    - [ ] PR sửa skill/agent (`.claude/skills/`, `.claude/agents/`, `.claude/commands/`): có bảng điểm
          bộ việc mẫu trước/sau (luật chủ dự án chốt ngày 23/10/2026)
 5. Báo cáo cho chủ dự án: đã làm gì, để được gì, phần nào chưa kiểm chứng, việc gì cần họ quyết.
