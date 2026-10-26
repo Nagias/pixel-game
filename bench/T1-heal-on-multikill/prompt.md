@@ -1,0 +1,1 @@
+Thêm luật hồi máu: một nhát chém (bằng bất kỳ vũ khí nào) diệt từ 3 quái trở lên thì nhân vật hồi 1 máu, không vượt quá máu tối đa. Hồi máu ngay sau nhát chém, trước khi quái áp sát đánh. Luật này mình đã duyệt, làm ở mức tối thiểu theo đúng quy trình trong CLAUDE.md, không thêm hiệu ứng.
