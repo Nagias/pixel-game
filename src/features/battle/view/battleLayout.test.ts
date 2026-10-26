@@ -3,6 +3,8 @@ import { isInZone, zoneSectors } from '../logic/arena';
 import type { WeaponConfig } from '../logic/battleTypes';
 import {
   ARENA_LAYOUT,
+  barButtonCount,
+  skillButtonIndex,
   cellToPoint,
   polarToPoint,
   ringCenterRadius,
@@ -201,5 +203,14 @@ describe('thanh nút vũ khí ở đáy màn hình (F02)', () => {
   it('thanh nút không đè lên sân tròn', () => {
     const arenaBottom = ARENA_LAYOUT.centerY + ringInnerRadius(6, ARENA_LAYOUT);
     expect(WEAPON_BAR.top).toBeGreaterThan(arenaBottom);
+  });
+});
+
+describe('B6 — ô skill trên thanh nút', () => {
+  it('mang skill thì thanh có thêm một ô cuối cho skill; không mang thì chỉ có các nút vũ khí', () => {
+    expect(barButtonCount({ weapons: [0, 1, 2] })).toBe(3);
+    expect(barButtonCount({ weapons: [0, 1, 2], skill: 'iceRain' })).toBe(4);
+    expect(skillButtonIndex({ weapons: [0, 1, 2], skill: 'iceRain' })).toBe(3);
+    expect(skillButtonIndex({ weapons: [0, 1, 2] })).toBeNull();
   });
 });

@@ -1,7 +1,7 @@
 // Phép tính đổi ô trên sân (lát, vòng) sang tọa độ màn hình. Không chứa luật chơi.
 // Quy ước góc: 0 = hướng 12 giờ, tăng theo chiều kim đồng hồ (giống chiều quay vùng xanh).
 import { aimSectors } from '../logic/arena';
-import type { Cell, WeaponConfig } from '../logic/battleTypes';
+import type { Cell, Loadout, WeaponConfig } from '../logic/battleTypes';
 
 export interface ArenaLayout {
   readonly centerX: number;
@@ -113,6 +113,16 @@ export interface Rect {
 
 /** Thanh nút cho khung 360×640: nằm dưới sân tròn (đáy sân ở y = 460), vừa tầm ngón cái. */
 export const WEAPON_BAR: WeaponBarLayout = { left: 18, top: 520, width: 324, height: 72, gap: 12 };
+
+/** B6: số nút trên thanh — các vũ khí đã mang, thêm một ô cuối nếu mang skill. */
+export function barButtonCount(loadout: Loadout): number {
+  return loadout.weapons.length + (loadout.skill === undefined ? 0 : 1);
+}
+
+/** B6: vị trí ô skill trên thanh (ngay sau các vũ khí), hoặc null nếu không mang skill. */
+export function skillButtonIndex(loadout: Loadout): number | null {
+  return loadout.skill === undefined ? null : loadout.weapons.length;
+}
 
 /** Chia thanh thành `count` nút bằng nhau, từ trái sang phải. */
 export function weaponButtonRects(count: number, bar: WeaponBarLayout): Rect[] {

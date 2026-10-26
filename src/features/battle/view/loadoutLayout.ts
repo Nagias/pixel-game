@@ -1,5 +1,6 @@
 // B4: bố cục màn chuẩn bị trận (khung 360×640) — phép tính tọa độ thuần, không Phaser, không luật chơi.
-// Mỗi hàng là một tầm (gần / vừa / xa): cột chữ bên trái, các nút món bên phải, dòng mô tả bên dưới.
+// Mỗi hàng là một tầm (gần / vừa / xa) hoặc hàng skill (B6): cột chữ bên trái, các nút bên phải, dòng
+// mô tả (tới 2 dòng) bên dưới.
 import type { Rect } from './battleLayout';
 
 export interface LoadoutLayout {
@@ -22,9 +23,10 @@ export const LOADOUT_LAYOUT: LoadoutLayout = {
   left: 18,
   width: 324,
   labelWidth: 60,
-  firstRowTop: 120,
-  rowPitch: 96,
-  buttonHeight: 56,
+  // 4 hàng (3 tầm + skill B6), dòng mô tả tới 2 dòng (chữ 12px).
+  firstRowTop: 106,
+  rowPitch: 104,
+  buttonHeight: 52,
   gap: 12,
   start: { x: 18, y: 520, width: 324, height: 72 },
 };
@@ -35,7 +37,7 @@ export function rowTop(row: number, layout: LoadoutLayout): number {
 
 /** Tọa độ y của dòng mô tả món đang chọn, ngay dưới các nút của hàng. */
 export function descriptionY(row: number, layout: LoadoutLayout): number {
-  return rowTop(row, layout) + layout.buttonHeight + 14;
+  return rowTop(row, layout) + layout.buttonHeight + 8;
 }
 
 /** Các nút món của hàng `row` (có `count` món), chia đều phần bên phải cột chữ. */

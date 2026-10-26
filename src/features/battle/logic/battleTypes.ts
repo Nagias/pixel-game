@@ -31,6 +31,21 @@ export interface WeaponConfig {
   readonly damage: number;
   /** B2: chém cả sau lưng — thêm một nêm y hệt ở lát đối diện (vd. Rìu). Mặc định chỉ một nêm. */
   readonly twoSided?: boolean;
+  /** B6: xác suất (0–1) một nhát chém trúng quái là chí mạng (sát thương × critMultiplier). Mặc định 0. */
+  readonly critChance?: number;
+}
+
+/** B6: các skill đánh cả sân (AOE). Thêm skill = thêm tên ở đây + con số trong battleConfig.ts. */
+export type SkillKind = 'iceRain' | 'fireball';
+
+export interface SkillConfig {
+  readonly name: string;
+  /** Số máu mọi quái trên sân mất khi bấm skill. */
+  readonly damage: number;
+  /** Số lượt quái còn sống bị đóng băng: không đi, không đánh, không bắn. 0 = không đóng băng. */
+  readonly freezeTurns: number;
+  /** Số nhát chém để nạp đầy skill. */
+  readonly chargeTurns: number;
 }
 
 /** F06: các loại quái. Thêm loại mới = thêm tên ở đây + con số trong battleConfig.ts + hình. */
@@ -51,8 +66,12 @@ export interface MonsterConfig {
 }
 
 export interface HeroConfig {
-  /** F04: máu ban đầu của nhân vật. */
+  /** F04: máu ban đầu (và tối đa) của nhân vật. */
   readonly hp: number;
+  /** B6: một nhát chém trúng từ ngần này quái trở lên thì hồi máu. */
+  readonly healMinHits: number;
+  /** B6: số máu hồi mỗi lần (không quá máu tối đa). 0 = không hồi. */
+  readonly healAmount: number;
 }
 
 /** F06: một màn chơi. */
@@ -81,6 +100,11 @@ export interface BattleConfig {
   readonly weapons: readonly WeaponConfig[];
   readonly monsterKinds: Readonly<Record<MonsterKind, MonsterConfig>>;
   readonly hero: HeroConfig;
+  /** B6: hệ số sát thương của nhát chí mạng. */
+  readonly critMultiplier: number;
+  readonly skills: Readonly<Record<SkillKind, SkillConfig>>;
+  /** B6: màn đầu tiên (đếm từ 0) được mang skill vào trận. */
+  readonly skillUnlockLevel: number;
   /** F06: các màn theo thứ tự chơi; thắng màn cuối là phá đảo. */
   readonly levels: readonly LevelConfig[];
 }
@@ -91,6 +115,8 @@ export interface BattleConfig {
 export interface Loadout {
   /** Chỉ số trong config.weapons, theo thứ tự trên thanh nút (tầm gần → xa). */
   readonly weapons: readonly number[];
+  /** B6: skill mang vào trận (chỉ từ màn skillUnlockLevel). Không có = không mang skill. */
+  readonly skill?: SkillKind;
 }
 
 /** Vị trí trên sân: lát (0 = hướng 12 giờ, tăng theo chiều kim đồng hồ) và vòng (0 = sát nhân vật). */
@@ -104,6 +130,8 @@ export interface Monster extends Cell {
   /** F06: loại quái — sức đánh, cách đi lấy theo loại trong config.monsterKinds. */
   readonly kind: MonsterKind;
   readonly hp: number;
+  /** B6: số lượt còn bị đóng băng (đứng im, không đánh). Không có = không bị băng. */
+  readonly frozenTurns?: number;
 }
 
 export interface Hit {
@@ -114,6 +142,16 @@ export interface Hit {
 
 export interface AttackRecord {
   readonly aimSector: number;
+  readonly hits: readonly Hit[];
+  /** B6: nhát này chí mạng (mọi con trúng ăn × critMultiplier). */
+  readonly crit: boolean;
+  /** B6: số máu nhân vật hồi nhờ nhát này. */
+  readonly healed: number;
+}
+
+/** B6: lần bấm skill gần nhất — để view hiện số sát thương. */
+export interface SkillRecord {
+  readonly skill: SkillKind;
   readonly hits: readonly Hit[];
 }
 
@@ -137,4 +175,8 @@ export interface BattleState {
   readonly phase: BattlePhase;
   readonly lossReason: LossReason | null;
   readonly lastAttack: AttackRecord | null;
+  /** B6: số nhát chém đã nạp cho skill (tối đa chargeTurns của skill đang mang). */
+  readonly skillCharge: number;
+  /** B6: lần bấm skill ngay trước — xóa khi chém nhát tiếp theo. */
+  readonly lastSkill: SkillRecord | null;
 }

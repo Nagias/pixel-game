@@ -5,6 +5,8 @@ import {
   type BattleConfig,
   type Loadout,
   type PushDirection,
+  type SkillConfig,
+  type SkillKind,
   type WeaponConfig,
   type WeaponSlot,
 } from './battleTypes';
@@ -90,6 +92,9 @@ export function validateLoadout(loadout: Loadout, config: BattleConfig): void {
     seen.add(index);
     slots.add(weapon.slot);
   }
+  if (loadout.skill !== undefined && !Object.hasOwn(config.skills, loadout.skill)) {
+    problems.push(`skill "${String(loadout.skill)}" không tồn tại`);
+  }
   if (problems.length > 0) {
     throw new RangeError(`Đồ mang vào trận sai: ${problems.join('; ')}`);
   }
@@ -109,6 +114,43 @@ export function describeWeapon(weapon: WeaponConfig): string {
     `rộng ${weapon.widthSectors} lát`,
     ...(weapon.twoSided ? ['2 phía'] : []),
     PUSH_LABEL[weapon.push],
+    ...((weapon.critChance ?? 0) > 0
+      ? [`chí mạng ${Math.round((weapon.critChance ?? 0) * 100)}%`]
+      : []),
   ];
   return `${weapon.name}: ${parts.join(', ')}`;
+}
+
+// ---------- B6: skill ----------
+
+/** Các skill chọn được, theo thứ tự cấu hình (skill đầu là mặc định). */
+export function skillOptions(config: BattleConfig): SkillKind[] {
+  return Object.keys(config.skills) as SkillKind[];
+}
+
+/** Màn `level` (đếm từ 0) đã được mang skill vào trận chưa. */
+export function isSkillUnlocked(level: number, config: BattleConfig): boolean {
+  return level >= config.skillUnlockLevel;
+}
+
+/** Chọn skill mang vào trận (thay skill đang mang), giữ nguyên vũ khí. */
+export function chooseSkill(loadout: Loadout, skill: SkillKind): Loadout {
+  return { ...loadout, skill };
+}
+
+/**
+ * Bộ đồ hợp với màn `level`: màn chưa mở skill thì bỏ skill; màn đã mở mà chưa chọn skill thì mang skill
+ * đầu tiên (mặc định).
+ */
+export function loadoutForLevel(loadout: Loadout, level: number, config: BattleConfig): Loadout {
+  if (!isSkillUnlocked(level, config)) return { weapons: loadout.weapons };
+  if (loadout.skill !== undefined) return loadout;
+  const [first] = skillOptions(config);
+  return first === undefined ? loadout : { ...loadout, skill: first };
+}
+
+/** Một dòng mô tả skill trên màn chuẩn bị, sinh từ con số cấu hình. */
+export function describeSkill(skill: SkillConfig): string {
+  const freeze = skill.freezeTurns > 0 ? `, đứng im ${skill.freezeTurns} lượt` : '';
+  return `${skill.name}: mọi quái mất ${skill.damage} máu${freeze}; nạp ${skill.chargeTurns} nhát`;
 }

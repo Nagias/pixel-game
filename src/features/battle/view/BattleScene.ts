@@ -4,28 +4,32 @@
 import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
 import { registerPixelSprites } from '../../../app/pixelSprites';
 import { setSnapshotProvider } from '../../../app/testBridge';
-import { colorNumber, PALETTE } from '../../../shared/palette';
+import { colorNumber, PALETTE, type PaletteColor } from '../../../shared/palette';
 import { parseSeedParam } from '../../../shared/seedParam';
 import { arcSectorAt } from '../logic/arena';
 import {
+  canCastSkill,
+  castSkill,
   createBattle,
   isGameCleared,
-  isThreatening,
   levelAt,
   nextLevelIndex,
   playTurn,
   selectWeapon,
+  willAttack,
 } from '../logic/battle';
 import { BATTLE_CONFIG } from '../logic/battleConfig';
-import type { BattleState, Loadout, Monster } from '../logic/battleTypes';
+import type { BattleState, Hit, Loadout, Monster, SkillKind } from '../logic/battleTypes';
 import { defaultLoadout } from '../logic/loadout';
 import {
   ARENA_LAYOUT,
+  barButtonCount,
   cellToPoint,
   type Point,
   polarToPoint,
   ringInnerRadius,
   sectorStartAngle,
+  skillButtonIndex,
   toPhaserAngle,
   isInWeaponBar,
   WEAPON_BAR,
@@ -56,6 +60,11 @@ const RESTART_DELAY_MS = 500;
 const MOVE_TWEEN_MS = 180;
 
 const DEPTH = { arena: 0, zone: 1, monster: 2, hero: 3, popup: 4, hud: 5, result: 10 } as const;
+
+/** B6: màu riêng của từng skill — nút nạp, chớp sân khi bấm. */
+const SKILL_COLOR: Record<SkillKind, PaletteColor> = { iceRain: 'sky', fireball: 'orange' };
+/** B6: quái bị đóng băng nhuộm màu này. */
+const FROZEN_TINT: PaletteColor = 'cyan';
 
 const TEXT = {
   fontFamily: 'monospace',
@@ -93,6 +102,13 @@ export class BattleScene extends Scene {
     name: GameObjects.Text;
     range: GameObjects.Text;
   }[] = [];
+  /** B6: ô skill cuối thanh nút (null nếu không mang skill). */
+  private skillButton: {
+    frame: GameObjects.Rectangle;
+    fill: GameObjects.Rectangle;
+    name: GameObjects.Text;
+    charge: GameObjects.Text;
+  } | null = null;
 
   constructor() {
     super('battle');
@@ -109,6 +125,7 @@ export class BattleScene extends Scene {
     this.monsterSprites.clear();
     this.threatMarks.clear();
     this.weaponButtons = [];
+    this.skillButton = null;
 
     this.spriteKeys = registerPixelSprites(this, 'battle', BATTLE_SPRITES);
     this.drawArena();
@@ -152,11 +169,13 @@ export class BattleScene extends Scene {
     this.resultLayer.setVisible(false);
     this.drawZone();
     this.syncWeaponBar(this.battle);
+    this.syncSkillButton(this.battle);
     this.updateHud();
   }
 
   /**
-   * Chạm vào nút vũ khí thì đổi vũ khí; chạm vào chỗ khác là chém. Màn kết quả: chạm để sang màn
+   * Chạm vào nút vũ khí thì đổi vũ khí; chạm ô skill (B6) thì bấm skill nếu đã đầy; chạm vào chỗ khác
+   * là chém. Màn kết quả: chạm để sang màn
    * chuẩn bị của màn sau hoặc của màn vừa thua — màn nào do luật quyết (nextLevelIndex).
    */
   private handleTap(x: number, y: number): void {
@@ -170,9 +189,14 @@ export class BattleScene extends Scene {
       }
       return;
     }
-    const { weapons } = this.battle.loadout;
-    const button = weaponButtonAt(x, y, weapons.length, WEAPON_BAR);
-    const weaponIndex = button === null ? undefined : weapons[button];
+    const { loadout } = this.battle;
+    const button = weaponButtonAt(x, y, barButtonCount(loadout), WEAPON_BAR);
+    if (button !== null && button === skillButtonIndex(loadout)) {
+      // Chưa đầy thì ô skill không làm gì (không chém, không tốn lượt).
+      if (canCastSkill(this.battle, this.config)) this.cast();
+      return;
+    }
+    const weaponIndex = button === null ? undefined : loadout.weapons[button];
     if (weaponIndex === undefined) {
       // Khe giữa hai nút vẫn thuộc thanh nút: không chém, không tốn lượt (FEATURE_MAP F02).
       if (!isInWeaponBar(x, y, WEAPON_BAR)) this.attack();
@@ -186,8 +210,24 @@ export class BattleScene extends Scene {
   private attack(): void {
     const next = playTurn(this.battle, this.arcSector, this.config);
     this.battle = next;
-    this.showHits(next);
+    this.showHits(next.lastAttack?.hits ?? []);
+    this.showStrikeBonus(next);
     this.syncMonsters(next);
+    this.syncSkillButton(next);
+    this.updateHud();
+    if (next.phase !== 'playing') this.showResult(next);
+  }
+
+  /** B6: bấm skill — chớp sân màu skill, số sát thương bay lên trên mọi quái, không tốn lượt. */
+  private cast(): void {
+    const next = castSkill(this.battle, this.config);
+    this.battle = next;
+    if (next.lastSkill) {
+      this.flashArena(SKILL_COLOR[next.lastSkill.skill]);
+      this.showHits(next.lastSkill.hits);
+    }
+    this.syncMonsters(next);
+    this.syncSkillButton(next);
     this.updateHud();
     if (next.phase !== 'playing') this.showResult(next);
   }
@@ -284,21 +324,27 @@ export class BattleScene extends Scene {
 
     for (const monster of state.monsters) {
       const point = cellToPoint(monster, this.config.sectorCount, ARENA_LAYOUT);
-      const sprite = this.monsterSprites.get(monster.id);
+      let sprite = this.monsterSprites.get(monster.id);
       if (sprite) {
         this.tweens.add({ targets: sprite, x: point.x, y: point.y, duration: MOVE_TWEEN_MS });
       } else {
-        this.spawnMonster(monster, point);
+        sprite = this.spawnMonster(monster, point);
       }
+      // B6: quái đang bị đóng băng nhuộm màu băng; hết băng thì về màu gốc.
+      if ((monster.frozenTurns ?? 0) > 0) sprite.setTint(colorNumber(FROZEN_TINT));
+      else sprite.clearTint();
     }
 
     this.syncThreatMarks(state);
   }
 
-  /** F04: dấu "!" đỏ trên đầu đúng những con luật coi là sắp đánh (isThreatening). */
+  /**
+   * F04: dấu "!" đỏ trên đầu đúng những con luật coi là sẽ đánh sau nhát chém tới (willAttack — B6:
+   * quái đang bị đóng băng thì không).
+   */
   private syncThreatMarks(state: BattleState): void {
     const threatening = new Map(
-      state.monsters.filter((m) => isThreatening(m, this.config)).map((m) => [m.id, m] as const),
+      state.monsters.filter((m) => willAttack(m, this.config)).map((m) => [m.id, m] as const),
     );
     for (const [id, mark] of this.threatMarks) {
       if (threatening.has(id)) continue;
@@ -318,17 +364,21 @@ export class BattleScene extends Scene {
     }
   }
 
-  private spawnMonster(monster: Monster, point: Point): void {
+  private spawnMonster(monster: Monster, point: Point): GameObjects.Image {
     const sprite = this.add
       .image(point.x, point.y, this.spriteKeys[monster.kind])
       .setScale(SPRITE_SCALE[monster.kind])
       .setDepth(DEPTH.monster);
     this.monsterSprites.set(monster.id, sprite);
+    return sprite;
   }
 
-  /** Số sát thương bay lên kiểu Pixel Chaos; quái trúng đòn mà còn sống thì nhấp nháy. */
-  private showHits(state: BattleState): void {
-    for (const hit of state.lastAttack?.hits ?? []) {
+  /**
+   * Số sát thương bay lên kiểu Pixel Chaos; quái trúng đòn mà còn sống thì nhấp nháy. Dùng cho nhát
+   * chém và cho skill (B6).
+   */
+  private showHits(hits: readonly Hit[]): void {
+    for (const hit of hits) {
       const sprite = this.monsterSprites.get(hit.monsterId);
       if (!sprite) continue;
       const label = this.add
@@ -352,6 +402,49 @@ export class BattleScene extends Scene {
         this.tweens.add({ targets: sprite, alpha: 0.3, duration: 70, yoyo: true, repeat: 1 });
       }
     }
+  }
+
+  /** Chữ bay lên rồi mờ dần ở (x, y). */
+  private popText(x: number, y: number, text: string, color: string, fontSize = '18px'): void {
+    const label = this.add
+      .text(x, y, text, { ...TEXT, fontSize, color })
+      .setOrigin(0.5)
+      .setDepth(DEPTH.popup);
+    this.tweens.add({
+      targets: label,
+      y: y - 30,
+      alpha: 0,
+      duration: 900,
+      onComplete: () => label.destroy(),
+    });
+  }
+
+  /** B6: nhát chí mạng hiện "CHÍ MẠNG!" trên đầu nhân vật; nhát hồi máu hiện "+n" bên cạnh. */
+  private showStrikeBonus(state: BattleState): void {
+    const { centerX, centerY } = ARENA_LAYOUT;
+    if (state.lastAttack?.crit) this.popText(centerX, centerY - 44, 'CHÍ MẠNG!', PALETTE.crimson);
+    const healed = state.lastAttack?.healed ?? 0;
+    if (healed > 0) this.popText(centerX + 34, centerY - 6, `+${healed}`, PALETTE.lime, '20px');
+  }
+
+  /** B6: chớp cả sân màu của skill vừa bấm. */
+  private flashArena(color: PaletteColor): void {
+    const { centerX, centerY } = ARENA_LAYOUT;
+    const flash = this.add
+      .circle(
+        centerX,
+        centerY,
+        ringInnerRadius(this.config.ringCount, ARENA_LAYOUT),
+        colorNumber(color),
+      )
+      .setAlpha(0.5)
+      .setDepth(DEPTH.popup);
+    this.tweens.add({
+      targets: flash,
+      alpha: 0,
+      duration: 450,
+      onComplete: () => flash.destroy(),
+    });
   }
 
   // ---------- Chữ trên màn hình ----------
@@ -399,9 +492,10 @@ export class BattleScene extends Scene {
 
   /** Vẽ khung nút một lần; trạng thái chọn/không chọn do syncWeaponBar cập nhật theo state. */
   private createWeaponBar(): void {
-    // B4: chỉ các món đã mang vào trận, theo thứ tự tầm gần → xa.
+    // B4: chỉ các món đã mang vào trận, theo thứ tự tầm gần → xa. B6: ô skill ở cuối nếu mang skill.
     const { weapons } = this.loadout;
-    const rects = weaponButtonRects(weapons.length, WEAPON_BAR);
+    const rects = weaponButtonRects(barButtonCount(this.loadout), WEAPON_BAR);
+    this.createSkillButton(rects);
     weapons.forEach((weaponIndex, i) => {
       const rect = rects[i];
       const weapon = this.config.weapons[weaponIndex];
@@ -421,6 +515,51 @@ export class BattleScene extends Scene {
         .setDepth(DEPTH.hud);
       this.weaponButtons.push({ frame, name, range });
     });
+  }
+
+  /** B6: ô skill — tên skill, mức nạp tô màu từ đáy lên, số nhát đã nạp hoặc "BẤM!" khi đầy. */
+  private createSkillButton(
+    rects: readonly { x: number; y: number; width: number; height: number }[],
+  ): void {
+    const index = skillButtonIndex(this.loadout);
+    const kind = this.loadout.skill;
+    const rect = index === null ? undefined : rects[index];
+    if (!rect || kind === undefined) return;
+    const centerX = rect.x + rect.width / 2;
+    const frame = this.add
+      .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('navy'))
+      .setOrigin(0)
+      .setDepth(DEPTH.hud);
+    // Mức nạp: hình chữ nhật mọc từ đáy ô lên (chiều cao đổi theo số nhát đã nạp).
+    const fill = this.add
+      .rectangle(rect.x, rect.y + rect.height, rect.width, 0, colorNumber(SKILL_COLOR[kind]), 0.55)
+      .setOrigin(0, 1)
+      .setDepth(DEPTH.hud);
+    const name = this.add
+      .text(centerX, rect.y + 24, this.config.skills[kind].name, { ...TEXT, fontSize: '13px' })
+      .setOrigin(0.5)
+      .setDepth(DEPTH.hud);
+    const charge = this.add
+      .text(centerX, rect.y + 50, '', { ...TEXT, fontSize: '15px' })
+      .setOrigin(0.5)
+      .setDepth(DEPTH.hud);
+    this.skillButton = { frame, fill, name, charge };
+  }
+
+  /** B6: cập nhật ô skill theo state — mức nạp, chữ, viền vàng khi bấm được. */
+  private syncSkillButton(state: BattleState): void {
+    const button = this.skillButton;
+    const kind = state.loadout.skill;
+    if (!button || kind === undefined) return;
+    const { chargeTurns } = this.config.skills[kind];
+    const ready = canCastSkill(state, this.config);
+    button.fill.height =
+      (button.frame.height * Math.min(state.skillCharge, chargeTurns)) / chargeTurns;
+    button.frame.setStrokeStyle(ready ? 3 : 1, colorNumber(ready ? 'sand' : 'slate'));
+    button.name.setColor(ready ? PALETTE.white : PALETTE.mist);
+    button.charge
+      .setText(ready ? 'BẤM!' : `${state.skillCharge}/${chargeTurns}`)
+      .setColor(ready ? PALETTE.sand : PALETTE.mist);
   }
 
   /** Nút của vũ khí đang cầm có viền xanh lá và chữ sáng; các nút khác mờ đi. */
