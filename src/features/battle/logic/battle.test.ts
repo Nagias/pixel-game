@@ -1,8 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { seedRng } from '../../../shared/random';
-import { createBattle, isThreatening, playTurn, selectWeapon } from './battle';
+import {
+  createBattle,
+  isGameCleared,
+  isThreatening,
+  nextLevelIndex,
+  playTurn,
+  selectWeapon,
+} from './battle';
 import { BATTLE_CONFIG } from './battleConfig';
-import type { BattleConfig, BattleState, Monster, WeaponConfig } from './battleTypes';
+import type {
+  BattleConfig,
+  BattleState,
+  LevelConfig,
+  Monster,
+  MonsterConfig,
+  MonsterKind,
+  WeaponConfig,
+} from './battleTypes';
 
 // Cấu hình riêng cho test: con số cố định để kỳ vọng tính tay được,
 // không gãy khi chỉnh cân bằng trong battleConfig.ts.
@@ -17,16 +32,35 @@ const ALL_REACH: WeaponConfig = {
   damage: 1,
 };
 
+const slimes = (count: number): MonsterKind[] => Array<MonsterKind>(count).fill('slime');
+
+/** Màn thử: 4 slime, 5 lượt, cụm ±2 lát. */
+const LEVEL_1: LevelConfig = { turnLimit: 5, monsters: slimes(4), spread: 2 };
+
 const CONFIG: BattleConfig = {
   sectorCount: 24,
   ringCount: 6,
-  turnLimit: 5,
   arcPeriodMs: 2_400,
   weapons: [ALL_REACH],
-  monster: { name: 'Slime thử', hp: 2, advanceChance: 1, attack: 1 },
+  monsterKinds: {
+    slime: { name: 'Slime thử', hp: 2, advanceChance: 1, attack: 1 },
+    slimeKing: { name: 'Vua thử', hp: 6, advanceChance: 1, attack: 2 },
+  },
   hero: { hp: 5 },
-  spawn: { count: 4, spread: 2 },
+  levels: [LEVEL_1],
 };
+
+/** Cấu hình chỉ có một màn, sửa vài con số của màn đó. */
+const oneLevel = (patch: Partial<LevelConfig>): BattleConfig => ({
+  ...CONFIG,
+  levels: [{ ...LEVEL_1, ...patch }],
+});
+
+/** Sửa con số của một loại quái. */
+const kindRule = (kind: MonsterKind, patch: Partial<MonsterConfig>): BattleConfig => ({
+  ...CONFIG,
+  monsterKinds: { ...CONFIG.monsterKinds, [kind]: { ...CONFIG.monsterKinds[kind], ...patch } },
+});
 
 /** Ba vũ khí theo tầm như F02: gần (vòng 0–1), vừa (2–3), xa (4–5). */
 const THREE_WEAPONS: BattleConfig = {
@@ -68,23 +102,28 @@ const pushing = (push: WeaponConfig['push'], patch: Partial<WeaponConfig> = {}):
   weapons: [{ ...ALL_REACH, push, ...patch }],
 });
 
-/** Quái luôn tiến (advanceChance 1) hoặc luôn đi ngang (0) để kết quả đoán trước được. */
+/** Mọi loại quái luôn tiến (advanceChance 1) hoặc luôn đi ngang (0) để kết quả đoán trước được. */
 const withAdvanceChance = (advanceChance: number): BattleConfig => ({
   ...CONFIG,
-  monster: { ...CONFIG.monster, advanceChance },
+  monsterKinds: {
+    slime: { ...CONFIG.monsterKinds.slime, advanceChance },
+    slimeKing: { ...CONFIG.monsterKinds.slimeKing, advanceChance },
+  },
 });
 
-const monster = (id: number, sector: number, ring: number, hp = 2): Monster => ({
-  id,
-  sector,
-  ring,
-  hp,
-});
+const monster = (
+  id: number,
+  sector: number,
+  ring: number,
+  hp = 2,
+  kind: MonsterKind = 'slime',
+): Monster => ({ id, kind, sector, ring, hp });
 
 function stateWith(monsters: Monster[], overrides: Partial<BattleState> = {}): BattleState {
   return {
     seed: 1,
     rng: seedRng(1),
+    level: 0,
     turnsLeft: 5,
     heroHp: 5,
     weaponIndex: 0,
@@ -106,7 +145,7 @@ const circularDistance = (a: number, b: number, count: number) => {
 
 describe('createBattle — mở trận', () => {
   it('tạo đúng số quái, tất cả ở vòng ngoài cùng, máu đầy, id không trùng', () => {
-    const battle = createBattle(7, CONFIG);
+    const battle = createBattle(7, CONFIG, 0);
     expect(battle.monsters).toHaveLength(4);
     for (const m of battle.monsters) {
       expect(m.ring).toBe(5);
@@ -117,7 +156,7 @@ describe('createBattle — mở trận', () => {
 
   it('quái xuất hiện thành cụm (cách nhau tối đa 2×spread lát) và không đứng chồng lên nhau', () => {
     for (let seed = 1; seed <= 60; seed++) {
-      const sectors = createBattle(seed, CONFIG).monsters.map((m) => m.sector);
+      const sectors = createBattle(seed, CONFIG, 0).monsters.map((m) => m.sector);
       expect(new Set(sectors).size).toBe(sectors.length);
       for (const a of sectors) {
         for (const b of sectors) {
@@ -128,9 +167,10 @@ describe('createBattle — mở trận', () => {
   });
 
   it('bắt đầu ở trạng thái đang chơi với đủ lượt và ghi lại seed', () => {
-    const battle = createBattle(123, CONFIG);
+    const battle = createBattle(123, CONFIG, 0);
     expect(battle).toMatchObject({
       seed: 123,
+      level: 0,
       turnsLeft: 5,
       weaponIndex: 0,
       phase: 'playing',
@@ -140,13 +180,13 @@ describe('createBattle — mở trận', () => {
   });
 
   it('cùng seed cho cùng trận, seed khác cho trận khác', () => {
-    expect(createBattle(9, CONFIG)).toEqual(createBattle(9, CONFIG));
-    expect(createBattle(1, CONFIG).monsters).not.toEqual(createBattle(2, CONFIG).monsters);
+    expect(createBattle(9, CONFIG, 0)).toEqual(createBattle(9, CONFIG, 0));
+    expect(createBattle(1, CONFIG, 0).monsters).not.toEqual(createBattle(2, CONFIG, 0).monsters);
   });
 
   it('từ chối cấu hình không đủ chỗ cho cụm quái', () => {
-    const crowded = { ...CONFIG, spawn: { count: 6, spread: 2 } };
-    expect(() => createBattle(1, crowded)).toThrow(RangeError);
+    const crowded = oneLevel({ monsters: slimes(6), spread: 2 });
+    expect(() => createBattle(1, crowded, 0)).toThrow(RangeError);
   });
 });
 
@@ -156,15 +196,11 @@ describe('createBattle — chặn cấu hình sai trước khi mở trận', () 
     ...CONFIG,
     weapons: [ALL_REACH, { ...ALL_REACH, ...patch }],
   });
-  const monsterRule = (patch: Partial<BattleConfig['monster']>): BattleConfig => ({
-    ...CONFIG,
-    monster: { ...CONFIG.monster, ...patch },
-  });
 
   it.each<[string, BattleConfig]>([
     [
       'cụm quái rộng hơn cả vòng tròn (quái chồng ô)',
-      { ...CONFIG, spawn: { count: 25, spread: 12 } },
+      oneLevel({ monsters: slimes(25), spread: 12 }),
     ],
     ['vùng đánh rộng số chẵn lát', weapon({ widthSectors: 2 })],
     ['vùng đánh rộng hơn cả vòng tròn', weapon({ widthSectors: 25 })],
@@ -173,25 +209,34 @@ describe('createBattle — chặn cấu hình sai trước khi mở trận', () 
     ['vòng trong của vũ khí âm', weapon({ minRing: -1 })],
     ['vũ khí không gây sát thương', weapon({ damage: 0 })],
     ['không có vũ khí nào', { ...CONFIG, weapons: [] }],
-    ['không có lượt nào', { ...CONFIG, turnLimit: 0 }],
-    ['quái không có máu', monsterRule({ hp: 0 })],
-    ['xác suất tiến vào lớn hơn 1', monsterRule({ advanceChance: 1.5 })],
-    ['xác suất tiến vào âm', monsterRule({ advanceChance: -0.1 })],
+    ['không có lượt nào', oneLevel({ turnLimit: 0 })],
+    ['quái không có máu', kindRule('slime', { hp: 0 })],
+    ['xác suất tiến vào lớn hơn 1', kindRule('slime', { advanceChance: 1.5 })],
+    ['xác suất tiến vào âm', kindRule('slime', { advanceChance: -0.1 })],
     ['nhân vật không có máu', { ...CONFIG, hero: { hp: 0 } }],
-    ['quái không có sức đánh', monsterRule({ attack: 0 })],
+    ['quái không có sức đánh', kindRule('slime', { attack: 0 })],
     ['kiểu đẩy không tồn tại', weapon({ push: 'xoay' as WeaponConfig['push'] })],
+    // F06: mọi loại quái và mọi màn đều được kiểm, kể cả loại/màn chưa dùng tới lúc mở màn 1.
+    ['trùm không có máu', kindRule('slimeKing', { hp: 0 })],
+    ['trùm không có sức đánh', kindRule('slimeKing', { attack: 0 })],
+    ['không có màn nào', { ...CONFIG, levels: [] }],
+    ['màn không có quái', oneLevel({ monsters: [] })],
+    ['màn có loại quái không tồn tại', oneLevel({ monsters: ['rong' as MonsterKind] })],
+    ['màn thứ 2 không có lượt nào', { ...CONFIG, levels: [LEVEL_1, { ...LEVEL_1, turnLimit: 0 }] }],
   ])('từ chối: %s', (_label, config) => {
-    expect(() => createBattle(1, config)).toThrow(RangeError);
+    expect(() => createBattle(1, config, 0)).toThrow(RangeError);
   });
 
-  it('cấu hình thật của game hợp lệ', () => {
-    expect(() => createBattle(1, BATTLE_CONFIG)).not.toThrow();
+  it('cấu hình thật của game hợp lệ, mở được mọi màn', () => {
+    BATTLE_CONFIG.levels.forEach((_, level) => {
+      expect(() => createBattle(1, BATTLE_CONFIG, level)).not.toThrow();
+    });
   });
 });
 
 describe('selectWeapon — đổi vũ khí (F02)', () => {
   it('trận mới cầm vũ khí đầu tiên trong danh sách', () => {
-    expect(createBattle(1, THREE_WEAPONS).weaponIndex).toBe(0);
+    expect(createBattle(1, THREE_WEAPONS, 0).weaponIndex).toBe(0);
   });
 
   it('đổi vũ khí không tốn lượt, quái không di chuyển, không tung số ngẫu nhiên', () => {
@@ -413,7 +458,7 @@ describe('playTurn — thắng / thua', () => {
 
 describe('F04 — máu nhân vật và quái áp sát đánh', () => {
   it('trận mới: nhân vật đầy máu theo cấu hình', () => {
-    expect(createBattle(1, CONFIG).heroHp).toBe(5);
+    expect(createBattle(1, CONFIG, 0).heroHp).toBe(5);
   });
 
   it('quái ở vòng 0 không tiến nữa mà đứng yên đánh: mỗi con trừ đúng sức đánh của nó', () => {
@@ -444,7 +489,7 @@ describe('F04 — máu nhân vật và quái áp sát đánh', () => {
   });
 
   it('sức đánh lấy từ cấu hình quái', () => {
-    const hard = { ...CONFIG, monster: { ...CONFIG.monster, attack: 2 } };
+    const hard = kindRule('slime', { attack: 2 });
     const after = playTurn(stateWith([monster(1, 12, 0)]), 6, hard);
     expect(after.heroHp).toBe(3);
   });
@@ -488,7 +533,7 @@ describe('playTurn — hợp đồng hàm thuần', () => {
 
 describe('F05 — đẩy quái theo vũ khí', () => {
   // Quái 5 máu để sống sót sau nhát chém; luật "luôn tiến" để thấy rõ quái bị đẩy thì đứng yên.
-  const ALWAYS_ADVANCE = { monster: { ...CONFIG.monster, advanceChance: 1 } };
+  const ALWAYS_ADVANCE = { monsterKinds: withAdvanceChance(1).monsterKinds };
 
   it('Kiếm (đẩy lùi): quái bị chém còn sống lùi ra 1 vòng và đứng yên lượt đó', () => {
     const config = { ...pushing('out'), ...ALWAYS_ADVANCE };
@@ -504,7 +549,7 @@ describe('F05 — đẩy quái theo vũ khí', () => {
 
   it('Cung (kéo vào): quái vào gần 1 vòng và đứng yên lượt đó', () => {
     // Luật "luôn đi ngang": nếu không bị kéo, quái sẽ lệch lát chứ không vào vòng 4 cùng lát.
-    const config = { ...pushing('in'), monster: { ...CONFIG.monster, advanceChance: 0 } };
+    const config = { ...pushing('in'), monsterKinds: withAdvanceChance(0).monsterKinds };
     const after = playTurn(stateWith([monster(1, 0, 5, 5)]), 0, config);
     expect(byId(after, 1)).toMatchObject({ sector: 0, ring: 4 });
   });
@@ -547,7 +592,98 @@ describe('F05 — đẩy quái theo vũ khí', () => {
 
   it('đẩy không tung số ngẫu nhiên', () => {
     const before = stateWith([monster(1, 0, 1, 5)]);
-    const config = { ...pushing('out'), monster: { ...CONFIG.monster, advanceChance: 0.5 } };
+    const config = { ...pushing('out'), monsterKinds: withAdvanceChance(0.5).monsterKinds };
     expect(playTurn(before, 0, config).rng).toBe(before.rng);
+  });
+});
+
+describe('F06 — màn chơi nối tiếp + trùm', () => {
+  const BOSS_LEVEL: LevelConfig = {
+    turnLimit: 9,
+    monsters: ['slimeKing', 'slime', 'slime'],
+    spread: 1,
+  };
+  const TWO_LEVELS: BattleConfig = { ...CONFIG, levels: [LEVEL_1, BOSS_LEVEL] };
+  const THREE_LEVELS: BattleConfig = { ...CONFIG, levels: [LEVEL_1, LEVEL_1, BOSS_LEVEL] };
+
+  it('mở màn nào theo cấu hình màn đó: số lượt, đội hình quái theo thứ tự id, máu theo loại quái', () => {
+    const battle = createBattle(3, TWO_LEVELS, 1);
+    expect(battle).toMatchObject({ level: 1, turnsLeft: 9, phase: 'playing' });
+    expect(battle.monsters.map((m) => [m.id, m.kind, m.hp])).toEqual([
+      [1, 'slimeKing', 6],
+      [2, 'slime', 2],
+      [3, 'slime', 2],
+    ]);
+  });
+
+  it('màn nào cũng bắt đầu đầy máu và cầm vũ khí đầu tiên', () => {
+    expect(createBattle(3, TWO_LEVELS, 1)).toMatchObject({ heroHp: 5, weaponIndex: 0 });
+  });
+
+  it('cụm quái rộng theo spread của từng màn (±1 lát → 3 con nằm liền nhau)', () => {
+    for (let seed = 1; seed <= 30; seed++) {
+      const sectors = createBattle(seed, TWO_LEVELS, 1).monsters.map((m) => m.sector);
+      for (const a of sectors) {
+        for (const b of sectors) {
+          expect(circularDistance(a, b, 24)).toBeLessThanOrEqual(2);
+        }
+      }
+    }
+  });
+
+  it('từ chối màn không có trong cấu hình', () => {
+    expect(() => createBattle(1, TWO_LEVELS, 2)).toThrow(RangeError);
+    expect(() => createBattle(1, TWO_LEVELS, -1)).toThrow(RangeError);
+    expect(() => createBattle(1, TWO_LEVELS, 0.5)).toThrow(RangeError);
+  });
+
+  it('quái áp sát đánh theo sức đánh của loại nó: trùm 2 + slime 1 → mất 3 máu', () => {
+    const before = stateWith([monster(1, 12, 0, 6, 'slimeKing'), monster(2, 14, 0)]);
+    expect(playTurn(before, 6, CONFIG).heroHp).toBe(2);
+  });
+
+  it('mỗi loại quái di chuyển theo xác suất tiến vào của loại đó', () => {
+    const config = {
+      ...CONFIG,
+      monsterKinds: {
+        slime: { ...CONFIG.monsterKinds.slime, advanceChance: 1 },
+        slimeKing: { ...CONFIG.monsterKinds.slimeKing, advanceChance: 0 },
+      },
+    };
+    const after = playTurn(
+      stateWith([monster(1, 12, 5, 6, 'slimeKing'), monster(2, 0, 5)]),
+      6,
+      config,
+    );
+    expect(byId(after, 1)?.ring).toBe(5); // trùm luôn đi ngang
+    expect([11, 13]).toContain(byId(after, 1)?.sector);
+    expect(byId(after, 2)).toMatchObject({ sector: 0, ring: 4 }); // slime luôn tiến
+  });
+
+  it('chém không làm đổi màn đang chơi', () => {
+    expect(playTurn(stateWith([monster(1, 12, 5)], { level: 1 }), 0, TWO_LEVELS).level).toBe(1);
+  });
+
+  it('thắng màn chưa phải cuối → sang màn kế; thắng màn cuối → về màn 1; thua → chơi lại đúng màn đó', () => {
+    const won = (level: number) => stateWith([], { phase: 'won', level });
+    const lost = (level: number) =>
+      stateWith([monster(1, 0, 0)], { phase: 'lost', lossReason: 'heroDefeated', level });
+    expect(nextLevelIndex(won(0), THREE_LEVELS)).toBe(1);
+    expect(nextLevelIndex(won(1), THREE_LEVELS)).toBe(2);
+    expect(nextLevelIndex(won(2), THREE_LEVELS)).toBe(0);
+    expect(nextLevelIndex(lost(0), THREE_LEVELS)).toBe(0);
+    expect(nextLevelIndex(lost(2), THREE_LEVELS)).toBe(2);
+  });
+
+  it('màn đang chơi dở thì chưa có màn kế', () => {
+    expect(() => nextLevelIndex(stateWith([monster(1, 0, 5)]), THREE_LEVELS)).toThrow();
+  });
+
+  it('phá đảo chỉ khi thắng màn cuối', () => {
+    expect(isGameCleared(stateWith([], { phase: 'won', level: 2 }), THREE_LEVELS)).toBe(true);
+    expect(isGameCleared(stateWith([], { phase: 'won', level: 1 }), THREE_LEVELS)).toBe(false);
+    const lostLast = stateWith([monster(1, 0, 0)], { phase: 'lost', level: 2 });
+    expect(isGameCleared(lostLast, THREE_LEVELS)).toBe(false);
+    expect(isGameCleared(stateWith([monster(1, 0, 5)], { level: 2 }), THREE_LEVELS)).toBe(false);
   });
 });

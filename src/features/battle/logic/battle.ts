@@ -1,5 +1,6 @@
 // Luật trận đấu: hàm thuần (state cũ + hành động → state mới). Không Phaser, không đồng hồ.
-// Thứ tự một lượt: đánh → kiểm thắng → quái di chuyển → kiểm bị chạm → kiểm hết lượt.
+// Thứ tự một lượt: đánh → kiểm thắng → đẩy quái (F05) → quái áp sát đánh (F04) → quái di chuyển
+// → kiểm hết máu → kiểm hết lượt. F06: mỗi màn mở bằng createBattle(seed, config, màn).
 import { nextFloat, nextInt, seedRng, type RngState } from '../../../shared/random';
 import { isInZone, knockbackCell, wrapSector } from './arena';
 import {
@@ -7,19 +8,16 @@ import {
   type BattleConfig,
   type BattleState,
   type Hit,
+  type LevelConfig,
   type Monster,
   type WeaponConfig,
 } from './battleTypes';
 
 /** Chặn cấu hình sai ngay lúc mở trận, thay vì để game chạy với luật vô nghĩa. */
 function validateBattleConfig(config: BattleConfig): void {
-  const { sectorCount, ringCount, turnLimit, weapons, monster, spawn } = config;
-  const slotCount = spawn.spread * 2 + 1;
+  const { sectorCount, ringCount, weapons, monsterKinds, levels } = config;
   const problems: string[] = [];
 
-  if (spawn.count > slotCount)
-    problems.push(`không đủ ${spawn.count} chỗ trong cụm ${slotCount} lát`);
-  if (slotCount > sectorCount) problems.push(`cụm quái ${slotCount} lát rộng hơn vòng tròn`);
   if (weapons.length === 0) problems.push('phải có ít nhất 1 vũ khí');
   for (const weapon of weapons) {
     const label = `vũ khí "${weapon.name}"`;
@@ -35,48 +33,82 @@ function validateBattleConfig(config: BattleConfig): void {
       problems.push(`${label}: kiểu đẩy "${String(weapon.push)}" không tồn tại`);
     }
   }
-  if (turnLimit < 1) problems.push('phải có ít nhất 1 lượt');
-  if (monster.hp < 1) problems.push('quái phải có ít nhất 1 máu');
-  if (monster.attack < 1) problems.push('quái phải có sức đánh ít nhất 1');
-  if (config.hero.hp < 1) problems.push('nhân vật phải có ít nhất 1 máu');
-  if (monster.advanceChance < 0 || monster.advanceChance > 1) {
-    problems.push('xác suất tiến vào phải trong [0, 1]');
+  for (const [kind, rule] of Object.entries(monsterKinds)) {
+    const label = `quái "${kind}"`;
+    if (rule.hp < 1) problems.push(`${label}: phải có ít nhất 1 máu`);
+    if (rule.attack < 1) problems.push(`${label}: phải có sức đánh ít nhất 1`);
+    if (rule.advanceChance < 0 || rule.advanceChance > 1) {
+      problems.push(`${label}: xác suất tiến vào phải trong [0, 1]`);
+    }
   }
+  if (config.hero.hp < 1) problems.push('nhân vật phải có ít nhất 1 máu');
+  if (levels.length === 0) problems.push('phải có ít nhất 1 màn');
+  levels.forEach((level, i) => {
+    const label = `màn ${i + 1}`;
+    const count = level.monsters.length;
+    const slotCount = level.spread * 2 + 1;
+    if (level.turnLimit < 1) problems.push(`${label}: phải có ít nhất 1 lượt`);
+    if (count === 0) problems.push(`${label}: phải có ít nhất 1 quái`);
+    if (count > slotCount)
+      problems.push(`${label}: không đủ ${count} chỗ trong cụm ${slotCount} lát`);
+    if (slotCount > sectorCount) {
+      problems.push(`${label}: cụm quái ${slotCount} lát rộng hơn vòng tròn`);
+    }
+    for (const kind of level.monsters) {
+      if (!Object.hasOwn(monsterKinds, kind)) {
+        problems.push(`${label}: loại quái "${String(kind)}" không tồn tại`);
+      }
+    }
+  });
 
   if (problems.length > 0) {
     throw new RangeError(`Cấu hình trận đấu sai: ${problems.join('; ')}`);
   }
 }
 
-/** Mở trận mới: một cụm quái xuất hiện ở vòng ngoài cùng, mỗi con một lát khác nhau. */
-export function createBattle(seed: number, config: BattleConfig): BattleState {
+/** F06: cấu hình của màn số `index` (0 = màn 1); báo lỗi nếu không có. */
+export function levelAt(index: number, config: BattleConfig): LevelConfig {
+  const level = Number.isInteger(index) ? config.levels[index] : undefined;
+  if (!level) {
+    throw new RangeError(`Không có màn số ${index} (có ${config.levels.length} màn)`);
+  }
+  return level;
+}
+
+/**
+ * Mở màn `level`: đội hình quái của màn xuất hiện thành cụm ở vòng ngoài cùng, mỗi con một lát
+ * khác nhau. Màn nào cũng bắt đầu đầy máu, cầm vũ khí đầu tiên.
+ */
+export function createBattle(seed: number, config: BattleConfig, level: number): BattleState {
   validateBattleConfig(config);
-  const { count, spread } = config.spawn;
+  const { turnLimit, monsters: lineup, spread } = levelAt(level, config);
   const slotCount = spread * 2 + 1;
 
   const [center, rngAfterCenter] = nextInt(seedRng(seed), config.sectorCount);
   let rng = rngAfterCenter;
 
-  // Xáo một phần (Fisher–Yates) để chọn `count` lát khác nhau trong cụm.
+  // Xáo một phần (Fisher–Yates) để chọn đủ lát khác nhau trong cụm cho cả đội hình.
   const offsets = Array.from({ length: slotCount }, (_, i) => i - spread);
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < lineup.length; i++) {
     let pick: number;
     [pick, rng] = nextInt(rng, slotCount - i);
     const j = i + pick;
     [offsets[i], offsets[j]] = [offsets[j] as number, offsets[i] as number];
   }
 
-  const monsters: Monster[] = offsets.slice(0, count).map((offset, index) => ({
+  const monsters: Monster[] = lineup.map((kind, index) => ({
     id: index + 1,
-    sector: wrapSector(center + offset, config.sectorCount),
+    kind,
+    sector: wrapSector(center + (offsets[index] as number), config.sectorCount),
     ring: config.ringCount - 1,
-    hp: config.monster.hp,
+    hp: config.monsterKinds[kind].hp,
   }));
 
   return {
     seed,
     rng,
-    turnsLeft: config.turnLimit,
+    level,
+    turnsLeft: turnLimit,
     heroHp: config.hero.hp,
     weaponIndex: 0,
     monsters,
@@ -84,6 +116,21 @@ export function createBattle(seed: number, config: BattleConfig): BattleState {
     lossReason: null,
     lastAttack: null,
   };
+}
+
+/**
+ * F06: màn chơi tiếp khi màn hiện tại đã kết thúc. Thắng → màn kế; thắng màn cuối (phá đảo) → về
+ * màn 1; thua → chơi lại đúng màn đó.
+ */
+export function nextLevelIndex(state: BattleState, config: BattleConfig): number {
+  if (state.phase === 'playing') throw new Error('Màn chưa kết thúc, chưa có màn kế');
+  if (state.phase === 'lost') return state.level;
+  return (state.level + 1) % config.levels.length;
+}
+
+/** F06: phá đảo — vừa thắng màn cuối. */
+export function isGameCleared(state: BattleState, config: BattleConfig): boolean {
+  return state.phase === 'won' && state.level === config.levels.length - 1;
 }
 
 /** Vũ khí ở vị trí `index` trên thanh nút; báo lỗi nếu không có. */
@@ -144,8 +191,11 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
 
   // F04: quái đang áp sát (còn sống sau nhát chém và sau khi bị đẩy) đánh; quái vừa tiến vào vòng 0
   // lượt này chỉ đánh từ lượt sau — đúng những con người chơi đã thấy dấu "!" trước khi chém.
-  const attackers = knocked.monsters.filter(isThreatening).length;
-  const heroHp = Math.max(0, state.heroHp - attackers * config.monster.attack);
+  // F06: mỗi con trừ máu theo sức đánh của loại nó (trùm đánh đau hơn slime).
+  const damageTaken = knocked.monsters
+    .filter(isThreatening)
+    .reduce((sum, m) => sum + config.monsterKinds[m.kind].attack, 0);
+  const heroHp = Math.max(0, state.heroHp - damageTaken);
 
   const moved = moveMonsters(knocked.monsters, state.rng, config, knocked.pushedIds);
   const base = {
@@ -228,7 +278,7 @@ function moveMonsters(
     [roll, rng] = nextFloat(rng);
 
     let target = { sector: monster.sector, ring: monster.ring - 1 };
-    if (roll >= config.monster.advanceChance) {
+    if (roll >= config.monsterKinds[monster.kind].advanceChance) {
       let directionRoll: number;
       [directionRoll, rng] = nextFloat(rng);
       const step = directionRoll < 0.5 ? -1 : 1;
