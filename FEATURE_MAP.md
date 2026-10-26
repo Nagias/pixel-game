@@ -14,6 +14,7 @@
 | F05  | Đẩy quái theo vũ khí (knockback)                 | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 | F06  | Màn chơi nối tiếp + trùm Slime Vua               | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 | F07a | Rìu chém hai phía + màn 4 quái tới từ hai phía   | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
+| F09  | Quái bắn xa Slime Pháo + màn 5                   | ✅ Xong    | `src/features/battle/` (mở rộng F01) | như F01                                                  |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -144,7 +145,8 @@ một con lọt vào, mà phải cân nhắc chém con nào trước — Kiếm 
 3. Quái vừa tiến vào vòng 0 trong lượt này chưa đánh ngay — lượt sau mới đánh (đúng những con đã có
    dấu "!" trước khi người chơi chém). Quái bị diệt trong nhát chém thì không kịp đánh.
 4. Hết máu → **thua** ("Bạn đã gục"); cùng lúc hết máu và hết lượt thì báo hết máu.
-5. `isThreatening` (vòng 0) là nguồn duy nhất quyết định con nào có dấu "!".
+5. `isThreatening` (vòng 0; quái bắn xa: vòng bắn của nó — F09) là nguồn duy nhất quyết định con nào
+   có dấu "!", đứng yên và đánh.
 
 **Hành vi giao diện:** dấu "!" đỏ trên đầu quái sắp đánh; ô "Máu" giữa thanh trên cùng. Không thêm
 hiệu ứng mới.
@@ -202,7 +204,8 @@ dễ hơn số này.
 
 ## F06 — Màn chơi nối tiếp + trùm
 
-**Người chơi thấy và làm gì:** game có 4 màn nối tiếp (màn 4 thêm ở F07a), thanh trên hiện "Màn 1/4".
+**Người chơi thấy và làm gì:** game có 5 màn nối tiếp (màn 4 thêm ở F07a, màn 5 ở F09), thanh trên hiện
+"Màn 1/5".
 Thắng một màn thì chạm để sang màn kế. Màn 3 có trùm Slime Vua (slime tím đội vương miện, to hơn) —
 trâu và đánh đau hơn. Hạ hết màn cuối là "PHÁ ĐẢO!", chạm để chơi lại từ màn 1. Thua thì chạm để chơi lại đúng màn đó.
 
@@ -242,9 +245,9 @@ thêm một dòng; thêm loại quái = thêm tên vào `MonsterKind` + con số
   đảo, chạm thì về màn 1 (ảnh `3-thang.png` "Chạm để sang màn 2", `6-man-trum.png`, `7-pha-dao.png`);
   qua màn 1 rồi chém trượt ở màn 2 → thua → chạm thì chơi lại đúng màn 2 (ảnh `4-thua.png`).
 
-**Cân bằng (`npm run sim` — 500 ván mỗi màn, seed 1…500, cùng bot với E2E):** ngắm chuẩn thắng màn 1 / 2 / 3 / 4 = 100% / 99,8% / 94,6% / 86,8%,
-dư trung bình ~2,36 / ~2,89 / ~2,56 / ~1,25 lượt — màn trùm khó hơn màn 2, màn 4 khó hơn màn 3 (unit test `balance.test.ts` giữ hai quan hệ này). Chém bừa (từ khi có 4 vũ khí) thắng 0,2% / 0% / 0% / 0%.
-Seed 42 của E2E qua cả 4 màn (dư 4 / 4 / 4 / 4 lượt).
+**Cân bằng (`npm run sim` — 500 ván mỗi màn, seed 1…500, cùng bot với E2E):** ngắm chuẩn thắng màn 1 / 2 / 3 / 4 / 5 = 100% / 99,8% / 94,6% / 86,8% / 84,8%,
+dư trung bình ~2,36 / ~2,89 / ~2,56 / ~1,25 / ~1,07 lượt — màn trùm khó hơn màn 2, màn 4 khó hơn màn 3, màn 5 khó hơn màn 4 (unit test `balance.test.ts` giữ ba quan hệ này, cùng 500 ván với `npm run sim`). Chém bừa (từ khi có 4 vũ khí) thắng 0,2% / 0% / 0% / 0% / 0%.
+Seed 42 của E2E qua cả 5 màn (dư 4 / 4 / 4 / 4 / 3 lượt).
 
 **Nợ liên quan:** DEBT-007 (hình Slime Vua tạm), DEBT-008, DEBT-009.
 
@@ -284,6 +287,44 @@ làm gì" ở cả 3 khe. Không thêm hiệu ứng mới.
 bằng Cung/Giáo nên quái hiếm khi áp sát cả hai phía cùng lúc. Rìu là vũ khí "cứu nguy".
 
 **Nợ liên quan:** DEBT-009.
+
+## F09 — Quái bắn xa Slime Pháo + màn 5
+
+**Người chơi thấy và làm gì:** màn 5 có **Slime Pháo** (slime cam, có nòng pháo trên đầu). Nó không cần
+áp sát: tới vòng 4 là dừng lại, hiện dấu **"!"** và bắn mỗi lượt. Chém trúng nó lúc đang có "!" (mà nó
+chưa chết) thì nó choáng, lượt đó không bắn. Người chơi phải ưu tiên xử lý nó bằng Cung (vòng 4–5) thay
+vì chỉ gom slime.
+
+**Luật** (nguồn sự thật: `logic/battle.ts` `isThreatening` / `playTurn` + test mục B3; chủ dự án duyệt
+ngày 26/10/2026):
+
+1. Đi như slime (tiến vào hoặc đi ngang) tới **vòng bắn** thì đứng yên; ở vòng bắn hoặc gần hơn (vd. bị
+   Cung kéo vào) thì mỗi lượt bắn sau nhát chém, trừ máu nhân vật theo `attack`.
+2. Vừa tới vòng bắn trong lượt này thì lượt sau mới bắn (như quái áp sát F04).
+3. **Choáng:** bị chém trúng lúc đang có "!" mà còn sống → lượt đó không bắn. Bị Kiếm đẩy ra ngoài vòng
+   bắn thì hết "!", phải tiến vào lại. Quái cận chiến (slime, Slime Vua) không bị choáng.
+4. Slime Pháo: 2 máu, vòng bắn 4, mỗi phát bắn mất 1 máu, 60% tiến vào.
+5. Màn 5: 6 slime + 2 Slime Pháo trong một cụm ±4 lát, 10 lượt.
+6. Cấu hình sai bị từ chối: vòng bắn không nguyên, nhỏ hơn 1, hoặc từ vòng xuất hiện trở ra.
+
+**Hành vi giao diện:** dấu "!" dùng chung với quái áp sát (đỏ, trên đầu quái). Không thêm hiệu ứng bắn.
+
+**Con số:** `monsterKinds.slimeCannon` (`shootRing: 4`) và `levels[4]` trong
+`src/features/battle/logic/battleConfig.ts`; hình `slimeCannon` trong `view/battleSprites.ts`.
+
+**Kiểm chứng tự động:**
+
+- Unit: đi như slime ngoài vòng bắn; tới vòng bắn đứng yên, lượt sau mới bắn; ở vòng bắn không tiến,
+  không đi ngang, bắn theo sức đánh, không tung số ngẫu nhiên; bị kéo vào gần vẫn bắn; choáng khi trúng
+  mà còn sống; không trúng thì vẫn bắn, bị giết thì không; bị Kiếm đẩy ra thì hết "!"; quái cận chiến
+  không choáng; từ chối vòng bắn sai; bot ngắm chuẩn ưu tiên quái bắn đang "!"; màn 5 khó hơn màn 4.
+- E2E: ván seed 42 đi đủ 5 màn; ảnh `10-man-slime-phao.png` (mở màn 5) và `11-slime-phao-ngam.png`
+  (Slime Pháo ở vòng 4 có "!").
+
+**Cân bằng:** xem F06. Người chơi biết ưu tiên Slime Pháo thắng màn 5 ~85%; phớt lờ nó chỉ ~13% (đo
+lúc đề xuất bằng bot không ưu tiên) — đúng là một câu đố.
+
+**Nợ liên quan:** DEBT-007 (hình Slime Pháo vẽ tạm bằng lưới ký tự), DEBT-009.
 
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 

@@ -45,6 +45,7 @@ const CONFIG: BattleConfig = {
   monsterKinds: {
     slime: { name: 'Slime thử', hp: 2, advanceChance: 1, attack: 1 },
     slimeKing: { name: 'Vua thử', hp: 6, advanceChance: 1, attack: 2 },
+    slimeCannon: { name: 'Pháo thử', hp: 2, advanceChance: 1, attack: 1, shootRing: 4 },
   },
   hero: { hp: 5 },
   levels: [LEVEL_1],
@@ -108,6 +109,7 @@ const withAdvanceChance = (advanceChance: number): BattleConfig => ({
   monsterKinds: {
     slime: { ...CONFIG.monsterKinds.slime, advanceChance },
     slimeKing: { ...CONFIG.monsterKinds.slimeKing, advanceChance },
+    slimeCannon: { ...CONFIG.monsterKinds.slimeCannon, advanceChance },
   },
 });
 
@@ -799,6 +801,7 @@ describe('F06 — màn chơi nối tiếp + trùm', () => {
     const config = {
       ...CONFIG,
       monsterKinds: {
+        ...CONFIG.monsterKinds,
         slime: { ...CONFIG.monsterKinds.slime, advanceChance: 1 },
         slimeKing: { ...CONFIG.monsterKinds.slimeKing, advanceChance: 0 },
       },

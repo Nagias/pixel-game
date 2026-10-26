@@ -27,7 +27,7 @@ export interface WeaponConfig {
 }
 
 /** F06: các loại quái. Thêm loại mới = thêm tên ở đây + con số trong battleConfig.ts + hình. */
-export type MonsterKind = 'slime' | 'slimeKing';
+export type MonsterKind = 'slime' | 'slimeKing' | 'slimeCannon';
 
 export interface MonsterConfig {
   readonly name: string;

@@ -23,6 +23,7 @@ const CONFIG: BattleConfig = {
   monsterKinds: {
     slime: { name: 'Slime thử', hp: 2, advanceChance: 0.6, attack: 1 },
     slimeKing: { name: 'Vua thử', hp: 6, advanceChance: 0.6, attack: 2 },
+    slimeCannon: { name: 'Pháo thử', hp: 2, advanceChance: 0.6, attack: 1, shootRing: 4 },
   },
   hero: { hp: 5 },
   levels: [{ turnLimit: 8, monsters: ['slime'], spread: 2 }],
