@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { zoneSectors } from '../logic/arena';
+import { isInZone, zoneSectors } from '../logic/arena';
+import type { WeaponConfig } from '../logic/battleTypes';
 import {
   ARENA_LAYOUT,
   cellToPoint,
@@ -12,6 +13,7 @@ import {
   weaponButtonAt,
   weaponButtonRects,
   zoneArc,
+  zoneArcs,
   zoneRadii,
   type ArenaLayout,
   type WeaponBarLayout,
@@ -77,6 +79,51 @@ describe('zoneArc — hình nêm xanh khớp đúng vùng luật chơi', () => {
     expect(sectorCenterAngle(3, 24)).toBeLessThan(arc.start);
     expect(sectorCenterAngle(7, 24)).toBeGreaterThan(arc.end);
   });
+});
+
+describe('zoneArcs — mọi nêm vẽ ra khớp đúng vùng luật, kể cả vũ khí chém hai phía (B2)', () => {
+  const weapon = (patch: Partial<WeaponConfig>): WeaponConfig => ({
+    name: 'thử',
+    rangeLabel: 'thử',
+    push: 'none',
+    widthSectors: 3,
+    minRing: 0,
+    maxRing: 1,
+    damage: 1,
+    ...patch,
+  });
+
+  /** Góc `angle` có nằm trong nêm [start, end] không (tính cả quấn qua 12 giờ). */
+  const insideArc = (angle: number, arc: { start: number; end: number }) =>
+    [angle - 2 * Math.PI, angle, angle + 2 * Math.PI].some((a) => a > arc.start && a < arc.end);
+
+  it('vũ khí một nêm: đúng một nêm, y như zoneArc', () => {
+    expect(zoneArcs(5, weapon({}), 24)).toEqual([zoneArc(5, 3, 24)]);
+  });
+
+  it('vũ khí hai phía: hai nêm, nêm sau lưng lệch đúng nửa vòng', () => {
+    const arcs = zoneArcs(5, weapon({ twoSided: true }), 24);
+    expect(arcs).toHaveLength(2);
+    expect(arcs[1]?.start).toBeCloseTo((arcs[0]?.start ?? 0) + Math.PI, 9);
+  });
+
+  it.each([
+    ['một nêm, rộng 3', weapon({})],
+    ['hai phía, rộng 1', weapon({ twoSided: true, widthSectors: 1 })],
+    ['hai phía, rộng 3', weapon({ twoSided: true })],
+    ['hai phía, rộng 5', weapon({ twoSided: true, widthSectors: 5 })],
+  ])(
+    '%s: với mọi lát ngắm, tâm một lát nằm trong nêm vẽ ra ⇔ luật coi lát đó là trúng',
+    (_label, w) => {
+      for (let aim = 0; aim < 24; aim++) {
+        const arcs = zoneArcs(aim, w, 24);
+        for (let sector = 0; sector < 24; sector++) {
+          const drawn = arcs.some((arc) => insideArc(sectorCenterAngle(sector, 24), arc));
+          expect(drawn).toBe(isInZone({ sector, ring: w.minRing }, aim, w, 24));
+        }
+      }
+    },
+  );
 });
 
 describe('zoneRadii — hình nêm xanh phủ đúng các vòng vũ khí với tới', () => {

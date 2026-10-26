@@ -1,5 +1,6 @@
 // Phép tính đổi ô trên sân (lát, vòng) sang tọa độ màn hình. Không chứa luật chơi.
 // Quy ước góc: 0 = hướng 12 giờ, tăng theo chiều kim đồng hồ (giống chiều quay vùng xanh).
+import { aimSectors } from '../logic/arena';
 import type { Cell, WeaponConfig } from '../logic/battleTypes';
 
 export interface ArenaLayout {
@@ -68,6 +69,17 @@ export function zoneArc(
     start: sectorStartAngle(aimSector - half, sectorCount),
     end: sectorStartAngle(aimSector + half + 1, sectorCount),
   };
+}
+
+/** Mọi hình nêm xanh cần vẽ khi ngắm `aimSector`: một nêm, hoặc hai nêm đối nhau (B2 — chém hai phía). */
+export function zoneArcs(
+  aimSector: number,
+  weapon: WeaponConfig,
+  sectorCount: number,
+): { start: number; end: number }[] {
+  return aimSectors(aimSector, weapon, sectorCount).map((aim) =>
+    zoneArc(aim, weapon.widthSectors, sectorCount),
+  );
 }
 
 /** Bán kính trong/ngoài của hình nêm xanh: từ mép trong vòng minRing tới mép ngoài vòng maxRing. */
