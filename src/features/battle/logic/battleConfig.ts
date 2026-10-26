@@ -64,6 +64,7 @@ export const BATTLE_CONFIG: BattleConfig = {
       monsters: ['slime', 'slime', 'slime', 'slime', 'slime', 'slime'],
       spread: 3,
     },
-    { turnLimit: 12, monsters: ['slimeKing', 'slime', 'slime'], spread: 2 },
+    // Màn trùm: chủ dự án duyệt 26/10/2026 (trước đó 2 slime, 12 lượt — dễ hơn màn 2).
+    { turnLimit: 10, monsters: ['slimeKing', 'slime', 'slime', 'slime'], spread: 2 },
   ],
 };
