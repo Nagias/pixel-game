@@ -20,9 +20,16 @@ import {
   selectWeapon,
   willAttack,
 } from '../logic/battle';
-import { BATTLE_CONFIG, CHAPTERS, LOOT_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
+import {
+  BATTLE_CONFIG,
+  CHAPTERS,
+  LOOT_CONFIG,
+  SHOP_CONFIG,
+  UPGRADE_CONFIG,
+} from '../logic/battleConfig';
 import { chapterOf } from '../logic/chapters';
 import { addDrop, lootAfterBattle, readPity, withWeaponTiers } from '../logic/loot';
+import { effectiveTiers, rentalsAfterBattle } from '../logic/shop';
 import { withUpgrades } from '../logic/upgrades';
 import type {
   BattleConfig,
@@ -152,9 +159,10 @@ export class BattleScene extends Scene {
   /** Màn chuẩn bị gửi màn + bộ đồ. Không có (chỉ khi mở thẳng scene này) thì màn 1, bộ mặc định. */
   init(data: Partial<LoadoutSceneData>): void {
     const profile = loadProfile();
+    // Đợt 6: món thuê ở cửa hàng còn hạn thì dùng cấp của cửa hàng.
     this.config = withWeaponTiers(
       withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
-      profile.weaponTiers,
+      effectiveTiers(profile.weaponTiers, profile.rentals, SHOP_CONFIG),
       LOOT_CONFIG,
     );
     this.level = data.level ?? 0;
@@ -727,7 +735,14 @@ export class BattleScene extends Scene {
       : undefined;
     const profile = applyBattleResult(
       before,
-      { level: state.level, won: state.phase === 'won', gold: state.gold, loot },
+      {
+        level: state.level,
+        won: state.phase === 'won',
+        gold: state.gold,
+        loot,
+        // Đợt 6: món thuê mang vào trận này bớt 1 trận (thắng hay thua).
+        rentals: rentalsAfterBattle(before.rentals, state.loadout),
+      },
       this.config.levels.length,
     );
     const saved = saveProfile(profile);

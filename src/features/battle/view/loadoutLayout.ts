@@ -19,6 +19,8 @@ export interface LoadoutLayout {
   readonly start: Rect;
   /** Đợt 4: nút "NÂNG CẤP" ngay dưới nút "VÀO TRẬN". */
   readonly upgrade: Rect;
+  /** Đợt 6: nút "CỬA HÀNG" cạnh nút "NÂNG CẤP". */
+  readonly shop: Rect;
 }
 
 export const LOADOUT_LAYOUT: LoadoutLayout = {
@@ -32,7 +34,9 @@ export const LOADOUT_LAYOUT: LoadoutLayout = {
   gap: 12,
   // Đợt 4: "VÀO TRẬN" thấp lại 72 → 64 để có chỗ cho nút "NÂNG CẤP" ở đáy khung.
   start: { x: 18, y: 520, width: 324, height: 64 },
-  upgrade: { x: 18, y: 592, width: 324, height: 44 },
+  // Đợt 6: hàng đáy chia đôi — "NÂNG CẤP" bên trái, "CỬA HÀNG" bên phải.
+  upgrade: { x: 18, y: 592, width: 156, height: 44 },
+  shop: { x: 186, y: 592, width: 156, height: 44 },
 };
 
 export function rowTop(row: number, layout: LoadoutLayout): number {
@@ -60,7 +64,8 @@ export function optionRects(row: number, count: number, layout: LoadoutLayout): 
 export type LoadoutTap =
   | { readonly kind: 'option'; readonly row: number; readonly option: number }
   | { readonly kind: 'start' }
-  | { readonly kind: 'upgrade' };
+  | { readonly kind: 'upgrade' }
+  | { readonly kind: 'shop' };
 
 const inside = (x: number, y: number, r: Rect) =>
   x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height;
@@ -77,6 +82,7 @@ export function loadoutTapAt(
 ): LoadoutTap | null {
   if (inside(x, y, layout.start)) return { kind: 'start' };
   if (inside(x, y, layout.upgrade)) return { kind: 'upgrade' };
+  if (inside(x, y, layout.shop)) return { kind: 'shop' };
   for (const [row, count] of rowCounts.entries()) {
     const option = optionRects(row, count, layout).findIndex((r) => inside(x, y, r));
     if (option !== -1) return { kind: 'option', row, option };

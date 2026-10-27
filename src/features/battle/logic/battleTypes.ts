@@ -135,6 +135,17 @@ export interface Drop {
 /** Đợt 5: cấp cao nhất đã có của từng vũ khí (khóa = chỉ số vũ khí) — dữ liệu hồ sơ, có thể lạ. */
 export type WeaponTiers = Readonly<Record<string, number>>;
 
+/** Đợt 6: món thuê ở cửa hàng — số trận còn dùng được của từng vũ khí (khóa = chỉ số vũ khí). */
+export type WeaponRentals = Readonly<Record<string, number>>;
+
+/** Đợt 6: cửa hàng bán các vũ khí `weapons` ở cấp `tier`, giá `price` vàng, dùng được `battles` trận. */
+export interface ShopConfig {
+  readonly weapons: readonly number[];
+  readonly tier: number;
+  readonly price: number;
+  readonly battles: number;
+}
+
 export interface HeroConfig {
   /** F04: máu ban đầu (và tối đa) của nhân vật. */
   readonly hp: number;

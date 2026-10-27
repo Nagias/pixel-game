@@ -160,3 +160,13 @@ rơi 50%, 6 cấp màu, bảo hiểm 3 lần / 30 món, loại vũ khí tạm ng
 - [x] Màn hình: quái hiếm phát sáng, dòng rơi đồ, cấp màu ở màn chuẩn bị và thanh vũ khí, sét cấp Thần, hàng May mắn
 - [x] Cân bằng: sinh lại màn 12; E2E bot theo cấu hình thật; 2 E2E mới; thử tay khung 375×760
 - [x] FEATURE_MAP (F16), `npm run check`, mở PR, gộp khi CI xanh
+
+## Kế hoạch sau B6, bước 3 lượt duyệt chung — F17 Cửa hàng (27/10/2026)
+
+Phạm vi chủ dự án chốt (duyệt A–E): bán cố định 4 món cấp Hiếm, 25 vàng, dùng 5 trận; quảng cáo để giai đoạn D.
+
+- [x] Test luật trước: `shop.test.ts`, hồ sơ bản 4, nút cửa hàng
+- [x] Code: mua / cộng dồn / không bán món thừa, cấp dùng trong trận, trừ hạn trận có mang món
+- [x] Màn Cửa hàng, nút ở màn chuẩn bị, "Hiếm · n trận"
+- [x] E2E mua → màn chuẩn bị → trận → trừ hạn; thử tay khung 375×760
+- [x] FEATURE_MAP (F17), `npm run check`, mở PR, gộp khi CI xanh

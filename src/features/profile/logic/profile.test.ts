@@ -34,6 +34,7 @@ describe('đọc / ghi hồ sơ', () => {
       upgrades: {},
       weaponTiers: {},
       lootPity: {},
+      rentals: {},
     });
   });
 
@@ -45,6 +46,7 @@ describe('đọc / ghi hồ sơ', () => {
       upgrades: { hp: 2, crit: 1 },
       weaponTiers: { 0: 3, 2: 1 },
       lootPity: { dryRareKills: 2, dropsSinceHighTier: 11 },
+      rentals: { 1: 4 },
     });
     expect(writeProfile(store, saved)).toBe(true);
     expect(readProfile(store)).toEqual(saved);
@@ -65,6 +67,15 @@ describe('đọc / ghi hồ sơ', () => {
     expect(readProfile(store)).toEqual(
       profile({ gold: 50, unlockedLevel: 9, upgrades: { hp: 3 } }),
     );
+    expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
+  });
+
+  // Đợt 6: phiên bản 4 thêm món thuê ở cửa hàng. Bản 3 (đợt 5) tự chuyển lên.
+  it('hồ sơ phiên bản 3 chuyển lên phiên bản 4: giữ đồ rơi và bảo hiểm, chưa thuê món nào', () => {
+    const loot = { weaponTiers: { 0: 3 }, lootPity: { dryRareKills: 1 } };
+    const raw = JSON.stringify({ version: 3, gold: 8, unlockedLevel: 2, upgrades: {}, ...loot });
+    const { store, data } = memoryStore({ [PROFILE_KEY]: raw });
+    expect(readProfile(store)).toEqual(profile({ gold: 8, unlockedLevel: 2, ...loot }));
     expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
   });
 
@@ -116,9 +127,32 @@ describe('đọc / ghi hồ sơ', () => {
     ],
     // Người chơi mở bản game cũ hơn dữ liệu: không hiểu thì không được phá.
     [
-      'phiên bản mới hơn game',
+      'món thuê số trận lẻ',
       JSON.stringify({
         version: 4,
+        gold: 0,
+        unlockedLevel: 0,
+        upgrades: {},
+        weaponTiers: {},
+        lootPity: {},
+        rentals: { 0: 2.5 },
+      }),
+    ],
+    [
+      'phiên bản 4 thiếu món thuê',
+      JSON.stringify({
+        version: 4,
+        gold: 0,
+        unlockedLevel: 0,
+        upgrades: {},
+        weaponTiers: {},
+        lootPity: {},
+      }),
+    ],
+    [
+      'phiên bản mới hơn game',
+      JSON.stringify({
+        version: 5,
         gold: 9,
         unlockedLevel: 4,
         upgrades: {},
@@ -181,6 +215,16 @@ describe('cộng kết quả trận vào hồ sơ', () => {
         20,
       ),
     ).toEqual(profile({ gold: 9, ...loot }));
+  });
+
+  it('đợt 6: trận có kết quả món thuê thì ghi số trận còn lại mới', () => {
+    expect(
+      applyBattleResult(
+        profile({ rentals: { 0: 5, 2: 1 } }),
+        { level: 0, won: false, gold: 0, rentals: { 0: 4 } },
+        7,
+      ),
+    ).toEqual(profile({ rentals: { 0: 4 } }));
   });
 
   it('trận không có kết quả rơi đồ: giữ nguyên đồ và bảo hiểm', () => {
