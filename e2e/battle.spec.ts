@@ -8,7 +8,8 @@ import {
   levelAt,
   willAttack,
 } from '../src/features/battle/logic/battle';
-import { BATTLE_CONFIG } from '../src/features/battle/logic/battleConfig';
+import { BATTLE_CONFIG, UPGRADE_CONFIG } from '../src/features/battle/logic/battleConfig';
+import { withUpgrades } from '../src/features/battle/logic/upgrades';
 import {
   barButtonCount,
   WEAPON_BAR,
@@ -21,6 +22,18 @@ import { BattleDriver, bestMove, hitIds, lookaheadTurn, missMove } from './suppo
 // Seed cố định để ván chơi lặp lại y hệt (màn nào cũng dùng seed này). Đổi cân bằng mà ván này
 // không còn thắng được bằng bot "Nhìn trước" thì chọn seed khác và ghi lý do trong PR.
 const SEED = 42;
+/**
+ * Đợt 7: hai ván chơi liền cả chủ đề (20 màn) dùng seed riêng, với hồ sơ đã nâng cấp (như người chơi đã
+ * tiêu vàng): seed 1 là seed nhỏ nhất mà bot "Nhìn trước" thắng đủ 20 màn với Mưa băng và màn cuối với Cầu
+ * lửa (script dò tạm 27/10/2026). Đổi cân bằng mà không còn thắng đủ thì dò lại seed và ghi lý do trong PR.
+ */
+const FULL_RUN_SEED = 1;
+const FULL_RUN_UPGRADES = { hp: 3, crit: 3, heal: 3 };
+const FULL_RUN_CONFIG = withUpgrades(BATTLE_CONFIG, FULL_RUN_UPGRADES, UPGRADE_CONFIG);
+/** 20 màn qua màn chuẩn bị mất vài phút trên máy CI chậm. */
+const FULL_RUN_TIMEOUT_MS = 8 * 60_000;
+/** Màn mới mở: chờ đủ để hình nhân vật và quái kịp vẽ lên trước khi chụp ảnh (50ms có lúc chưa kịp). */
+const LEVEL_DRAWN_MS = 300;
 /** Màn kết quả cần hiện đủ lâu mới cho đi tiếp (chống chạm nhầm) — dư ra một chút. */
 const RESULT_SCREEN_WAIT_MS = 600;
 const LEVEL_1 = levelAt(0, BATTLE_CONFIG);
@@ -37,10 +50,12 @@ async function playBestUntilOver(
   game: BattleDriver,
   /** Gọi trước mỗi nhát chém (vd. để chụp ảnh đúng lúc). */
   beforeStrike?: (snapshot: Awaited<ReturnType<BattleDriver['snapshot']>>) => Promise<void>,
+  /** Seed của ván — ngẫu nhiên riêng của người chơi tính từ đây. */
+  seed = SEED,
 ): Promise<number> {
   let mostHitsInOneStrike = 0;
   // Ngẫu nhiên riêng của người chơi, tách khỏi trận (như scripts/simCore.ts).
-  let rng = seedRng(SEED + 1_000_000);
+  let rng = seedRng(seed + 1_000_000);
   while ((await game.snapshot()).battle.phase === 'playing') {
     const [{ cast, move }, next] = lookaheadTurn(await game.snapshot(), rng);
     rng = next;
@@ -219,15 +234,17 @@ test('chạm sân chém đúng lát vùng xanh, bằng đúng vũ khí đang c�
 test('F06: chơi giỏi thắng màn nào sang màn kế, hạ trùm ở màn cuối là phá đảo, rồi chơi lại từ màn 1', async ({
   page,
 }) => {
-  // Đi đủ mọi màn (mỗi màn qua màn chuẩn bị chờ 0,5 giây): lâu hơn mức 30 giây trên máy CI chậm.
-  test.slow();
+  // Đi đủ mọi màn (mỗi màn qua màn chuẩn bị chờ 0,5 giây).
+  test.setTimeout(FULL_RUN_TIMEOUT_MS);
   const game = new BattleDriver(page);
-  await game.openBattle(SEED);
+  await game.seedProfile({ upgrades: FULL_RUN_UPGRADES });
+  await game.openBattle(FULL_RUN_SEED);
 
   let mostHitsInOneStrike = 0;
   // F11: lần đầu thấy đợt quái mới tràn vào (id sau đội hình mở màn) thì chụp ảnh làm bằng chứng.
   let waveSeen = false;
   let ghostShot = false;
+  let forestShot = false;
   for (let level = 0; level <= LAST_LEVEL; level++) {
     // Màn mới: đầy máu, cầm vũ khí đầu, đủ lượt và đúng đội hình quái của màn (màn cuối có trùm).
     const { turnLimit, monsters } = levelAt(level, BATTLE_CONFIG);
@@ -235,22 +252,35 @@ test('F06: chơi giỏi thắng màn nào sang màn kế, hạ trùm ở màn cu
     expect(start).toMatchObject({
       level,
       phase: 'playing',
-      heroHp: BATTLE_CONFIG.hero.hp,
+      heroHp: FULL_RUN_CONFIG.hero.hp,
       weaponIndex: 0,
       turnsLeft: turnLimit,
     });
     expect(start.monsters.map((m) => m.kind)).toEqual(monsters);
     if (monsters.includes('slimeKing')) {
-      await game.advance(50);
+      await game.advance(LEVEL_DRAWN_MS);
       await page.screenshot({ path: test.info().outputPath('6-man-trum.png') });
     }
     if (monsters.includes('slimeCannon')) {
-      await game.advance(50);
+      await game.advance(LEVEL_DRAWN_MS);
       await page.screenshot({ path: test.info().outputPath('10-man-slime-phao.png') });
     }
     if (monsters.includes('slimeCharger')) {
-      await game.advance(50);
+      await game.advance(LEVEL_DRAWN_MS);
       await page.screenshot({ path: test.info().outputPath('19-man-slime-lao.png') });
+    }
+    // F15: lần đầu gặp quái rừng và trùm Người Cây thì chụp ảnh làm bằng chứng hình mới.
+    if (
+      !forestShot &&
+      monsters.some((kind) => ['goblin', 'wolf', 'goblinArcher', 'bat'].includes(kind))
+    ) {
+      forestShot = true;
+      await game.advance(LEVEL_DRAWN_MS);
+      await page.screenshot({ path: test.info().outputPath('25-quai-rung.png') });
+    }
+    if (monsters.includes('treant')) {
+      await game.advance(LEVEL_DRAWN_MS);
+      await page.screenshot({ path: test.info().outputPath(`26-nguoi-cay-man-${level + 1}.png`) });
     }
     if (levelAt(level, BATTLE_CONFIG).splitOpposite) {
       // B2: nửa đầu đội hình ở một phía, nửa sau ở phía đối diện (lệch nửa vòng).
@@ -259,8 +289,9 @@ test('F06: chơi giỏi thắng màn nào sang màn kế, hạ trùm ở màn cu
       if (!first || !last) throw new Error('Thiếu quái ở một trong hai cụm');
       const gap = Math.abs(first.sector - last.sector) % BATTLE_CONFIG.sectorCount;
       const apart = Math.min(gap, BATTLE_CONFIG.sectorCount - gap);
-      expect(apart).toBeGreaterThanOrEqual(BATTLE_CONFIG.sectorCount / 2 - 2 * 2);
-      await game.advance(50);
+      const { spread } = levelAt(level, BATTLE_CONFIG);
+      expect(apart).toBeGreaterThanOrEqual(BATTLE_CONFIG.sectorCount / 2 - 2 * spread);
+      await game.advance(LEVEL_DRAWN_MS);
       await page.screenshot({ path: test.info().outputPath('8-man-hai-phia.png') });
     }
 
@@ -268,35 +299,39 @@ test('F06: chơi giỏi thắng màn nào sang màn kế, hạ trùm ở màn cu
     let cannonShot = false;
     mostHitsInOneStrike = Math.max(
       mostHitsInOneStrike,
-      await playBestUntilOver(game, async (snapshot) => {
-        // F12: lần đầu Slime Ma vô hình (lượt chẵn) thì chụp ảnh — nó phải hiện mờ.
-        const hiddenGhost = snapshot.battle.monsters.some(
-          (m) => !canBeHit(m, snapshot.battle, BATTLE_CONFIG),
-        );
-        if (!ghostShot && hiddenGhost) {
-          ghostShot = true;
+      await playBestUntilOver(
+        game,
+        async (snapshot) => {
+          // F12: lần đầu Slime Ma vô hình (lượt chẵn) thì chụp ảnh — nó phải hiện mờ.
+          const hiddenGhost = snapshot.battle.monsters.some(
+            (m) => !canBeHit(m, snapshot.battle, BATTLE_CONFIG),
+          );
+          if (!ghostShot && hiddenGhost) {
+            ghostShot = true;
+            await game.advance(300);
+            await page.screenshot({ path: test.info().outputPath('20-slime-ma-vo-hinh.png') });
+          }
+          const newcomers = snapshot.battle.monsters.filter((m) => m.id > monsters.length);
+          if (!waveSeen && newcomers.length > 0) {
+            waveSeen = true;
+            expect(snapshot.battle.nextWave).toBeGreaterThan(0);
+            await game.advance(300);
+            await page.screenshot({ path: test.info().outputPath('18-dot-quai-moi.png') });
+          }
+          const aiming = snapshot.battle.monsters.find(
+            (m) => m.kind === 'slimeCannon' && willAttack(m, BATTLE_CONFIG),
+          );
+          if (!aiming || cannonShot) return;
+          cannonShot = true;
+          expect(aiming.ring).toBeLessThanOrEqual(
+            BATTLE_CONFIG.monsterKinds.slimeCannon.shootRing ?? -1,
+          );
+          // Chờ hết hoạt ảnh quái trượt sang ô mới (180ms) để ảnh đúng vị trí.
           await game.advance(300);
-          await page.screenshot({ path: test.info().outputPath('20-slime-ma-vo-hinh.png') });
-        }
-        const newcomers = snapshot.battle.monsters.filter((m) => m.id > monsters.length);
-        if (!waveSeen && newcomers.length > 0) {
-          waveSeen = true;
-          expect(snapshot.battle.nextWave).toBeGreaterThan(0);
-          await game.advance(300);
-          await page.screenshot({ path: test.info().outputPath('18-dot-quai-moi.png') });
-        }
-        const aiming = snapshot.battle.monsters.find(
-          (m) => m.kind === 'slimeCannon' && willAttack(m, BATTLE_CONFIG),
-        );
-        if (!aiming || cannonShot) return;
-        cannonShot = true;
-        expect(aiming.ring).toBeLessThanOrEqual(
-          BATTLE_CONFIG.monsterKinds.slimeCannon.shootRing ?? -1,
-        );
-        // Chờ hết hoạt ảnh quái trượt sang ô mới (180ms) để ảnh đúng vị trí.
-        await game.advance(300);
-        await page.screenshot({ path: test.info().outputPath('11-slime-phao-ngam.png') });
-      }),
+          await page.screenshot({ path: test.info().outputPath('11-slime-phao-ngam.png') });
+        },
+        FULL_RUN_SEED,
+      ),
     );
     if (monsters.includes('slimeCannon')) expect(cannonShot).toBe(true);
 
@@ -590,21 +625,27 @@ test('B6: skill nạp theo nhát chém, đầy thì bấm — mọi quái mất 
   await page.screenshot({ path: test.info().outputPath('17-mua-bang.png') });
 
   // Lượt ngay sau: mọi quái đang băng không đánh (máu nhân vật không giảm), hết lượt thì hết băng.
-  await game.play(bestMove(await game.snapshot()));
+  // Chém trượt cho chắc lượt chạy trọn: chém trúng mà xong nhiệm vụ thì thắng ngay, quái giữ nguyên băng.
+  await game.play(missMove(await game.snapshot()));
   const next = (await game.snapshot()).battle;
-  expect(next.heroHp).toBeGreaterThanOrEqual(after.heroHp);
+  expect(next.phase).toBe('playing');
+  expect(next.heroHp).toBe(after.heroHp);
   expect(next.monsters.every((m) => m.frozenTurns === undefined)).toBe(true);
 });
 
 test('B6: màn chuẩn bị nhớ skill đã chọn qua các màn chưa có skill — phá đảo bằng Cầu lửa, lên lại màn 3 vẫn chọn Cầu lửa', async ({
   page,
 }) => {
-  test.slow(); // chơi 3 màn (màn 5 rồi màn 1, 2) qua màn chuẩn bị
+  test.setTimeout(FULL_RUN_TIMEOUT_MS); // chơi màn cuối rồi màn 1, 2 qua màn chuẩn bị
   const game = new BattleDriver(page);
-  await game.openLoadout(SEED, BATTLE_CONFIG.levels.length);
+  await game.seedProfile({
+    unlockedLevel: BATTLE_CONFIG.levels.length - 1,
+    upgrades: FULL_RUN_UPGRADES,
+  });
+  await game.openLoadout(FULL_RUN_SEED, BATTLE_CONFIG.levels.length);
   await game.chooseSkill('fireball');
   await game.startBattle();
-  await playBestUntilOver(game);
+  await playBestUntilOver(game, undefined, FULL_RUN_SEED);
   expect(isGameCleared((await game.snapshot()).battle, BATTLE_CONFIG)).toBe(true);
 
   // Phá đảo → màn 1, 2 chưa có skill.
@@ -613,7 +654,7 @@ test('B6: màn chuẩn bị nhớ skill đã chọn qua các màn chưa có skil
     const { battle } = await game.snapshot();
     expect(battle.level).toBe(level);
     expect(battle.loadout.skill).toBeUndefined();
-    await playBestUntilOver(game);
+    await playBestUntilOver(game, undefined, FULL_RUN_SEED);
     expect((await game.snapshot()).battle.phase).toBe('won');
   }
 

@@ -7,8 +7,8 @@ import {
   type LevelResult,
   type Player,
 } from '../../../../scripts/simCore';
-import { measured, withinTolerance } from '../../../../scripts/tuneCore';
-import { BALANCE_TOLERANCE, BATTLE_CONFIG } from './battleConfig';
+import { levelWithinTolerance, measured } from '../../../../scripts/tuneCore';
+import { BALANCE_TOLERANCE, BATTLE_CONFIG, LOADOUT_TOLERANCE } from './battleConfig';
 
 // Kiểm độ khó chủ dự án đã duyệt trên con số THẬT của game (khác các test luật dùng cấu hình riêng).
 // Mục tiêu nằm ở `target` của từng màn trong battleConfig.ts (đợt 0), đo bằng kiểu chơi TARGET_PLAYER
@@ -41,12 +41,10 @@ describe('cân bằng đã duyệt', () => {
       const target = BATTLE_CONFIG.levels[level]?.target;
       expect(target, `màn ${level + 1} phải có target`).toBeDefined();
       if (!target) return;
-      for (const result of playLevel(level)) {
-        const actual = measured(result);
-        expect(withinTolerance(actual, target, BALANCE_TOLERANCE), JSON.stringify(actual)).toBe(
-          true,
-        );
-      }
+      // Trung bình các skill ±5% / ±0,5 lượt; từng skill ±8% / ±0,8 (chủ dự án duyệt 27/10/2026).
+      const actual = playLevel(level).map(measured);
+      const tolerance = { mean: BALANCE_TOLERANCE, perLoadout: LOADOUT_TOLERANCE };
+      expect(levelWithinTolerance(actual, target, tolerance), JSON.stringify(actual)).toBe(true);
     },
   );
 

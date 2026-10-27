@@ -20,7 +20,8 @@ import {
   selectWeapon,
   willAttack,
 } from '../logic/battle';
-import { BATTLE_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
+import { BATTLE_CONFIG, CHAPTERS, UPGRADE_CONFIG } from '../logic/battleConfig';
+import { chapterOf } from '../logic/chapters';
 import { withUpgrades } from '../logic/upgrades';
 import type { BattleState, Hit, Loadout, Monster, SkillKind } from '../logic/battleTypes';
 import { defaultLoadout } from '../logic/loadout';
@@ -66,7 +67,7 @@ const DEPTH = { arena: 0, zone: 1, monster: 2, hero: 3, popup: 4, hud: 5, result
 
 /** B6: màu riêng của từng skill — nút nạp, chớp sân khi bấm. */
 const SKILL_COLOR: Record<SkillKind, PaletteColor> = { iceRain: 'sky', fireball: 'orange' };
-/** B6: quái bị đóng băng nhuộm màu này. */
+/** B6: quái bị đóng băng phủ kín màu này. */
 const FROZEN_TINT: PaletteColor = 'cyan';
 /** F12: độ đậm của quái ma lúc vô hình — đủ thấy để người chơi biết nó ở đâu. */
 const GHOST_HIDDEN_ALPHA = 0.3;
@@ -340,8 +341,9 @@ export class BattleScene extends Scene {
       } else {
         sprite = this.spawnMonster(monster, point);
       }
-      // B6: quái đang bị đóng băng nhuộm màu băng; hết băng thì về màu gốc.
-      if ((monster.frozenTurns ?? 0) > 0) sprite.setTint(colorNumber(FROZEN_TINT));
+      // B6: quái đang bị đóng băng phủ kín màu băng (khối băng); hết băng thì về màu gốc. Phủ kín chứ
+      // không nhân màu: nhân màu băng lên quái xanh lá (Yêu tinh…) gần như không đổi, người chơi không thấy.
+      if ((monster.frozenTurns ?? 0) > 0) sprite.setTintFill(colorNumber(FROZEN_TINT));
       else sprite.clearTint();
       // F12: quái ma đang vô hình (lượt chẵn) vẽ mờ — chém lúc này là xuyên qua.
       sprite.setAlpha(canBeHit(monster, state, this.config) ? 1 : GHOST_HIDDEN_ALPHA);
@@ -491,7 +493,9 @@ export class BattleScene extends Scene {
   private updateHud(): void {
     const { turnLimit, quest } = levelAt(this.battle.level, this.config);
     this.turnsText.setText(`Lượt: ${this.battle.turnsLeft}/${turnLimit}`);
-    this.levelText.setText(`Màn ${this.battle.level + 1}/${this.config.levels.length}`);
+    // Đợt 7: số màn đếm trong chương (chủ đề).
+    const chapter = chapterOf(this.battle.level, CHAPTERS);
+    this.levelText.setText(`Màn ${chapter.number}/${chapter.levelCount}`);
     this.heroHpText.setText(`Máu: ${this.battle.heroHp}/${this.config.hero.hp}`);
     // F11: ô nhiệm vụ thay ô "Quái: n" — "Slime 3/6" (màn không có nhiệm vụ thì vẫn đếm quái).
     this.questText.setText(

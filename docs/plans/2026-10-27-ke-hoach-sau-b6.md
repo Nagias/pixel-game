@@ -25,6 +25,48 @@ tại (CLAUDE.md đường cấm #11).
 
 **Cỡ:** S ≈ một buổi, M ≈ 1–2 ngày làm của agent (kể cả 3 lớp kiểm chứng), L ≈ 2–4 ngày.
 
+## 1b. Lượt duyệt chung cho phần còn lại (chủ dự án duyệt 27/10/2026)
+
+Chủ dự án duyệt một lần mọi câu "Chủ dự án quyết" còn lại, rồi để agent **chạy liên tục**: mỗi bước một
+PR, **tự gộp khi CI xanh**; đề xuất nào làm không được thì chọn phương án gần nhất và ghi lý do trong PR.
+
+**Thứ tự mới:** (1) 5 loài quái mới + chủ đề Rừng rậm 20 màn (đợt 7 làm trước vì màn cần quái mới) →
+(2) quái hiếm, rơi đồ, túi đồ (đợt 5) → (3) cửa hàng (đợt 6).
+
+**Đợt 7 — chủ đề Rừng rậm:** 20 màn, 7 màn hiện có làm nền; trùm Người Cây ở màn 10 và 20; độ khó răng
+cưa: màn 1 ~98% giảm dần tới màn 10 ~78%, màn 11 nhẹ lại ~92% rồi giảm tới màn 20 ~72%. Dung sai: trung
+bình các skill ±5% thắng / ±0,5 lượt dư, **từng skill riêng ±8%** (mỗi loại quái hợp một skill khác nhau).
+Chưa có cơ chế sân riêng. Có bộ sinh màn để thêm chủ đề sau nhanh. Chủ đề Băng, Núi lửa để sau.
+
+**Loài quái mới (không phải slime)** — dùng lại đặc tính có sẵn:
+
+| Quái              | Đặc điểm                        |
+| ----------------- | ------------------------------- |
+| Yêu tinh          | 4 máu, đánh 2 — lính thường     |
+| Sói rừng          | lao 2 vòng, 4 máu, đánh 3       |
+| Yêu tinh cung thủ | bắn từ vòng 4, 3 máu, bắn mất 2 |
+| Dơi đêm           | lượt chẵn vô hình, 3 máu        |
+| Người Cây (trùm)  | 14 máu, đánh 5, tiến chậm       |
+
+**Đợt 5 — quái hiếm, rơi đồ:** từ màn 3, mỗi trận 15% có một con quái **không phải slime** hóa hiếm (sáng,
+×2 máu, ×3 vàng; không bao giờ cần để thắng); chỉ số **may mắn** thêm vào màn Nâng cấp (+5% mỗi cấp, 3 cấp,
+10/20/40 vàng). **Slime không bao giờ hóa hiếm, không rơi vũ khí.** Hạ quái hiếm: 50% rơi vũ khí; bảo hiểm 3
+quái hiếm liền không rơi → con thứ 4 chắc chắn rơi; bảo hiểm cấp cao: 30 món chưa có từ Sử thi trở lên →
+món thứ 30 chắc chắn từ Sử thi. Loại vũ khí rơi **tạm thời ngẫu nhiên** trong 4 loại (bảng rơi theo loài
+chủ dự án chốt sau — chỉ sửa dữ liệu). Đồ rơi vĩnh viễn; túi đồ nối vào màn chuẩn bị.
+
+| Cấp         | Màu                       | Thêm so với vũ khí gốc                        | Tỉ lệ rơi |
+| ----------- | ------------------------- | --------------------------------------------- | --------- |
+| Thường      | trắng                     | —                                             | 40%       |
+| Tốt         | xanh lá                   | +5% chí mạng                                  | 28%       |
+| Hiếm        | xanh dương                | +10% chí mạng                                 | 17%       |
+| Sử thi      | tím                       | +10% chí mạng, rộng thêm 2 lát                | 10%       |
+| Huyền thoại | cam                       | +15% chí mạng, rộng thêm 2 lát, +1 sát thương | 4%        |
+| Thần        | đỏ, sét sáng quanh vũ khí | +20% chí mạng, rộng thêm 2 lát, +1 sát thương | 1%        |
+
+**Đợt 6 — cửa hàng:** bán cố định 4 món cấp Hiếm (Kiếm, Rìu, Giáo, Cung), 25 vàng mỗi món, **có hạn 5
+trận** (thắng hay thua đều trừ); nút xem quảng cáo để giai đoạn D.
+
 ## 2. Nhận xét của chủ dự án → đợt nào
 
 | Nhận xét (26–27/10/2026)                                                                                                | Đợt               |

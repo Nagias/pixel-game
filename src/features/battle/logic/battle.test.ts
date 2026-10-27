@@ -50,6 +50,11 @@ const CONFIG: BattleConfig = {
     slimeMini: { name: 'Con thử', hp: 1, advanceChance: 1, attack: 1 },
     slimeCharger: { name: 'Lao thử', hp: 2, advanceChance: 1, attack: 1, step: 2 },
     slimeGhost: { name: 'Ma thử', hp: 2, advanceChance: 1, attack: 1, ghost: true },
+    goblin: { name: 'Yêu tinh thử', hp: 4, advanceChance: 1, attack: 2 },
+    wolf: { name: 'Sói thử', hp: 4, advanceChance: 1, attack: 3, step: 2 },
+    goblinArcher: { name: 'Cung thủ thử', hp: 3, advanceChance: 1, attack: 2, shootRing: 4 },
+    bat: { name: 'Dơi thử', hp: 3, advanceChance: 1, attack: 1, ghost: true },
+    treant: { name: 'Cây thử', hp: 14, advanceChance: 1, attack: 5 },
   },
   // B6: hồi máu 0 để các test luật cũ không đổi; test hồi máu / skill nằm ở skill.test.ts.
   hero: { hp: 5, healMinHits: 3, healAmount: 0 },

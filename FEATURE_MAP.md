@@ -5,23 +5,24 @@
 
 ## Tổng quan
 
-| Mã   | Tính năng                                          | Trạng thái | Code                                                      | Test                                                     |
-| ---- | -------------------------------------------------- | ---------- | --------------------------------------------------------- | -------------------------------------------------------- |
-| F01  | Trận đấu tối thiểu (walking skeleton, khuôn mẫu)   | ✅ Xong    | `src/features/battle/`                                    | `src/features/battle/**/*.test.ts`, `e2e/battle.spec.ts` |
-| F02  | Thanh 3 nút vũ khí theo tầm (gần / vừa / xa)       | ✅ Xong    | `src/features/battle/` (mở rộng F01)                      | như F01                                                  |
-| F03  | Combo gom cụm 100% / 200% / 300%                   | ✅ Xong    | `src/features/battle/` (mở rộng F01)                      | như F01                                                  |
-| F04  | Máu nhân vật + dấu "!" báo quái sắp đánh           | ✅ Xong    | `src/features/battle/` (mở rộng F01)                      | như F01                                                  |
-| F05  | Đẩy quái theo vũ khí (knockback)                   | ✅ Xong    | `src/features/battle/` (mở rộng F01)                      | như F01                                                  |
-| F06  | Màn chơi nối tiếp + trùm Slime Vua                 | ✅ Xong    | `src/features/battle/` (mở rộng F01)                      | như F01                                                  |
-| F07a | Rìu chém hai phía + màn 4 quái tới từ hai phía     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                      | như F01                                                  |
-| F07  | Màn chuẩn bị trận: chọn mỗi tầm một vũ khí         | ✅ Xong    | `src/features/battle/` (mở rộng F01)                      | như F01                                                  |
-| F08  | Skill bấm đánh cả sân + máu, hồi máu, chí mạng     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                      | như F01                                                  |
-| F09  | Quái bắn xa Slime Pháo + màn 5                     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                      | như F01                                                  |
-| F10  | Tự động cân bằng (mục tiêu, bot nhìn trước, dò số) | ✅ Xong    | `scripts/`, `logic/autoPlay.ts`, `logic/battleConfig.ts`  | `scripts/tuneCore.test.ts`, `logic/balance.test.ts`      |
-| F11  | Thắng bằng nhiệm vụ + quái ra theo đợt             | ✅ Xong    | `src/features/battle/` (mở rộng F01)                      | `logic/quest.test.ts`, như F01                           |
-| F12  | Thêm Slime Con, Slime Lao, Slime Ma + màn 6–7      | ✅ Xong    | `src/features/battle/` (mở rộng F01)                      | `logic/monsters.test.ts`, như F01                        |
-| F13  | Lưu tiến trình + vàng                              | ✅ Xong    | `src/features/profile/`, `battle/logic/battle.ts`         | `profile/logic/profile.test.ts`, `logic/gold.test.ts`    |
-| F14  | Nâng cấp nhân vật bằng vàng                        | ✅ Xong    | `battle/logic/upgrades.ts`, `battle/view/UpgradeScene.ts` | `logic/upgrades.test.ts`, `view/upgradeLayout.test.ts`   |
+| Mã   | Tính năng                                          | Trạng thái | Code                                                           | Test                                                     |
+| ---- | -------------------------------------------------- | ---------- | -------------------------------------------------------------- | -------------------------------------------------------- |
+| F01  | Trận đấu tối thiểu (walking skeleton, khuôn mẫu)   | ✅ Xong    | `src/features/battle/`                                         | `src/features/battle/**/*.test.ts`, `e2e/battle.spec.ts` |
+| F02  | Thanh 3 nút vũ khí theo tầm (gần / vừa / xa)       | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
+| F03  | Combo gom cụm 100% / 200% / 300%                   | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
+| F04  | Máu nhân vật + dấu "!" báo quái sắp đánh           | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
+| F05  | Đẩy quái theo vũ khí (knockback)                   | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
+| F06  | Màn chơi nối tiếp + trùm Slime Vua                 | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
+| F07a | Rìu chém hai phía + màn 4 quái tới từ hai phía     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
+| F07  | Màn chuẩn bị trận: chọn mỗi tầm một vũ khí         | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
+| F08  | Skill bấm đánh cả sân + máu, hồi máu, chí mạng     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
+| F09  | Quái bắn xa Slime Pháo + màn 5                     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
+| F10  | Tự động cân bằng (mục tiêu, bot nhìn trước, dò số) | ✅ Xong    | `scripts/`, `logic/autoPlay.ts`, `logic/battleConfig.ts`       | `scripts/tuneCore.test.ts`, `logic/balance.test.ts`      |
+| F11  | Thắng bằng nhiệm vụ + quái ra theo đợt             | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | `logic/quest.test.ts`, như F01                           |
+| F12  | Thêm Slime Con, Slime Lao, Slime Ma + màn 6–7      | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | `logic/monsters.test.ts`, như F01                        |
+| F13  | Lưu tiến trình + vàng                              | ✅ Xong    | `src/features/profile/`, `battle/logic/battle.ts`              | `profile/logic/profile.test.ts`, `logic/gold.test.ts`    |
+| F14  | Nâng cấp nhân vật bằng vàng                        | ✅ Xong    | `battle/logic/upgrades.ts`, `battle/view/UpgradeScene.ts`      | `logic/upgrades.test.ts`, `view/upgradeLayout.test.ts`   |
+| F15  | Chủ đề Rừng rậm: 20 màn, 5 quái mới, bộ sinh màn   | ✅ Xong    | `logic/chapters.ts`, `battleConfig.ts`, `scripts/levelGen*.ts` | `logic/chapters.test.ts`, `scripts/levelGenCore.test.ts` |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -374,7 +375,7 @@ hồi máu, chí mạng làm luôn"):
    chí mạng < 1, hồi máu khi trúng 0 con hoặc hồi âm, màn mở skill âm, skill không tồn tại.
 
 **Hành vi giao diện:** ô skill là nút thứ 4 của thanh (rộng 72); chưa đầy thì chạm không làm gì. Quái
-băng nhuộm màu `cyan` (ra hơi tối vì Phaser nhuộm kiểu nhân màu — xem lại ở đợt đồ họa thật). Máy không có WebGL (Phaser rơi về Canvas) thì không nhuộm được — chỉ còn dấu hiệu là mất "!"; đồ họa thật sẽ thay bằng hình băng riêng. Màn chuẩn bị nhớ skill chọn gần nhất qua các màn chưa mở skill (vd. sau phá đảo) trong lúc đang chơi. Mô tả
+băng phủ kín màu `cyan` (F15: trước đó nhuộm kiểu nhân màu, quái xanh lá gần như không đổi). Máy không có WebGL (Phaser rơi về Canvas) thì không phủ màu được — chỉ còn dấu hiệu là mất "!"; đồ họa thật sẽ thay bằng hình băng riêng. Màn chuẩn bị nhớ skill chọn gần nhất qua các màn chưa mở skill (vd. sau phá đảo) trong lúc đang chơi. Mô tả
 skill / vũ khí trên màn chuẩn bị sinh từ con số (`describeSkill`, `describeWeapon` có "chí mạng 10%").
 
 **Con số** (`src/features/battle/logic/battleConfig.ts`, agent chọn bằng mô phỏng ngày 27/10/2026 theo ủy
@@ -748,11 +749,94 @@ không chập chờn). Chưa nâng cấp riêng từng vũ khí (có thể ở �
 
 **Nợ liên quan:** DEBT-009 (số chưa qua chơi thử).
 
+## F15 — Chủ đề Rừng rậm: 20 màn, 5 loại quái mới, bộ sinh màn
+
+**Người chơi thấy và làm gì:** game giờ có **20 màn** thuộc chủ đề đầu tiên **Rừng rậm**. Màn chuẩn bị ghi
+"MÀN 8/20" và "Rừng rậm · chọn đồ mang vào trận"; thanh trên trận ghi "Màn 8/20". Từ màn 8 gặp 5 loại quái
+rừng (không còn chỉ là slime), màn 10 và 20 là trùm **Người Cây**. Màn 1–7 giữ quái cũ nhưng số đã sinh
+lại theo đường độ khó mới.
+
+| Quái      | Máu | Đánh | Vàng | Đặc tính (dùng lại luật sẵn có)           | Hình                      |
+| --------- | --- | ---- | ---- | ----------------------------------------- | ------------------------- |
+| Yêu tinh  | 4   | 2    | 2    | —                                         | người lùn da xanh lá      |
+| Sói rừng  | 4   | 3    | 3    | lao 2 vòng (`step: 2`, như Slime Lao)     | sói xám mắt đỏ            |
+| Cung thủ  | 3   | 2    | 3    | bắn từ vòng 4 (`shootRing: 4`, như Pháo)  | yêu tinh đội mũ, cầm cung |
+| Dơi đêm   | 3   | 2    | 3    | vô hình lượt chẵn (`ghost`, như Slime Ma) | dơi tím sải cánh          |
+| Người Cây | 14  | 5    | 10   | trùm, tiến chậm (40%)                     | gốc cây có tán lá, 16×16  |
+
+**Luật** (chủ dự án duyệt 27/10/2026 — lượt duyệt chung "A–E", `docs/plans/2026-10-27-ke-hoach-sau-b6.md`
+mục 1b): không thêm cơ chế mới — 5 loại quái chỉ là con số trong `monsterKinds`. Slime không bao giờ là quái
+hiếm, không rơi đồ (đợt 5 dùng 5 loại mới này).
+
+1. **Chương** (`logic/chapters.ts` + test): `CHAPTERS` trong `battleConfig.ts` liệt kê chủ đề và số màn;
+   `chapterOf` đổi số màn toàn game thành "chủ đề + màn thứ mấy trong chủ đề". Tổng số màn của các chủ đề phải
+   bằng số màn trong cấu hình (sai thì từ chối). Thêm chủ đề Băng / Núi lửa = thêm 1 dòng + 20 màn.
+2. **Đường độ khó răng cưa** (mục tiêu thắng của bot ngắm chuẩn): màn 1 → 10 giảm dần 98% → 78% (trùm),
+   màn 11 → 20 bật lên 92% rồi giảm tới 72% (trùm cuối). Lượt dư mục tiêu = số đo thật làm tròn 0,25 (chủ
+   dự án chỉ chốt % thắng).
+3. **Dung sai hai lớp:** trung bình các skill ±5% thắng (như cũ); **mỗi skill** ±8% (`LOADOUT_TOLERANCE`) —
+   quái mới hợp skill khác nhau nên đòi ±5% cho từng skill thì gần như không màn nào đạt (đã thấy ở F12).
+4. Nâng cấp dự kiến (`assumedUpgrades`) tăng dần theo màn: tới màn 20 là Máu 3, Chí mạng 2, Hồi máu 2.
+5. Ba quan hệ độ khó cũ giữ nguyên (trùm màn 3 khó hơn màn 2, màn 4 khó hơn 3, màn 5 khó hơn 4).
+
+**Bộ sinh màn** (`npm run levelgen -- --levels 8-12 --games 200`): mỗi màn của chủ đề là một bản mô tả
+(`scripts/themeForest.ts`: mục tiêu, nâng cấp dự kiến, khoảng số quái mỗi loại, cụm, đợt, nhiệm vụ, khoảng
+số lượt). Máy thử mọi tổ hợp bằng bot ngắm chuẩn (`scripts/levelGenCore.ts`), in ra màn đạt mục tiêu lệch ít
+nhất — **không tự ghi** cấu hình, agent chép vào `battleConfig.ts`. Chủ đề mới = viết thêm một file bản mô tả.
+
+| Màn | Lượt | Mở màn (cụm)                                 | Đợt sau                         | Nhiệm vụ        | Mục tiêu (thắng / dư) |
+| --- | ---- | -------------------------------------------- | ------------------------------- | --------------- | --------------------- |
+| 1   | 13   | 4 Slime (±2)                                 | 2 Slime                         | hạ 5 Slime      | 98% / 3,5             |
+| 2   | 15   | 6 Slime (±3)                                 | 3 Slime                         | hạ 8 Slime      | 96% / 3,25            |
+| 3   | 6    | 1 Slime Vua + 4 Slime (±3)                   | —                               | hạ Slime Vua    | 94% / 1,25            |
+| 4   | 9    | 8 Slime (±4, hai phía)                       | —                               | hạ 8 Slime      | 91% / 1               |
+| 5   | 9    | 7 Slime + 1 Slime Pháo (±4)                  | 1 Slime + 1 Pháo                | hạ 2 Slime Pháo | 89% / 1               |
+| 6   | 9    | 1 Slime Lao + 5 Slime (±4)                   | 1 Lao + 3 Slime                 | hạ 2 Slime Lao  | 87% / 0,75            |
+| 7   | 9    | 1 Slime Ma + 5 Slime (±4)                    | 3 Slime Con + 1 Ma              | hạ 2 Slime Ma   | 85% / 1,25            |
+| 8   | 10   | 2 Yêu tinh + 3 Slime (±3)                    | 2 Yêu tinh + 2 Slime            | hạ 4 Yêu tinh   | 82% / 1,25            |
+| 9   | 8    | 2 Sói + 2 Yêu tinh (±4)                      | 1 Sói + 2 Yêu tinh              | hạ 3 Sói rừng   | 80% / 0,75            |
+| 10  | 9    | 1 Người Cây + 2 Yêu tinh (±3)                | —                               | hạ Người Cây    | 78% / 1,5             |
+| 11  | 9    | 2 Cung thủ + 3 Yêu tinh (±4)                 | 1 Cung thủ + 2 Yêu tinh         | hạ 3 Cung thủ   | 92% / 1,75            |
+| 12  | 11   | 1 Dơi + 4 Yêu tinh (±3)                      | 1 Dơi + 2 Slime                 | hạ 2 Dơi đêm    | 90% / 1,5             |
+| 13  | 9    | 4 Yêu tinh + 1 Sói (±3, hai phía)            | 1 Sói + 2 Yêu tinh              | hạ 4 Yêu tinh   | 88% / 1,75            |
+| 14  | 9    | 2 Cung thủ + 4 Yêu tinh (±4)                 | 1 Cung thủ + 1 Yêu tinh         | hạ 3 Cung thủ   | 85% / 1               |
+| 15  | 12   | 2 Dơi + 2 Sói + 2 Yêu tinh (±5)              | 1 Sói + 1 Dơi                   | hạ 3 Sói rừng   | 83% / 1,25            |
+| 16  | 13   | 3 Yêu tinh + 1 Cung thủ + 1 Dơi (±5)         | 2 Yêu tinh + 1 Cung thủ + 1 Dơi | hạ 5 Yêu tinh   | 81% / 1,25            |
+| 17  | 13   | 2 Sói + 4 Yêu tinh (±3, hai phía)            | 3 Sói                           | hạ 4 Sói rừng   | 79% / 1               |
+| 18  | 9    | 2 Cung thủ + 2 Dơi + 2 Yêu tinh (±4)         | 1 Cung thủ + 1 Dơi              | hạ 3 Cung thủ   | 76% / 0,75            |
+| 19  | 8    | 2 Yêu tinh + 2 Sói + 2 Cung thủ + 1 Dơi (±4) | 1 Sói + 1 Cung thủ + 2 Dơi      | hạ 2 Sói rừng   | 74% / 1               |
+| 20  | 9    | 1 Người Cây + 1 Sói (±3)                     | 3 Yêu tinh                      | hạ Người Cây    | 72% / 1,5             |
+
+Con số màn 1–7 ở các mục F06–F14 phía trên là số cũ lúc làm tính năng đó — số hiện hành là bảng này.
+Màn 4 chọn tay (8 slime, ±4, 9 lượt) vì bộ sinh màn không ra tổ hợp nào vừa đạt mục tiêu vừa giữ được quan hệ
+"màn 5 khó hơn màn 4" — đã dò mọi tổ hợp màn 4 nằm giữa màn 3 và 5 (script tạm).
+
+**Hành vi giao diện:** quái đang đóng băng (F08) giờ **phủ kín màu băng** (`setTintFill`) thay vì nhân màu:
+nhân màu băng lên quái xanh lá (Yêu tinh, Cung thủ) gần như không đổi màu — thử tay mới thấy.
+
+**Kiểm chứng tự động:**
+
+- Unit: `chapters.test.ts` (chương đầu / giữa / cuối, số màn lệch cấu hình bị từ chối);
+  `scripts/levelGenCore.test.ts` (5 test — liệt kê tổ hợp, bỏ tổ hợp bất khả thi, ưu tiên màn đạt rồi lệch
+  ít, chỉ khớp % thắng); `scripts/tuneCore.test.ts` (dung sai hai lớp); `balance.test.ts` (20 màn × mọi skill
+  với nâng cấp dự kiến, dung sai hai lớp, ba quan hệ độ khó). Cấu hình test thêm 5 loại quái.
+- E2E: ván chơi liền 20 màn dùng seed riêng `FULL_RUN_SEED = 1` và hồ sơ đã nâng cấp tối đa (seed 42 không
+  còn thắng đủ 20 màn — seed 1 là seed nhỏ nhất bot "Nhìn trước" thắng đủ, script dò tạm); ảnh
+  `25-quai-rung.png` (màn 8), `26-nguoi-cay-man-10.png`, `26-nguoi-cay-man-20.png`. Kiểm "hai phía" theo cụm
+  của từng màn. Ảnh mở màn chờ 300ms (50ms có lúc chụp khi hình chưa kịp vẽ). Test Mưa băng: lượt sau khi bấm
+  chém trượt (chém trúng mà xong nhiệm vụ thì thắng ngay, quái giữ nguyên băng — đúng luật, test cũ ngầm giả
+  định không xảy ra).
+- Thử tay khung 375×760: màn 8 — màn chuẩn bị ghi "MÀN 8/20 · Rừng rậm", nhiệm vụ "hạ 4 Yêu tinh"; chém, quái
+  rừng tiến vào; Mưa băng phủ băng cả Yêu tinh lẫn slime, hết 1 lượt về màu gốc; console không lỗi.
+
+**Giới hạn đã biết:** chưa có hình nền / màu sân riêng cho chủ đề. Số chưa qua chơi thử (DEBT-009).
+
+**Nợ liên quan:** DEBT-007 (hình quái lưới ký tự), DEBT-009.
+
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
-Trống. Việc tiếp theo nằm trong kế hoạch sau B6 (`docs/plans/2026-10-27-ke-hoach-sau-b6.md`, chủ dự án
-duyệt 27/10/2026): đợt 5 — quái hiếm, rơi đồ theo cấp màu, túi đồ, chờ chủ dự án trả lời các câu "Chủ dự án
-quyết".
+Trống. Việc tiếp theo nằm trong kế hoạch sau B6 (`docs/plans/2026-10-27-ke-hoach-sau-b6.md` mục 1b, chủ dự án
+duyệt 27/10/2026): đợt 5 — quái hiếm, rơi vũ khí 6 cấp màu, túi đồ; đợt 6 — cửa hàng.
 
 ## Mẫu cho tính năng mới (copy khối này)
 
