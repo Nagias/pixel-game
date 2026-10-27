@@ -11,6 +11,7 @@ const UPGRADES: UpgradeConfig = {
   hp: { name: 'Máu thử', perLevel: 2, costs: [10, 20, 40] },
   crit: { name: 'Chí mạng thử', perLevel: 0.05, costs: [10, 20, 40] },
   heal: { name: 'Hồi máu thử', perLevel: 1, costs: [5] },
+  luck: { name: 'May mắn thử', perLevel: 0.05, costs: [10, 20, 40] },
 };
 
 const BASE: BattleConfig = {

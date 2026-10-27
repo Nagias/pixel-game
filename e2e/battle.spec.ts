@@ -8,7 +8,12 @@ import {
   levelAt,
   willAttack,
 } from '../src/features/battle/logic/battle';
-import { BATTLE_CONFIG, UPGRADE_CONFIG } from '../src/features/battle/logic/battleConfig';
+import {
+  BATTLE_CONFIG,
+  LOOT_CONFIG,
+  UPGRADE_CONFIG,
+} from '../src/features/battle/logic/battleConfig';
+import { lootAfterBattle } from '../src/features/battle/logic/loot';
 import { withUpgrades } from '../src/features/battle/logic/upgrades';
 import {
   barButtonCount,
@@ -25,7 +30,9 @@ const SEED = 42;
 /**
  * Đợt 7: hai ván chơi liền cả chủ đề (20 màn) dùng seed riêng, với hồ sơ đã nâng cấp (như người chơi đã
  * tiêu vàng): seed 1 là seed nhỏ nhất mà bot "Nhìn trước" thắng đủ 20 màn với Mưa băng và màn cuối với Cầu
- * lửa (script dò tạm 27/10/2026). Đổi cân bằng mà không còn thắng đủ thì dò lại seed và ghi lý do trong PR.
+ * lửa (script dò tạm 27/10/2026). Đợt 5: dò lại khi có quái hiếm — đồ rơi giữa ván nâng cấp vũ khí cho các
+ * màn sau, bot tính theo cấu hình thật của trận (`snapshot.config`); seed 1 vẫn thắng đủ. Đổi cân bằng mà
+ * không còn thắng đủ thì dò lại seed và ghi lý do trong PR.
  */
 const FULL_RUN_SEED = 1;
 const FULL_RUN_UPGRADES = { hp: 3, crit: 3, heal: 3 };
@@ -60,7 +67,8 @@ async function playBestUntilOver(
     const [{ cast, move }, next] = lookaheadTurn(await game.snapshot(), rng);
     rng = next;
     if (cast) {
-      expect(canCastSkill((await game.snapshot()).battle, BATTLE_CONFIG)).toBe(true);
+      const ready = await game.snapshot();
+      expect(canCastSkill(ready.battle, ready.config)).toBe(true);
       await game.castSkill();
       if ((await game.snapshot()).battle.phase !== 'playing') break;
     }
@@ -68,7 +76,7 @@ async function playBestUntilOver(
     await beforeStrike?.(before);
     // F12: quái ma đang vô hình thì nhát chém đi xuyên qua.
     const hidden = before.battle.monsters
-      .filter((m) => !canBeHit(m, before.battle, BATTLE_CONFIG))
+      .filter((m) => !canBeHit(m, before.battle, before.config))
       .map((m) => m.id);
     await game.play(move);
 
@@ -76,8 +84,9 @@ async function playBestUntilOver(
     const hits = lastAttack?.hits ?? [];
     expect(hits.filter((hit) => hidden.includes(hit.monsterId))).toEqual([]);
     // B6: nhát chí mạng nhân hệ số cho mọi con trúng.
-    const multiplier = lastAttack?.crit ? BATTLE_CONFIG.critMultiplier : 1;
-    const weaponDamage = (BATTLE_CONFIG.weapons[move.weaponIndex]?.damage ?? 0) * multiplier;
+    // Đợt 5: sát thương vũ khí theo cấu hình thật của trận (vũ khí cấp cao có thể +1 sát thương).
+    const multiplier = lastAttack?.crit ? before.config.critMultiplier : 1;
+    const weaponDamage = (before.config.weapons[move.weaponIndex]?.damage ?? 0) * multiplier;
     expect(hits.map((hit) => hit.damage)).toEqual(hits.map((_, i) => weaponDamage * (i + 1)));
     mostHitsInOneStrike = Math.max(mostHitsInOneStrike, hits.length);
   }
@@ -666,4 +675,76 @@ test('B6: màn chuẩn bị nhớ skill đã chọn qua các màn chưa có skil
     level: BATTLE_CONFIG.skillUnlockLevel,
     loadout: { skill: 'fireball' },
   });
+});
+
+/**
+ * Đợt 5: seed 34 ở màn 16 — có quái hiếm và bot "Nhìn trước" (hồ sơ nâng cấp như ván chơi liền) hạ được nó
+ * rồi thắng (script dò tạm 27/10/2026). Màn 3–8 không có quái hiếm: ngoài loại nhiệm vụ chỉ có slime.
+ */
+const RARE_SEED = 34;
+const RARE_LEVEL = 16;
+
+test('Đợt 5: quái hiếm sáng lên, máu ×2; hạ nó thì (bảo hiểm) chắc rơi vũ khí từ Sử thi — lưu vĩnh viễn, màn chuẩn bị hiện cấp màu', async ({
+  page,
+}) => {
+  test.slow();
+  const game = new BattleDriver(page);
+  // Đã hụt 3 lần liền và 29 món liền dưới Sử thi: lần này chắc rơi, chắc từ Sử thi trở lên.
+  const pity = { dryRareKills: 3, dropsSinceHighTier: 29 };
+  await game.seedProfile({
+    unlockedLevel: RARE_LEVEL - 1,
+    upgrades: FULL_RUN_UPGRADES,
+    lootPity: pity,
+  });
+  await game.openLoadout(RARE_SEED, RARE_LEVEL);
+  await game.startBattle();
+  const start = (await game.snapshot()).battle;
+  const rares = start.monsters.filter((m) => m.rare);
+  expect(rares).toHaveLength(1);
+  const [rare] = rares;
+  if (!rare) throw new Error('Thiếu quái hiếm');
+  expect(BATTLE_CONFIG.monsterKinds[rare.kind].canBeRare).toBe(true);
+  expect(rare.hp).toBe(BATTLE_CONFIG.monsterKinds[rare.kind].hp * 2);
+  await game.advance(LEVEL_DRAWN_MS);
+  await page.screenshot({ path: test.info().outputPath('27-quai-hiem.png') });
+
+  await playBestUntilOver(game, undefined, RARE_SEED);
+  const end = await game.snapshot();
+  expect(end.battle).toMatchObject({ phase: 'won', rareKilled: true });
+  // Món rơi đúng luật (logic/loot.ts) và từ Sử thi trở lên nhờ bảo hiểm cấp cao.
+  const expected = lootAfterBattle(end.battle, pity, FULL_RUN_CONFIG, LOOT_CONFIG).drop;
+  expect(end.drop).toEqual(expected);
+  const drop = end.drop;
+  if (!drop) throw new Error('Bảo hiểm phải làm rơi đồ');
+  expect(drop.tier).toBeGreaterThanOrEqual(LOOT_CONFIG.highTier);
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('28-roi-do.png') });
+  expect(await game.storedProfile()).toMatchObject({
+    weaponTiers: { [drop.weapon]: drop.tier },
+    lootPity: { dryRareKills: 0, dropsSinceHighTier: 0 },
+  });
+
+  // Chạm đi tiếp: màn chuẩn bị màn sau — vũ khí vừa rơi hiện cấp màu.
+  await game.advance(RESULT_SCREEN_WAIT_MS);
+  await game.tap();
+  await game.waitSceneSwitch();
+  const prep = await game.waitLoadoutReady();
+  expect(prep.tiers[drop.weapon]).toBe(drop.tier);
+  await page.screenshot({ path: test.info().outputPath('29-tui-do.png') });
+});
+
+test('Đợt 5: vũ khí có cấp màu — màn chuẩn bị và thanh vũ khí ghi tên cấp; cấp Thần có sét quanh nút', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  // Kiếm Thần, Giáo Sử thi, Cung Hiếm, Rìu chưa rơi.
+  await game.seedProfile({ unlockedLevel: 2, weaponTiers: { 0: 5, 1: 3, 2: 2 } });
+  await game.openLoadout(SEED, 3);
+  const prep = await game.waitLoadoutReady();
+  expect(prep.tiers).toEqual([5, 3, 2, 0]);
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('30-cap-vu-khi.png') });
+  await game.startBattle();
+  await game.advance(LEVEL_DRAWN_MS);
+  await page.screenshot({ path: test.info().outputPath('31-thanh-vu-khi-cap.png') });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BATTLE_CONFIG } from './battleConfig';
+import { BATTLE_CONFIG, LOOT_CONFIG } from './battleConfig';
 import type { BattleConfig, WeaponConfig } from './battleTypes';
 import {
   allLoadouts,
@@ -149,6 +149,13 @@ describe('B4 — đồ mang vào trận', () => {
     expect(describeWeapon(weapon('Gậy', 'mid', { critChance: 0.1 }))).toBe(
       'Gậy: vòng 0–1, rộng 3 lát, không đẩy, chí mạng 10%',
     );
+    // Đợt 5: vũ khí có cấp màu thì ghi tên cấp; sát thương trên 1 thì ghi sát thương.
+    expect(
+      describeWeapon(
+        weapon('Gậy', 'mid', { tier: 4, damage: 2, widthSectors: 5, critChance: 0.25 }),
+        LOOT_CONFIG,
+      ),
+    ).toBe('Gậy Huyền thoại: vòng 0–1, rộng 5 lát, không đẩy, chí mạng 25%, sát thương 2');
   });
 });
 

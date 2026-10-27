@@ -51,11 +51,18 @@ function effectValue(kind: UpgradeKind, levels: UpgradeLevels): string {
       return String(config.hero.healAmount);
     case 'crit':
       return `${Math.round((config.weapons[0]?.critChance ?? 0) * 100)}%`;
+    case 'luck':
+      return `${Math.round((config.rare?.chance ?? 0) * 100)}%`;
   }
 }
 
 /** Đơn vị viết sau con số hiệu lực. */
-const EFFECT_UNIT: Record<UpgradeKind, string> = { hp: ' máu', heal: ' máu mỗi lần', crit: '' };
+const EFFECT_UNIT: Record<UpgradeKind, string> = {
+  hp: ' máu',
+  heal: ' máu mỗi lần',
+  crit: '',
+  luck: ' trận có quái hiếm',
+};
 
 export class UpgradeScene extends Scene {
   /** Màn chuẩn bị để quay lại (màn sắp chơi + bộ đồ đang chọn). */

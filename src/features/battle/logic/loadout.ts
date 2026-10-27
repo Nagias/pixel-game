@@ -4,6 +4,7 @@ import {
   WEAPON_SLOTS,
   type BattleConfig,
   type Loadout,
+  type LootConfig,
   type PushDirection,
   type SkillConfig,
   type SkillKind,
@@ -107,8 +108,11 @@ const PUSH_LABEL: Record<PushDirection, string> = {
   clockwise: 'đẩy lệch phải',
 };
 
-/** Một dòng mô tả món trên màn chuẩn bị, sinh từ con số cấu hình (thêm vũ khí không phải viết tay). */
-export function describeWeapon(weapon: WeaponConfig): string {
+/**
+ * Một dòng mô tả món trên màn chuẩn bị, sinh từ con số cấu hình (thêm vũ khí không phải viết tay). Đợt 5:
+ * món có cấp màu thì ghi tên cấp (lấy trong bảng rơi `loot`).
+ */
+export function describeWeapon(weapon: WeaponConfig, loot?: LootConfig): string {
   const parts = [
     `vòng ${weapon.minRing}–${weapon.maxRing}`,
     `rộng ${weapon.widthSectors} lát`,
@@ -117,8 +121,10 @@ export function describeWeapon(weapon: WeaponConfig): string {
     ...((weapon.critChance ?? 0) > 0
       ? [`chí mạng ${Math.round((weapon.critChance ?? 0) * 100)}%`]
       : []),
+    ...(weapon.damage > 1 ? [`sát thương ${weapon.damage}`] : []),
   ];
-  return `${weapon.name}: ${parts.join(', ')}`;
+  const tier = weapon.tier ? loot?.tiers[weapon.tier]?.name : undefined;
+  return `${weapon.name}${tier ? ` ${tier}` : ''}: ${parts.join(', ')}`;
 }
 
 // ---------- B6: skill ----------

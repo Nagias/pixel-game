@@ -29,6 +29,10 @@ export function validateUpgradeConfig(upgrades: UpgradeConfig, config: BattleCon
       if (!(perLevel >= 0 && strongest + perLevel * costs.length <= 1)) {
         problems.push(`"${name}": chí mạng ở cấp tối đa phải trong [0, 1]`);
       }
+    } else if (kind === 'luck') {
+      if (!(perLevel >= 0 && (config.rare?.chance ?? 0) + perLevel * costs.length <= 1)) {
+        problems.push(`"${name}": xác suất quái hiếm ở cấp tối đa phải trong [0, 1]`);
+      }
     } else if (!Number.isInteger(perLevel) || perLevel < 0) {
       problems.push(`"${name}": mỗi cấp phải cộng số nguyên ≥ 0`);
     }
@@ -38,7 +42,7 @@ export function validateUpgradeConfig(upgrades: UpgradeConfig, config: BattleCon
   }
 }
 
-/** Cấu hình trận sau khi cộng các cấp đã nâng: máu tối đa, chí mạng mọi vũ khí, máu hồi. */
+/** Cấu hình trận sau khi cộng các cấp đã nâng: máu tối đa, chí mạng mọi vũ khí, máu hồi, may mắn (đợt 5). */
 export function withUpgrades(
   config: BattleConfig,
   levels: UpgradeLevels,
@@ -58,6 +62,9 @@ export function withUpgrades(
       ...weapon,
       critChance: (weapon.critChance ?? 0) + bonus('crit'),
     })),
+    ...(config.rare
+      ? { rare: { ...config.rare, chance: config.rare.chance + bonus('luck') } }
+      : {}),
   };
 }
 

@@ -83,6 +83,20 @@ function validateBattleConfig(config: BattleConfig): void {
       problems.push(`${label}: số vòng lao ${rule.step} phải là số nguyên ≥ 1`);
     }
   }
+  if (config.rare) {
+    const { fromLevel, chance, hpMultiplier, goldMultiplier } = config.rare;
+    if (!Number.isInteger(fromLevel) || fromLevel < 0) {
+      problems.push('màn mở quái hiếm phải là số nguyên ≥ 0');
+    }
+    if (!(chance >= 0 && chance <= 1))
+      problems.push(`xác suất quái hiếm ${chance} nằm ngoài [0, 1]`);
+    if (!Number.isInteger(hpMultiplier) || hpMultiplier < 1) {
+      problems.push('hệ số máu quái hiếm phải là số nguyên ≥ 1');
+    }
+    if (!Number.isInteger(goldMultiplier) || goldMultiplier < 1) {
+      problems.push('hệ số vàng quái hiếm phải là số nguyên ≥ 1');
+    }
+  }
   if (config.hero.hp < 1) problems.push('nhân vật phải có ít nhất 1 máu');
   if (!Number.isInteger(config.hero.healMinHits) || config.hero.healMinHits < 1) {
     problems.push('hồi máu phải cần ít nhất 1 con trúng');
@@ -250,7 +264,7 @@ export function createBattle(
     );
   }
   const levelConfig = levelAt(level, config);
-  const [monsters, rng] = placeLineup(
+  const [lineup, rng] = placeLineup(
     seedRng(seed),
     levelConfig.monsters,
     1,
@@ -258,6 +272,7 @@ export function createBattle(
     new Set(),
     config,
   );
+  const monsters = withRare(seed, lineup, level, config);
 
   return {
     seed,
@@ -288,13 +303,54 @@ function questProgressAfter(state: BattleState, hits: readonly Hit[], level: Lev
   return state.questProgress + killed.length;
 }
 
-/** Đợt 3: vàng sau khi các quái trong `hits` trúng đòn — cộng vàng theo loại của từng con bị hạ. */
-function goldAfter(state: BattleState, hits: readonly Hit[], config: BattleConfig): number {
-  const kindById = new Map(state.monsters.map((m) => [m.id, m.kind]));
-  return hits.reduce((sum, hit) => {
-    const kind = kindById.get(hit.monsterId);
-    return hit.killed && kind !== undefined ? sum + (config.monsterKinds[kind].gold ?? 0) : sum;
+/**
+ * Đợt 3: vàng sau khi các quái trong `hits` trúng đòn — cộng vàng theo loại của từng con bị hạ. Đợt 5:
+ * quái hiếm cho vàng × goldMultiplier và đánh dấu trận đã hạ quái hiếm.
+ */
+function rewardsAfter(
+  state: BattleState,
+  hits: readonly Hit[],
+  config: BattleConfig,
+): { gold: number; rareKilled?: boolean } {
+  const byId = new Map(state.monsters.map((m) => [m.id, m]));
+  const killed = hits.flatMap((hit) => {
+    const monster = byId.get(hit.monsterId);
+    return hit.killed && monster ? [monster] : [];
+  });
+  const gold = killed.reduce((sum, m) => {
+    const base = config.monsterKinds[m.kind].gold ?? 0;
+    return sum + (m.rare ? base * (config.rare?.goldMultiplier ?? 1) : base);
   }, state.gold);
+  return killed.some((m) => m.rare) ? { gold, rareKilled: true } : { gold };
+}
+
+/** Dòng ngẫu nhiên riêng để chọn quái hiếm (tách khỏi dòng của trận): có hay không thì ván vẫn như nhau. */
+const RARE_STREAM = 0x52415245;
+
+/**
+ * Đợt 5: từ màn `rare.fromLevel`, xác suất `rare.chance` một con của đội hình mở màn hóa hiếm (máu ×
+ * hpMultiplier) — chỉ loại `canBeRare`, không phải loại của nhiệm vụ (quái hiếm không bao giờ cần để
+ * thắng); màn không có nhiệm vụ (phải diệt sạch) thì không có.
+ */
+function withRare(
+  seed: number,
+  monsters: Monster[],
+  level: number,
+  config: BattleConfig,
+): Monster[] {
+  const { rare } = config;
+  const { quest } = levelAt(level, config);
+  if (!rare || !quest || level < rare.fromLevel) return monsters;
+  const candidates = monsters.filter(
+    (m) => config.monsterKinds[m.kind].canBeRare && m.kind !== quest.kind,
+  );
+  const [roll, afterRoll] = nextFloat(seedRng(seed + RARE_STREAM));
+  if (candidates.length === 0 || !(roll < rare.chance)) return monsters;
+  const [pick] = nextInt(afterRoll, candidates.length);
+  const chosen = candidates[pick];
+  return monsters.map((m) =>
+    m === chosen ? { ...m, hp: m.hp * rare.hpMultiplier, rare: true } : m,
+  );
 }
 
 /**
@@ -435,8 +491,8 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
     skill === undefined ? 0 : Math.min(state.skillCharge + 1, config.skills[skill].chargeTurns);
   const level = levelAt(state.level, config);
   const questProgress = questProgressAfter(state, hits, level);
-  const gold = goldAfter(state, hits, config);
-  const common = { turnsLeft, skillCharge, lastAttack, lastSkill: null, questProgress, gold };
+  const rewards = rewardsAfter(state, hits, config);
+  const common = { turnsLeft, skillCharge, lastAttack, lastSkill: null, questProgress, ...rewards };
 
   // F11: xong nhiệm vụ thì thắng ngay — quái còn lại không đánh, không đi nữa.
   if (isLevelCleared(level, questProgress, survivors, state.nextWave)) {
@@ -601,8 +657,8 @@ export function castSkill(state: BattleState, config: BattleConfig): BattleState
   const lastSkill = { skill: kind, hits };
   const level = levelAt(state.level, config);
   const questProgress = questProgressAfter(state, hits, level);
-  const gold = goldAfter(state, hits, config);
-  const after = { ...state, monsters, skillCharge: 0, lastSkill, questProgress, gold };
+  const rewards = rewardsAfter(state, hits, config);
+  const after = { ...state, monsters, skillCharge: 0, lastSkill, questProgress, ...rewards };
 
   if (isLevelCleared(level, questProgress, monsters, state.nextWave)) {
     return { ...after, phase: 'won', lossReason: null };

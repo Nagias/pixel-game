@@ -23,6 +23,7 @@
 | F13  | Lưu tiến trình + vàng                              | ✅ Xong    | `src/features/profile/`, `battle/logic/battle.ts`              | `profile/logic/profile.test.ts`, `logic/gold.test.ts`    |
 | F14  | Nâng cấp nhân vật bằng vàng                        | ✅ Xong    | `battle/logic/upgrades.ts`, `battle/view/UpgradeScene.ts`      | `logic/upgrades.test.ts`, `view/upgradeLayout.test.ts`   |
 | F15  | Chủ đề Rừng rậm: 20 màn, 5 quái mới, bộ sinh màn   | ✅ Xong    | `logic/chapters.ts`, `battleConfig.ts`, `scripts/levelGen*.ts` | `logic/chapters.test.ts`, `scripts/levelGenCore.test.ts` |
+| F16  | Quái hiếm, may mắn, rơi vũ khí 6 cấp màu, túi đồ   | ✅ Xong    | `logic/loot.ts`, `logic/battle.ts`, `view/weaponTierStyle.ts`  | `logic/loot.test.ts`, `logic/rare.test.ts`               |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -797,7 +798,7 @@ nhất — **không tự ghi** cấu hình, agent chép vào `battleConfig.ts`. 
 | 9   | 8    | 2 Sói + 2 Yêu tinh (±4)                      | 1 Sói + 2 Yêu tinh              | hạ 3 Sói rừng   | 80% / 0,75            |
 | 10  | 9    | 1 Người Cây + 2 Yêu tinh (±3)                | —                               | hạ Người Cây    | 78% / 1,5             |
 | 11  | 9    | 2 Cung thủ + 3 Yêu tinh (±4)                 | 1 Cung thủ + 2 Yêu tinh         | hạ 3 Cung thủ   | 92% / 1,75            |
-| 12  | 11   | 1 Dơi + 4 Yêu tinh (±3)                      | 1 Dơi + 2 Slime                 | hạ 2 Dơi đêm    | 90% / 1,5             |
+| 12  | 9    | 1 Dơi + 3 Yêu tinh (±5) — F16 sinh lại       | 1 Dơi + 2 Slime                 | hạ 2 Dơi đêm    | 90% / 1,25            |
 | 13  | 9    | 4 Yêu tinh + 1 Sói (±3, hai phía)            | 1 Sói + 2 Yêu tinh              | hạ 4 Yêu tinh   | 88% / 1,75            |
 | 14  | 9    | 2 Cung thủ + 4 Yêu tinh (±4)                 | 1 Cung thủ + 1 Yêu tinh         | hạ 3 Cung thủ   | 85% / 1               |
 | 15  | 12   | 2 Dơi + 2 Sói + 2 Yêu tinh (±5)              | 1 Sói + 1 Dơi                   | hạ 3 Sói rừng   | 83% / 1,25            |
@@ -833,10 +834,87 @@ nhân màu băng lên quái xanh lá (Yêu tinh, Cung thủ) gần như không �
 
 **Nợ liên quan:** DEBT-007 (hình quái lưới ký tự), DEBT-009.
 
+## F16 — Quái hiếm, may mắn, rơi vũ khí 6 cấp màu, túi đồ
+
+**Người chơi thấy và làm gì:** thỉnh thoảng một con quái rừng **phát sáng vàng và phập phồng** — quái hiếm:
+trâu gấp đôi, hạ được nhiều vàng gấp ba và có thể **rơi vũ khí**. Màn kết quả ghi "Rơi: Giáo Sử thi!" tô màu
+cấp (hoặc "Quái hiếm không rơi đồ lần này"). Vũ khí rơi là **vĩnh viễn**: màn chuẩn bị và thanh vũ khí trong
+trận ghi tên cấp màu dưới tên vũ khí, dòng mô tả cộng đúng chỉ số; cấp **Thần** có sét chớp quanh nút. Màn
+Nâng cấp có thêm hàng **May mắn** (tăng xác suất gặp quái hiếm).
+
+**Luật** (chủ dự án duyệt 27/10/2026 — lượt duyệt chung, `docs/plans/2026-10-27-ke-hoach-sau-b6.md` mục 1b;
+nguồn sự thật: `logic/battle.ts` `withRare` / `rewardsAfter`, `logic/loot.ts`, test cạnh bên):
+
+1. **Quái hiếm** (`rare` trong `BATTLE_CONFIG`): từ màn 3, mỗi trận 15% có **một** con của đội hình mở màn
+   hóa hiếm — chỉ loại `canBeRare` (Yêu tinh, Sói rừng, Cung thủ, Dơi đêm; **slime và trùm không bao giờ**) và
+   **không phải loại của nhiệm vụ** (không bao giờ cần để thắng). Máu ×2, vàng ×3. Màn không có nhiệm vụ thì
+   không có quái hiếm. Chọn quái hiếm bằng dòng ngẫu nhiên riêng tính từ seed: có hay không thì ván vẫn như
+   nhau.
+2. **May mắn** (nâng cấp): +5% xác suất quái hiếm mỗi cấp, 3 cấp, 10 / 20 / 40 vàng.
+3. **Rơi đồ** (`LOOT_CONFIG`): hạ quái hiếm → 50% rơi một vũ khí, loại **tạm ngẫu nhiên đều** trong 4 vũ khí
+   (bảng rơi theo loài chủ dự án chốt sau — chỉ sửa dữ liệu). Cấp theo tỉ lệ:
+
+   | Cấp         | Màu chữ               | Cộng thêm so với vũ khí gốc                   | Tỉ lệ |
+   | ----------- | --------------------- | --------------------------------------------- | ----- |
+   | Thường      | trắng                 | —                                             | 40%   |
+   | Tốt         | xanh lá               | +5% chí mạng                                  | 28%   |
+   | Hiếm        | xanh dương            | +10% chí mạng                                 | 17%   |
+   | Sử thi      | tím (viền trắng)      | +10% chí mạng, rộng thêm 2 lát                | 10%   |
+   | Huyền thoại | cam                   | +15% chí mạng, rộng thêm 2 lát, +1 sát thương | 4%    |
+   | Thần        | đỏ (viền trắng) + sét | +20% chí mạng, rộng thêm 2 lát, +1 sát thương | 1%    |
+
+4. **Bảo hiểm:** hụt 3 quái hiếm liền → con thứ 4 chắc rơi; 29 món liền dưới Sử thi → món thứ 30 chắc từ Sử
+   thi trở lên (tung trong nhóm cao theo tỉ lệ 10 : 4 : 1). Bộ đếm lưu trong hồ sơ, rơi lúc hết trận (thắng hay
+   thua đều tính).
+5. **Túi đồ:** mỗi vũ khí giữ **cấp cao nhất đã rơi** (cấp cao hơn luôn mạnh hơn nên không cần chọn cấp); món
+   rơi thấp hơn hoặc bằng thì ghi "(đã có)". `withWeaponTiers` trả cấu hình trận đã cộng chỉ số (như
+   `withUpgrades`), trận chạy y như cũ.
+6. Hồ sơ lên **phiên bản 3** (`weaponTiers`, `lootPity`); hồ sơ bản 1 và 2 tự chuyển lên, không mất gì.
+7. Cấu hình sai bị từ chối: xác suất ngoài [0, 1], hệ số máu / vàng không nguyên hoặc < 1; bảng rơi không có
+   cấp, tỉ lệ không cộng 100%, rộng thêm số lẻ (vùng đánh phải rộng số lẻ), chí mạng vượt 100%, bảo hiểm sai.
+
+**Thực tế khi chơi** (đo bằng script tạm, 300 ván mỗi màn, bot ngắm chuẩn): quái hiếm chỉ có từ **màn 9**
+(màn 3–8 ngoài loại nhiệm vụ chỉ có slime). Ở màn 9–20 khoảng 4–5% số trận hạ được quái hiếm (người chơi phải
+chủ động hạ nó trước khi xong nhiệm vụ) → tính cả bảo hiểm, cỡ **20 trận một món**; Sử thi trở lên chắc chắn
+sau tối đa 30 món.
+
+**Cân bằng:** mô phỏng giờ có quái hiếm (15% trận). Màn 12 tụt khỏi dung sai (Cầu lửa 80% so với mục tiêu
+90% ± 8%) → sinh lại bằng `npm run levelgen` (4 quái mở màn, cụm ±5, 9 lượt, mục tiêu dư 1,25); 19 màn khác
+vẫn đạt.
+
+| File                       | Vai trò                                                           |
+| -------------------------- | ----------------------------------------------------------------- |
+| `logic/loot.ts`            | Cấp màu lên cấu hình, tung rơi đồ, bảo hiểm, nhận món, đọc bộ đếm |
+| `logic/battle.ts`          | Chọn quái hiếm lúc mở trận; vàng ×3 và đánh dấu đã hạ quái hiếm   |
+| `view/weaponTierStyle.ts`  | Màu chữ theo cấp, sét quanh nút cấp Thần                          |
+| `profile/logic/profile.ts` | Hồ sơ phiên bản 3, ghi cấp vũ khí + bảo hiểm sau trận             |
+
+**Kiểm chứng tự động:**
+
+- Unit: `loot.test.ts` (bảng thật, cộng chỉ số theo cấp, dữ liệu lạ, không tụt cấp, 8 kiểu bảng sai, rơi theo
+  tỉ lệ, bảo hiểm 3 lần và 30 món, tỉ lệ cấp 10 000 lần, loại vũ khí đều, lặp lại được); `rare.test.ts` (một
+  con duy nhất, máu ×2, không slime / không loại nhiệm vụ / không màn diệt sạch, xác suất 0 và ~15%, ván không
+  đổi, cấu hình sai, bảng thật, may mắn +5%, vàng ×3 khi chém và khi skill); `profile.test.ts` (bản 2 → 3, dữ
+  liệu đồ rơi lạ, ghi đồ rơi sau trận); `loadout.test.ts` (mô tả có tên cấp và sát thương);
+  `upgradeLayout.test.ts` (4 hàng vừa màn hình).
+- E2E: seed 34 màn 16 (bảo hiểm đặt sẵn) — có đúng 1 quái hiếm máu ×2 (ảnh `27-quai-hiem.png`), bot hạ nó và
+  thắng, món rơi đúng luật và từ Sử thi (ảnh `28-roi-do.png`), hồ sơ lưu cấp + bảo hiểm về 0, màn chuẩn bị màn
+  sau hiện cấp (ảnh `29-tui-do.png`); hồ sơ có Kiếm Thần / Giáo Sử thi / Cung Hiếm → màn chuẩn bị và thanh vũ
+  khí ghi đúng cấp, có sét (ảnh `30-cap-vu-khi.png`, `31-thanh-vu-khi-cap.png`). Bot của test tính nước đi
+  theo cấu hình thật của trận (`snapshot.config`) vì đồ rơi giữa ván làm vũ khí đổi chỉ số.
+- Thử tay khung 375×760: hồ sơ phiên bản 2 (100 vàng) mở ra đủ vàng và màn; màn Nâng cấp 4 hàng, mua May mắn
+  15% → 20%, hồ sơ lưu bản 3; vào màn 16 thấy Dơi đêm hiếm phát sáng; console không lỗi.
+
+**Giới hạn đã biết:** món rơi không cao hơn món đang có là phí (40% là cấp Thường — trùng vũ khí gốc). Sét và
+ánh sáng là hình khối tạm; máy không có WebGL thì quái hiếm chỉ phập phồng, không phát sáng. Bảng Sweetie 16
+không có tím sáng nên Sử thi dùng tím đậm + viền trắng.
+
+**Nợ liên quan:** DEBT-007 (hình tạm), DEBT-009 (số chưa qua chơi thử).
+
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
 Trống. Việc tiếp theo nằm trong kế hoạch sau B6 (`docs/plans/2026-10-27-ke-hoach-sau-b6.md` mục 1b, chủ dự án
-duyệt 27/10/2026): đợt 5 — quái hiếm, rơi vũ khí 6 cấp màu, túi đồ; đợt 6 — cửa hàng.
+duyệt 27/10/2026): đợt 6 — cửa hàng (4 món Hiếm, 25 vàng, dùng 5 trận).
 
 ## Mẫu cho tính năng mới (copy khối này)
 

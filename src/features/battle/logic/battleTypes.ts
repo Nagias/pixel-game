@@ -33,6 +33,8 @@ export interface WeaponConfig {
   readonly twoSided?: boolean;
   /** B6: xác suất (0–1) một nhát chém trúng quái là chí mạng (sát thương × critMultiplier). Mặc định 0. */
   readonly critChance?: number;
+  /** Đợt 5: cấp màu (chỉ số trong LootConfig.tiers) — đã cộng chỉ số của cấp. Không có = Thường (0). */
+  readonly tier?: number;
 }
 
 /** B6: các skill đánh cả sân (AOE). Thêm skill = thêm tên ở đây + con số trong battleConfig.ts. */
@@ -80,7 +82,58 @@ export interface MonsterConfig {
   readonly ghost?: boolean;
   /** Đợt 3: số vàng người chơi nhận khi hạ một con loại này (chém hay skill). Không có = 0. */
   readonly gold?: number;
+  /** Đợt 5: loại này có thể hóa quái hiếm (slime và trùm thì không). Không có = không. */
+  readonly canBeRare?: boolean;
 }
+
+/**
+ * Đợt 5: quái hiếm — từ màn `fromLevel` (đếm từ 0), mỗi trận xác suất `chance` có MỘT con (loại
+ * `canBeRare`, không phải loại của nhiệm vụ) hóa hiếm: máu × hpMultiplier, vàng × goldMultiplier.
+ */
+export interface RareConfig {
+  readonly fromLevel: number;
+  readonly chance: number;
+  readonly hpMultiplier: number;
+  readonly goldMultiplier: number;
+}
+
+/** Đợt 5: một cấp màu vũ khí — chỉ cộng chỉ số so với vũ khí gốc; `dropRate` là tỉ lệ cấp khi rơi đồ. */
+export interface WeaponTier {
+  readonly name: string;
+  readonly critBonus: number;
+  readonly widthBonus: number;
+  readonly damageBonus: number;
+  readonly dropRate: number;
+}
+
+/**
+ * Đợt 5: rơi đồ khi hạ quái hiếm. `dropChance` — xác suất rơi; hụt `dryPity` lần liền thì lần kế chắc
+ * rơi; `highPity` món liền dưới cấp `highTier` thì món thứ `highPity` chắc từ cấp đó trở lên.
+ */
+export interface LootConfig {
+  readonly dropChance: number;
+  readonly dryPity: number;
+  readonly highTier: number;
+  readonly highPity: number;
+  readonly tiers: readonly WeaponTier[];
+}
+
+/** Đợt 5: bộ đếm bảo hiểm rơi đồ (lưu trong hồ sơ). */
+export interface LootPity {
+  /** Số quái hiếm đã hạ liền mà không rơi gì. */
+  readonly dryRareKills: number;
+  /** Số món đã rơi liền mà dưới cấp `highTier`. */
+  readonly dropsSinceHighTier: number;
+}
+
+/** Đợt 5: một món rơi — vũ khí (chỉ số trong config.weapons) ở cấp nào. */
+export interface Drop {
+  readonly weapon: number;
+  readonly tier: number;
+}
+
+/** Đợt 5: cấp cao nhất đã có của từng vũ khí (khóa = chỉ số vũ khí) — dữ liệu hồ sơ, có thể lạ. */
+export type WeaponTiers = Readonly<Record<string, number>>;
 
 export interface HeroConfig {
   /** F04: máu ban đầu (và tối đa) của nhân vật. */
@@ -102,13 +155,16 @@ export interface Difficulty {
 }
 
 /** Đợt 4: các chỉ số nâng cấp được bằng vàng. Thêm chỉ số = thêm tên ở đây + con số + hiệu lực ở upgrades.ts. */
-export type UpgradeKind = 'hp' | 'crit' | 'heal';
+export type UpgradeKind = 'hp' | 'crit' | 'heal' | 'luck';
 
-export const UPGRADE_KINDS: readonly UpgradeKind[] = ['hp', 'crit', 'heal'];
+export const UPGRADE_KINDS: readonly UpgradeKind[] = ['hp', 'crit', 'heal', 'luck'];
 
 export interface UpgradeStat {
   readonly name: string;
-  /** Hiệu lực mỗi cấp: hp — máu tối đa; crit — xác suất chí mạng (0–1) cộng cho mọi vũ khí; heal — máu hồi. */
+  /**
+   * Hiệu lực mỗi cấp: hp — máu tối đa; crit — xác suất chí mạng (0–1) cộng cho mọi vũ khí; heal — máu hồi;
+   * luck (đợt 5) — xác suất có quái hiếm (0–1).
+   */
   readonly perLevel: number;
   /** Giá vàng của từng cấp, theo thứ tự (cấp 1, cấp 2…); số phần tử = cấp tối đa. */
   readonly costs: readonly number[];
@@ -169,6 +225,8 @@ export interface BattleConfig {
   readonly skills: Readonly<Record<SkillKind, SkillConfig>>;
   /** B6: màn đầu tiên (đếm từ 0) được mang skill vào trận. */
   readonly skillUnlockLevel: number;
+  /** Đợt 5: quái hiếm. Không có = không bao giờ có quái hiếm. */
+  readonly rare?: RareConfig;
   /** F06: các màn theo thứ tự chơi; thắng màn cuối là phá đảo. */
   readonly levels: readonly LevelConfig[];
 }
@@ -196,6 +254,8 @@ export interface Monster extends Cell {
   readonly hp: number;
   /** B6: số lượt còn bị đóng băng (đứng im, không đánh). Không có = không bị băng. */
   readonly frozenTurns?: number;
+  /** Đợt 5: quái hiếm (máu đã nhân, hạ được nhiều vàng, có thể rơi đồ). */
+  readonly rare?: boolean;
 }
 
 export interface Hit {
@@ -249,4 +309,6 @@ export interface BattleState {
   readonly nextWave: number;
   /** Đợt 3: vàng nhặt được trong trận này (thắng hay thua đều giữ — cộng vào hồ sơ ở tính năng profile). */
   readonly gold: number;
+  /** Đợt 5: đã hạ quái hiếm của trận (tung rơi đồ lúc hết trận). Không có = chưa. */
+  readonly rareKilled?: boolean;
 }

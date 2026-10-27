@@ -20,10 +20,19 @@ import {
   selectWeapon,
   willAttack,
 } from '../logic/battle';
-import { BATTLE_CONFIG, CHAPTERS, UPGRADE_CONFIG } from '../logic/battleConfig';
+import { BATTLE_CONFIG, CHAPTERS, LOOT_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
 import { chapterOf } from '../logic/chapters';
+import { addDrop, lootAfterBattle, readPity, withWeaponTiers } from '../logic/loot';
 import { withUpgrades } from '../logic/upgrades';
-import type { BattleState, Hit, Loadout, Monster, SkillKind } from '../logic/battleTypes';
+import type {
+  BattleConfig,
+  BattleState,
+  Drop,
+  Hit,
+  Loadout,
+  Monster,
+  SkillKind,
+} from '../logic/battleTypes';
 import { defaultLoadout } from '../logic/loadout';
 import {
   ARENA_LAYOUT,
@@ -44,6 +53,7 @@ import {
 } from './battleLayout';
 import { BATTLE_SPRITES, SPRITE_SCALE } from './battleSprites';
 import type { LoadoutSceneData } from './LoadoutScene';
+import { addLightning, styleTierText } from './weaponTierStyle';
 
 /** Thứ test E2E đọc được qua window.__PIXEL_GAME__.snapshot(). */
 export interface BattleSnapshot {
@@ -55,6 +65,13 @@ export interface BattleSnapshot {
   /** Màn kết quả đã hiện đủ lâu để chạm đi tiếp — sang màn sau hoặc chơi lại (chống chạm nhầm). */
   readonly canRestart: boolean;
   readonly battle: BattleState;
+  /**
+   * Cấu hình trận thật đang dùng — đã cộng nâng cấp (đợt 4) và cấp vũ khí (đợt 5) trong hồ sơ — để bot
+   * của test tính nước đi đúng như game.
+   */
+  readonly config: BattleConfig;
+  /** Đợt 5: món rơi lúc hết trận (null nếu không hạ quái hiếm hoặc hạ mà không rơi; chưa hết trận cũng null). */
+  readonly drop: Drop | null;
 }
 
 const GAME_WIDTH = 360;
@@ -69,6 +86,8 @@ const DEPTH = { arena: 0, zone: 1, monster: 2, hero: 3, popup: 4, hud: 5, result
 const SKILL_COLOR: Record<SkillKind, PaletteColor> = { iceRain: 'sky', fireball: 'orange' };
 /** B6: quái bị đóng băng phủ kín màu này. */
 const FROZEN_TINT: PaletteColor = 'cyan';
+/** Đợt 5: quái hiếm phát sáng màu này (WebGL) và phập phồng nhẹ (mọi máy). */
+const RARE_GLOW: PaletteColor = 'sand';
 /** F12: độ đậm của quái ma lúc vô hình — đủ thấy để người chơi biết nó ở đâu. */
 const GHOST_HIDDEN_ALPHA = 0.3;
 
@@ -81,7 +100,7 @@ const TEXT = {
 } as const;
 
 export class BattleScene extends Scene {
-  /** Cấu hình trận đã cộng nâng cấp trong hồ sơ (đợt 4): máu tối đa, chí mạng, hồi máu. */
+  /** Cấu hình trận đã cộng nâng cấp (đợt 4) và cấp vũ khí đã rơi (đợt 5) trong hồ sơ. */
   private config = BATTLE_CONFIG;
   private readonly fixedSeed = parseSeedParam(window.location.search);
   private level = 0;
@@ -104,13 +123,19 @@ export class BattleScene extends Scene {
   private resultDetail!: GameObjects.Text;
   /** Đợt 3: vàng nhặt trong trận + tổng vàng trong hồ sơ. */
   private resultGold!: GameObjects.Text;
+  /** Đợt 5: dòng báo rơi đồ khi hạ quái hiếm. */
+  private resultLoot!: GameObjects.Text;
   private resultHint!: GameObjects.Text;
+  /** Đợt 5: món rơi của trận vừa hết (cho E2E đọc). */
+  private drop: Drop | null = null;
   private readonly monsterSprites = new Map<number, GameObjects.Image>();
   private spriteKeys!: Record<keyof typeof BATTLE_SPRITES, string>;
   private weaponButtons: {
     frame: GameObjects.Rectangle;
     name: GameObjects.Text;
     range: GameObjects.Text;
+    /** Đợt 5: cấp màu (> 0 thì dòng dưới ghi tên cấp, tô màu cấp). */
+    tier: number;
   }[] = [];
   /** B6: ô skill cuối thanh nút (null nếu không mang skill). */
   private skillButton: {
@@ -126,7 +151,12 @@ export class BattleScene extends Scene {
 
   /** Màn chuẩn bị gửi màn + bộ đồ. Không có (chỉ khi mở thẳng scene này) thì màn 1, bộ mặc định. */
   init(data: Partial<LoadoutSceneData>): void {
-    this.config = withUpgrades(BATTLE_CONFIG, loadProfile().upgrades, UPGRADE_CONFIG);
+    const profile = loadProfile();
+    this.config = withWeaponTiers(
+      withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
+      profile.weaponTiers,
+      LOOT_CONFIG,
+    );
     this.level = data.level ?? 0;
     this.loadout = data.loadout ?? defaultLoadout(this.config);
   }
@@ -172,6 +202,7 @@ export class BattleScene extends Scene {
   private startLevel(level: number): void {
     const seed = this.fixedSeed ?? Math.floor(Math.random() * 2 ** 32);
     this.battle = createBattle(seed, this.config, level, this.loadout);
+    this.drop = null;
     this.arcElapsedMs = 0;
     this.arcSector = 0;
     this.endedAtMs = null;
@@ -254,6 +285,8 @@ export class BattleScene extends Scene {
       arcElapsedMs: this.arcElapsedMs,
       canRestart: this.canRestart(),
       battle: this.battle,
+      config: this.config,
+      drop: this.drop,
     };
   }
 
@@ -383,6 +416,18 @@ export class BattleScene extends Scene {
       .image(point.x, point.y, this.spriteKeys[monster.kind])
       .setScale(SPRITE_SCALE[monster.kind])
       .setDepth(DEPTH.monster);
+    if (monster.rare) {
+      // Đợt 5: quái hiếm "sáng" — viền phát sáng (chỉ WebGL) + phập phồng nhẹ (máy nào cũng thấy).
+      sprite.preFX?.addGlow(colorNumber(RARE_GLOW), 4, 0, false, 0.1, 12);
+      const scale = SPRITE_SCALE[monster.kind];
+      this.tweens.add({
+        targets: sprite,
+        scale: scale * 1.12,
+        duration: 420,
+        yoyo: true,
+        repeat: -1,
+      });
+    }
     this.monsterSprites.set(monster.id, sprite);
     return sprite;
   }
@@ -533,10 +578,12 @@ export class BattleScene extends Scene {
         .setOrigin(0.5)
         .setDepth(DEPTH.hud);
       const range = this.add
-        .text(centerX, rect.y + 50, weapon.rangeLabel, { ...TEXT, fontSize: '14px' })
+        .text(centerX, rect.y + 50, this.weaponSubLabel(weaponIndex), { ...TEXT, fontSize: '14px' })
         .setOrigin(0.5)
         .setDepth(DEPTH.hud);
-      this.weaponButtons.push({ frame, name, range });
+      // Đợt 5: cấp cao nhất ("Thần") có sét sáng quanh nút.
+      if (weapon.tier === LOOT_CONFIG.tiers.length - 1) addLightning(this, rect, DEPTH.hud);
+      this.weaponButtons.push({ frame, name, range, tier: weapon.tier ?? 0 });
     });
   }
 
@@ -595,6 +642,7 @@ export class BattleScene extends Scene {
       button.frame.setStrokeStyle(selected ? 3 : 1, colorNumber(selected ? 'lime' : 'slate'));
       button.name.setColor(selected ? PALETTE.white : PALETTE.mist);
       button.range.setColor(selected ? PALETTE.sand : PALETTE.mist);
+      if (button.tier > 0) styleTierText(button.range, button.tier);
     });
   }
 
@@ -611,8 +659,11 @@ export class BattleScene extends Scene {
     this.resultGold = this.add
       .text(GAME_WIDTH / 2, 342, '', { ...TEXT, fontSize: '16px', color: PALETTE.sand })
       .setOrigin(0.5);
+    this.resultLoot = this.add
+      .text(GAME_WIDTH / 2, 370, '', { ...TEXT, fontSize: '15px' })
+      .setOrigin(0.5);
     this.resultHint = this.add
-      .text(GAME_WIDTH / 2, 380, '', { ...TEXT, fontSize: '18px', color: PALETTE.sand })
+      .text(GAME_WIDTH / 2, 410, '', { ...TEXT, fontSize: '18px', color: PALETTE.sand })
       .setOrigin(0.5);
     this.resultLayer = this.add
       .container(0, 0, [
@@ -620,6 +671,7 @@ export class BattleScene extends Scene {
         this.resultTitle,
         this.resultDetail,
         this.resultGold,
+        this.resultLoot,
         this.resultHint,
       ])
       .setDepth(DEPTH.result)
@@ -649,23 +701,65 @@ export class BattleScene extends Scene {
       );
       this.resultHint.setText(`Chạm để chơi lại màn ${next}`);
     }
-    this.showGold(state);
+    this.saveRewards(state);
     this.resultLayer.setVisible(true);
   }
 
   /**
    * Đợt 3: cộng trận vào hồ sơ (vàng — thắng hay thua đều giữ; thắng thì mở khóa màn kế), lưu lại, và
-   * hiện số vàng. Gọi đúng một lần mỗi trận (lúc hiện màn kết quả). Không lưu được thì vẫn chơi tiếp.
+   * hiện số vàng. Đợt 5: hạ quái hiếm thì tung rơi đồ (luật ở logic/loot.ts), lưu cấp vũ khí + bảo hiểm,
+   * hiện món rơi. Gọi đúng một lần mỗi trận (lúc hiện màn kết quả). Không lưu được thì vẫn chơi tiếp.
    */
-  private showGold(state: BattleState): void {
+  private saveRewards(state: BattleState): void {
+    const before = loadProfile();
+    const { drop, pity } = lootAfterBattle(
+      state,
+      readPity(before.lootPity),
+      this.config,
+      LOOT_CONFIG,
+    );
+    this.drop = drop;
+    const loot = state.rareKilled
+      ? {
+          weaponTiers: drop ? addDrop(before.weaponTiers, drop) : before.weaponTiers,
+          lootPity: { ...pity },
+        }
+      : undefined;
     const profile = applyBattleResult(
-      loadProfile(),
-      { level: state.level, won: state.phase === 'won', gold: state.gold },
+      before,
+      { level: state.level, won: state.phase === 'won', gold: state.gold, loot },
       this.config.levels.length,
     );
     const saved = saveProfile(profile);
     this.resultGold.setText(
       saved ? `+${state.gold} vàng · tổng ${profile.gold}` : `+${state.gold} vàng (không lưu được)`,
     );
+    this.showDrop(state, drop, before.weaponTiers);
+  }
+
+  /** Đợt 5: dòng báo rơi đồ — tên món tô màu cấp; món không cao hơn món đang có thì ghi "đã có". */
+  private showDrop(
+    state: BattleState,
+    drop: Drop | null,
+    owned: Readonly<Record<string, number>>,
+  ): void {
+    this.resultLoot.setText('').setColor(PALETTE.white).setStroke(PALETTE.ink, 4);
+    if (!state.rareKilled) return;
+    if (!drop) {
+      this.resultLoot.setText('Quái hiếm không rơi đồ lần này').setColor(PALETTE.mist);
+      return;
+    }
+    const weapon = BATTLE_CONFIG.weapons[drop.weapon]?.name ?? '';
+    const tier = LOOT_CONFIG.tiers[drop.tier]?.name ?? '';
+    const better = drop.tier > (owned[drop.weapon] ?? 0);
+    this.resultLoot.setText(`Rơi: ${weapon} ${tier}${better ? '!' : ' (đã có)'}`);
+    styleTierText(this.resultLoot, drop.tier);
+  }
+
+  /** Dòng dưới tên vũ khí: tên cấp màu nếu có (đợt 5), không thì tầm ("gần", "2 phía"…). */
+  private weaponSubLabel(weaponIndex: number): string {
+    const weapon = this.config.weapons[weaponIndex];
+    if (!weapon) return '';
+    return weapon.tier ? (LOOT_CONFIG.tiers[weapon.tier]?.name ?? '') : weapon.rangeLabel;
   }
 }

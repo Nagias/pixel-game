@@ -1,6 +1,6 @@
 // Nơi DUY NHẤT chứa con số cân bằng của trận đấu. Đổi số ở đây, không viết cứng ở chỗ khác.
 // NỢ DEBT-009: các con số hiện là phỏng đoán ban đầu, chưa qua chơi thử.
-import type { BattleConfig, Difficulty, UpgradeConfig } from './battleTypes';
+import type { BattleConfig, Difficulty, LootConfig, UpgradeConfig } from './battleTypes';
 import type { Chapter } from './chapters';
 
 /**
@@ -130,15 +130,40 @@ export const BATTLE_CONFIG: BattleConfig = {
       ghost: true,
     },
     // Chủ đề Rừng rậm (chủ dự án duyệt 27/10/2026): 5 loài không phải slime, dùng lại đặc tính có sẵn. Vàng
-    // theo độ khó hạ (agent đề xuất, cùng nguyên tắc đợt 3).
+    // theo độ khó hạ (agent đề xuất, cùng nguyên tắc đợt 3). Đợt 5: 4 loài thường hóa hiếm được (slime và
+    // trùm thì không).
     // Yêu tinh: lính thường của rừng, cứng hơn slime.
-    goblin: { name: 'Yêu tinh', gold: 2, hp: 4, advanceChance: 0.6, attack: 2 },
+    goblin: { name: 'Yêu tinh', gold: 2, hp: 4, advanceChance: 0.6, attack: 2, canBeRare: true },
     // Sói rừng: lao 2 vòng mỗi lần tiến — phải hạ trước khi nó áp sát.
-    wolf: { name: 'Sói rừng', gold: 3, hp: 4, advanceChance: 0.6, attack: 3, step: 2 },
+    wolf: {
+      name: 'Sói rừng',
+      gold: 3,
+      hp: 4,
+      advanceChance: 0.6,
+      attack: 3,
+      step: 2,
+      canBeRare: true,
+    },
     // Yêu tinh cung thủ: tới vòng 4 thì đứng bắn — ưu tiên dùng Cung.
-    goblinArcher: { name: 'Cung thủ', gold: 3, hp: 3, advanceChance: 0.6, attack: 2, shootRing: 4 },
+    goblinArcher: {
+      name: 'Cung thủ',
+      gold: 3,
+      hp: 3,
+      advanceChance: 0.6,
+      attack: 2,
+      shootRing: 4,
+      canBeRare: true,
+    },
     // Dơi đêm: lượt chẵn bay lẩn (vô hình) — canh đúng lượt.
-    bat: { name: 'Dơi đêm', gold: 3, hp: 3, advanceChance: 0.6, attack: 2, ghost: true },
+    bat: {
+      name: 'Dơi đêm',
+      gold: 3,
+      hp: 3,
+      advanceChance: 0.6,
+      attack: 2,
+      ghost: true,
+      canBeRare: true,
+    },
     // Người Cây: trùm màn 10 và 20 — rất trâu, đánh đau, tiến chậm.
     treant: { name: 'Người Cây', gold: 10, hp: 14, advanceChance: 0.4, attack: 5 },
   },
@@ -157,6 +182,8 @@ export const BATTLE_CONFIG: BattleConfig = {
     fireball: { name: 'Cầu lửa', damage: 2, freezeTurns: 0, chargeTurns: 6 },
   },
   skillUnlockLevel: 2,
+  // Đợt 5 (chủ dự án duyệt 27/10/2026, lượt duyệt chung mục 1b): từ màn 3, 15% số trận có một quái hiếm.
+  rare: { fromLevel: 2, chance: 0.15, hpMultiplier: 2, goldMultiplier: 3 },
   // Đợt 7 — chủ đề Rừng rậm, 20 màn (chủ dự án duyệt 27/10/2026): độ khó răng cưa — màn 1 ~98% giảm dần tới
   // màn 10 (trùm Người Cây) ~78%, màn 11 nhẹ lại ~92% rồi giảm tới màn 20 (trùm cuối) ~72%; đo bằng bot
   // "Ngắm chuẩn" với nâng cấp dự kiến (`assumedUpgrades`). Đội hình, nhiệm vụ, đợt quái, số lượt do bộ sinh
@@ -278,15 +305,16 @@ export const BATTLE_CONFIG: BattleConfig = {
       target: { winRate: 0.92, spareTurns: 1.75 },
       assumedUpgrades: { hp: 2, crit: 1, heal: 1 },
     },
-    // Màn 12: giới thiệu Dơi đêm — lượt chẵn vô hình.
+    // Màn 12: giới thiệu Dơi đêm — lượt chẵn vô hình. Đợt 5: sinh lại khi có quái hiếm (Yêu tinh hiếm ×2
+    // máu làm Cầu lửa tụt 80% < 90% − 8%).
     {
-      monsters: ['bat', 'goblin', 'goblin', 'goblin', 'goblin'],
-      spread: 3,
+      monsters: ['bat', 'goblin', 'goblin', 'goblin'],
+      spread: 5,
       waves: [['bat', 'slime', 'slime']],
-      nextWaveAt: 1,
+      nextWaveAt: 2,
       quest: { kind: 'bat', count: 2 },
-      turnLimit: 11,
-      target: { winRate: 0.9, spareTurns: 1.5 },
+      turnLimit: 9,
+      target: { winRate: 0.9, spareTurns: 1.25 },
       assumedUpgrades: { hp: 2, crit: 1, heal: 1 },
     },
     // Màn 13: Yêu tinh + Sói tới từ hai phía.
@@ -391,6 +419,28 @@ export const UPGRADE_CONFIG: UpgradeConfig = {
   hp: { name: 'Máu tối đa', perLevel: 2, costs: [10, 20, 40] },
   crit: { name: 'Chí mạng', perLevel: 0.05, costs: [10, 20, 40] },
   heal: { name: 'Hồi máu', perLevel: 1, costs: [10, 20, 40] },
+  // Đợt 5 (chủ dự án duyệt 27/10/2026): may mắn +5% xác suất có quái hiếm mỗi cấp.
+  luck: { name: 'May mắn', perLevel: 0.05, costs: [10, 20, 40] },
+};
+
+/**
+ * Đợt 5 (chủ dự án duyệt 27/10/2026, lượt duyệt chung mục 1b): hạ quái hiếm thì 50% rơi một vũ khí (loại
+ * tạm ngẫu nhiên trong mọi vũ khí); 6 cấp màu chỉ cộng chỉ số. Bảo hiểm: hụt 3 lần liền thì lần thứ 4 chắc
+ * rơi; 29 món liền dưới Sử thi thì món thứ 30 chắc từ Sử thi trở lên.
+ */
+export const LOOT_CONFIG: LootConfig = {
+  dropChance: 0.5,
+  dryPity: 3,
+  highTier: 3,
+  highPity: 30,
+  tiers: [
+    { name: 'Thường', critBonus: 0, widthBonus: 0, damageBonus: 0, dropRate: 0.4 },
+    { name: 'Tốt', critBonus: 0.05, widthBonus: 0, damageBonus: 0, dropRate: 0.28 },
+    { name: 'Hiếm', critBonus: 0.1, widthBonus: 0, damageBonus: 0, dropRate: 0.17 },
+    { name: 'Sử thi', critBonus: 0.1, widthBonus: 2, damageBonus: 0, dropRate: 0.1 },
+    { name: 'Huyền thoại', critBonus: 0.15, widthBonus: 2, damageBonus: 1, dropRate: 0.04 },
+    { name: 'Thần', critBonus: 0.2, widthBonus: 2, damageBonus: 1, dropRate: 0.01 },
+  ],
 };
 
 /**

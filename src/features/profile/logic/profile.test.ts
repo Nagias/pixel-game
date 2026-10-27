@@ -32,12 +32,20 @@ describe('đọc / ghi hồ sơ', () => {
       gold: 0,
       unlockedLevel: 0,
       upgrades: {},
+      weaponTiers: {},
+      lootPity: {},
     });
   });
 
   it('ghi rồi đọc lại ra y hệt', () => {
     const { store } = memoryStore();
-    const saved = profile({ gold: 42, unlockedLevel: 3, upgrades: { hp: 2, crit: 1 } });
+    const saved = profile({
+      gold: 42,
+      unlockedLevel: 3,
+      upgrades: { hp: 2, crit: 1 },
+      weaponTiers: { 0: 3, 2: 1 },
+      lootPity: { dryRareKills: 2, dropsSinceHighTier: 11 },
+    });
     expect(writeProfile(store, saved)).toBe(true);
     expect(readProfile(store)).toEqual(saved);
   });
@@ -47,6 +55,16 @@ describe('đọc / ghi hồ sơ', () => {
     const raw = JSON.stringify({ version: 1, gold: 37, unlockedLevel: 4 });
     const { store, data } = memoryStore({ [PROFILE_KEY]: raw });
     expect(readProfile(store)).toEqual(profile({ gold: 37, unlockedLevel: 4 }));
+    expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
+  });
+
+  // Đợt 5: phiên bản 3 thêm cấp vũ khí đã rơi và bộ đếm bảo hiểm rơi đồ. Bản 2 (đợt 4) tự chuyển lên.
+  it('hồ sơ phiên bản 2 chuyển lên phiên bản 3: giữ vàng, màn, nâng cấp; chưa có đồ rơi', () => {
+    const raw = JSON.stringify({ version: 2, gold: 50, unlockedLevel: 9, upgrades: { hp: 3 } });
+    const { store, data } = memoryStore({ [PROFILE_KEY]: raw });
+    expect(readProfile(store)).toEqual(
+      profile({ gold: 50, unlockedLevel: 9, upgrades: { hp: 3 } }),
+    );
     expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
   });
 
@@ -70,10 +88,43 @@ describe('đọc / ghi hồ sơ', () => {
       JSON.stringify({ version: 2, gold: 0, unlockedLevel: 0, upgrades: [1] }),
     ],
     ['phiên bản 2 thiếu nâng cấp', JSON.stringify({ version: 2, gold: 0, unlockedLevel: 0 })],
+    [
+      'phiên bản 3 thiếu cấp vũ khí',
+      JSON.stringify({ version: 3, gold: 0, unlockedLevel: 0, upgrades: {}, lootPity: {} }),
+    ],
+    [
+      'cấp vũ khí âm',
+      JSON.stringify({
+        version: 3,
+        gold: 0,
+        unlockedLevel: 0,
+        upgrades: {},
+        weaponTiers: { 0: -2 },
+        lootPity: {},
+      }),
+    ],
+    [
+      'bảo hiểm rơi đồ là chữ',
+      JSON.stringify({
+        version: 3,
+        gold: 0,
+        unlockedLevel: 0,
+        upgrades: {},
+        weaponTiers: {},
+        lootPity: { dryRareKills: 'ba' },
+      }),
+    ],
     // Người chơi mở bản game cũ hơn dữ liệu: không hiểu thì không được phá.
     [
       'phiên bản mới hơn game',
-      JSON.stringify({ version: 3, gold: 9, unlockedLevel: 4, upgrades: {} }),
+      JSON.stringify({
+        version: 4,
+        gold: 9,
+        unlockedLevel: 4,
+        upgrades: {},
+        weaponTiers: {},
+        lootPity: {},
+      }),
     ],
   ])('dữ liệu lạ (%s): cất bản sao để còn cứu, chơi tiếp bằng hồ sơ trống', (_name, raw) => {
     const { store, data } = memoryStore({ [PROFILE_KEY]: raw });
@@ -119,6 +170,22 @@ describe('cộng kết quả trận vào hồ sơ', () => {
       applyBattleResult(profile({ unlockedLevel: 5 }), { level: 1, won: true, gold: 0 }, 7)
         .unlockedLevel,
     ).toBe(5);
+  });
+
+  it('đợt 5: trận có kết quả rơi đồ thì ghi cấp vũ khí và bộ đếm bảo hiểm mới (thắng hay thua đều giữ)', () => {
+    const loot = { weaponTiers: { 1: 4 }, lootPity: { dryRareKills: 0, dropsSinceHighTier: 0 } };
+    expect(
+      applyBattleResult(
+        profile({ gold: 3, weaponTiers: { 1: 2 }, lootPity: { dryRareKills: 2 } }),
+        { level: 9, won: false, gold: 6, loot },
+        20,
+      ),
+    ).toEqual(profile({ gold: 9, ...loot }));
+  });
+
+  it('trận không có kết quả rơi đồ: giữ nguyên đồ và bảo hiểm', () => {
+    const before = profile({ weaponTiers: { 0: 1 }, lootPity: { dryRareKills: 1 } });
+    expect(applyBattleResult(before, { level: 0, won: false, gold: 0 }, 7)).toEqual(before);
   });
 
   it('thắng màn cuối: giữ mở khóa ở màn cuối (không vượt số màn)', () => {

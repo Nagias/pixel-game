@@ -4,7 +4,14 @@ import { PROFILE_BACKUP_KEY, PROFILE_KEY, PROFILE_VERSION } from './profileConfi
 import type { BattleResult, KeyValueStore, Profile } from './profileTypes';
 
 export function emptyProfile(): Profile {
-  return { version: PROFILE_VERSION, gold: 0, unlockedLevel: 0, upgrades: {} };
+  return {
+    version: PROFILE_VERSION,
+    gold: 0,
+    unlockedLevel: 0,
+    upgrades: {},
+    weaponTiers: {},
+    lootPity: {},
+  };
 }
 
 const isCount = (value: unknown): value is number =>
@@ -19,12 +26,17 @@ function parseProfile(raw: string): Profile | null {
     return null;
   }
   if (typeof data !== 'object' || data === null || Array.isArray(data)) return null;
-  const { version, gold, unlockedLevel, upgrades } = data as Record<string, unknown>;
+  const { version, gold, unlockedLevel, upgrades, weaponTiers, lootPity } = data as Record<
+    string,
+    unknown
+  >;
   if (!isCount(gold) || !isCount(unlockedLevel)) return null;
-  // Bước chuyển từ phiên bản cũ: 1 → 2 thêm cấp nâng cấp (chưa nâng gì).
-  if (version === 1) return { version: PROFILE_VERSION, gold, unlockedLevel, upgrades: {} };
-  if (version !== PROFILE_VERSION || !isLevels(upgrades)) return null;
-  return { version, gold, unlockedLevel, upgrades };
+  // Bước chuyển từ phiên bản cũ: 1 → 2 thêm cấp nâng cấp (chưa nâng gì); 2 → 3 thêm đồ rơi (chưa có gì).
+  if (version === 1) return { ...emptyProfile(), gold, unlockedLevel };
+  if (!isLevels(upgrades)) return null;
+  if (version === 2) return { ...emptyProfile(), gold, unlockedLevel, upgrades };
+  if (version !== PROFILE_VERSION || !isLevels(weaponTiers) || !isLevels(lootPity)) return null;
+  return { version, gold, unlockedLevel, upgrades, weaponTiers, lootPity };
 }
 
 const isLevels = (value: unknown): value is Record<string, number> =>
@@ -80,6 +92,7 @@ export function applyBattleResult(
     ...profile,
     gold: profile.gold + result.gold,
     unlockedLevel: Math.max(profile.unlockedLevel, next),
+    ...result.loot,
   };
 }
 
