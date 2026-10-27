@@ -18,12 +18,13 @@
 | F08  | Skill bấm đánh cả sân + máu, hồi máu, chí mạng     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                     | như F01                                                  |
 | F09  | Quái bắn xa Slime Pháo + màn 5                     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                     | như F01                                                  |
 | F10  | Tự động cân bằng (mục tiêu, bot nhìn trước, dò số) | ✅ Xong    | `scripts/`, `logic/autoPlay.ts`, `logic/battleConfig.ts` | `scripts/tuneCore.test.ts`, `logic/balance.test.ts`      |
+| F11  | Thắng bằng nhiệm vụ + quái ra theo đợt             | ✅ Xong    | `src/features/battle/` (mở rộng F01)                     | `logic/quest.test.ts`, như F01                           |
 
 ## F01 — Trận đấu tối thiểu
 
 **Người chơi thấy và làm gì:** nhân vật đứng giữa sân tròn, một hình nêm xanh quay quanh. Chạm vào
-sân để chém mọi quái đang nằm trong vùng xanh. Diệt hết quái trước khi hết lượt hoặc trước khi quái
-chạm tới mình thì thắng.
+sân để chém mọi quái đang nằm trong vùng xanh. Xong nhiệm vụ của màn (F11 — vd. "hạ 6 Slime") trước khi
+hết lượt hoặc trước khi quái hạ mình thì thắng.
 
 **Luật** (nguồn sự thật: `logic/battle.ts` + `logic/battle.test.ts`):
 
@@ -36,8 +37,9 @@ chạm tới mình thì thắng.
    máu thì biến mất.
 5. Sau nhát chém, từng con quái còn sống (theo thứ tự id): 60% tiến vào 1 vòng, 40% đi ngang 1 lát
    ("đi lung tung"); không đi vào ô đã có quái khác.
-6. Hết quái → **thắng**. Nhân vật hết máu → **thua** ("Bạn đã gục") — xem F04.
-   Hết lượt mà còn quái → **thua** ("Hết lượt mà quái vẫn còn"). Nhát cuối vừa diệt hết quái thì vẫn thắng.
+6. Xong nhiệm vụ → **thắng** (F11; màn không có nhiệm vụ: diệt sạch mọi đợt quái). Nhân vật hết máu →
+   **thua** ("Bạn đã gục") — xem F04. Hết lượt mà chưa xong → **thua** ("Hết lượt mà chưa xong nhiệm
+   vụ"). Nhát cuối vừa xong nhiệm vụ thì vẫn thắng.
 7. Cấu hình sai (vd. vùng đánh rộng số chẵn lát, tầm vũ khí vượt sân, không có vũ khí) bị từ chối ngay
    lúc mở trận.
 
@@ -217,20 +219,21 @@ trâu và đánh đau hơn. Hạ hết màn cuối là "PHÁ ĐẢO!", chạm đ
 **Luật** (nguồn sự thật: `logic/battle.ts` `createBattle` / `nextLevelIndex` / `isGameCleared` +
 test mục F06; chủ dự án duyệt ngày 23/10/2026):
 
-1. Màn 1: 4 slime · Màn 2: 6 slime · Màn 3: Slime Vua + 3 slime (chủ dự án duyệt 26/10/2026 — trước
-   đó 2 slime, dễ hơn màn 2) · Màn 4: xem F07a · Màn 5: xem F09. Số lượt màn 1–5: 10/11/8/9/8 (F10 —
-   trước đó 10/12/9/8/8; F08 — trước đó 8/10/10/10/10).
-2. Slime Vua: 6 máu, áp sát thì mỗi lượt đánh mất 4 máu (F08; trước đó 2); còn lại y như slime (đi lung tung, combo, bị
+1. Đội hình mở màn — Màn 1: 4 slime · Màn 2: 6 slime · Màn 3: Slime Vua + 4 slime (F11; chủ dự án duyệt
+   26/10/2026 Vua + 3 slime — trước đó 2 slime, dễ hơn màn 2) · Màn 4: xem F07a · Màn 5: xem F09. Nhiệm
+   vụ và đợt sau: xem F11. Số lượt màn 1–5: 14/13/6/8/9 (F11 — trước đó 10/11/8/9/8; F10 — trước đó
+   10/12/9/8/8; F08 — trước đó 8/10/10/10/10).
+2. Slime Vua: 8 máu (F11; trước đó 6), áp sát thì mỗi lượt đánh mất 4 máu (F08; trước đó 2); còn lại y như slime (đi lung tung, combo, bị
    đẩy, dấu "!"). Không có luật trùm riêng.
 3. Mỗi loại quái có máu, sức đánh, xác suất tiến vào riêng; quái áp sát đánh theo sức đánh của loại nó.
 4. Màn nào cũng bắt đầu đầy máu, cầm món tầm gần đã mang (F07), đủ lượt của màn, skill nạp 0 (F08).
 5. Thắng màn chưa phải cuối → sang màn kế; thắng màn cuối → phá đảo, chơi lại từ màn 1; thua → chơi
    lại đúng màn đó.
-6. Màn 2 có 6 con nên cụm quái rộng ±3 lát (cụm ±2 chỉ có 5 chỗ); màn 1 và màn 3 giữ ±2.
+6. Màn 2 có 6 con nên cụm quái rộng ±3 lát (cụm ±2 chỉ có 5 chỗ); màn 1 giữ ±2; màn 3 ±4 (F11).
 7. Cấu hình sai (không có màn, màn không có quái hoặc 0 lượt, loại quái không tồn tại hoặc 0 máu/0 sức
    đánh) bị từ chối lúc mở màn — kiểm cả những màn chưa chơi tới.
 
-**Hành vi giao diện:** thanh trên chia 2 hàng (Lượt · Quái / Màn · Máu) vì số lượt có thể có 2 chữ số.
+**Hành vi giao diện:** thanh trên chia 2 hàng (Lượt · Nhiệm vụ / Màn · Máu — F11: ô nhiệm vụ thay ô "Quái") vì số lượt có thể có 2 chữ số.
 Màn kết quả ghi rõ chạm để làm gì: "Chạm để sang màn 2", "Chạm để chơi lại màn 2", "Chạm để chơi lại
 từ màn 1". Có `?seed=` thì màn nào cũng dùng seed đó. Không lưu tiến trình: tải lại trang là về màn 1.
 
@@ -268,7 +271,8 @@ xuất hiện thành **hai cụm ở hai phía đối diện**; quái áp sát t
 
 1. Rìu: mỗi nêm rộng 3 lát, vòng 0–1, 1 sát thương, đẩy lùi. Nêm sau lưng ở lát đối diện (lệch nửa vòng).
 2. Một nhát Rìu đếm quái của cả hai nêm cho combo; đẩy áp dụng cho quái ở cả hai nêm.
-3. Màn 4: 10 slime, 9 lượt (F10 — trước đó 8 slime, cụm ±2, 8 lượt). Nửa đầu đội hình (id 1–5) thành một
+3. Màn 4: 10 slime, 8 lượt, nhiệm vụ hạ 9 (F11 — trước đó 9 lượt, diệt hết; F10 — trước đó 8 slime, cụm
+   ±2, 8 lượt). Nửa đầu đội hình (id 1–5) thành một
    cụm ±3 lát quanh một lát ngẫu nhiên, nửa sau (id 6–10) thành cụm ±3 lát quanh lát đối diện.
 4. Cấu hình sai bị từ chối: vũ khí hai phía trên sân lẻ lát hoặc hai nêm chồng nhau; màn hai phía trên
    sân lẻ lát, cụm không đủ chỗ, hoặc hai cụm chồng nhau.
@@ -417,7 +421,8 @@ ngày 26/10/2026):
    bắn thì hết "!", phải tiến vào lại. Quái cận chiến (slime, Slime Vua) không bị choáng.
 4. Slime Pháo: 3 máu, vòng bắn 4, mỗi phát bắn mất 2 máu (F08; trước đó 2 máu, bắn mất 1), 60%
    tiến vào.
-5. Màn 5: 7 slime + 1 Slime Pháo trong một cụm ±5 lát (F10; trước đó 6 slime + 2 Pháo, cụm ±4), 8 lượt.
+5. Màn 5: mở màn 7 slime + 1 Slime Pháo trong một cụm ±5 lát (F10; trước đó 6 slime + 2 Pháo, cụm ±4), 9
+   lượt; F11: nhiệm vụ hạ 2 Slime Pháo — con thứ hai tới cùng đợt sau (3 slime + 1 Pháo) khi sân còn ≤ 2.
 6. Cấu hình sai bị từ chối: vòng bắn không nguyên, nhỏ hơn 1, hoặc từ vòng xuất hiện trở ra.
 
 **Hành vi giao diện:** dấu "!" dùng chung với quái áp sát (đỏ, trên đầu quái). Không thêm hiệu ứng bắn.
@@ -498,10 +503,77 @@ Màn 3 dư 1,67 lượt, sát mép trên dung sai (1,75).
 
 **Nợ liên quan:** DEBT-009 (số chưa qua chơi thử).
 
+## F11 — Thắng bằng nhiệm vụ + quái ra theo đợt
+
+**Người chơi thấy và làm gì:** màn chuẩn bị ghi nhiệm vụ của màn ("Nhiệm vụ: hạ 6 Slime"). Trong trận,
+góc trên bên phải đếm tiến độ ("Slime 2/6", "Slime Vua 0/1") thay ô "Quái: n". Xong nhiệm vụ là thắng
+ngay, quái còn lại không cần giết ("Xong nhiệm vụ, còn dư n lượt"). Sân còn ít quái thì một đợt quái
+mới tràn vào vòng ngoài cùng.
+
+**Luật** (nguồn sự thật: `logic/battle.ts` `playTurn` / `castSkill` / `spawnWave` + `logic/quest.test.ts`;
+đợt 1 kế hoạch sau B6, chủ dự án duyệt 27/10/2026 — "cứ làm theo gợi ý"):
+
+1. Mỗi màn có một nhiệm vụ `quest: { kind, count }`: giết đủ `count` con loại `kind` (bằng chém hay skill)
+   là **thắng ngay** — kể cả nhát cuối vừa hết lượt. Màn không khai báo nhiệm vụ: diệt sạch mọi đợt quái.
+2. Đợt quái: `monsters` là đợt mở màn; `waves` là các đợt sau, ra lần lượt. Sau mỗi nhát chém (khi quái
+   cũ đã đi, chưa thua) hoặc mỗi lần bấm skill, nếu sân còn ≤ `nextWaveAt` con (mặc định 0) thì **một**
+   đợt kế tràn vào vòng ngoài cùng — cùng luật đặt quái với đợt mở màn (cụm ±spread, hai phía nếu màn
+   `splitOpposite`), không đè quái đang đứng; cụm thiếu chỗ thì lấn sang ô trống gần cụm nhất; vòng ngoài
+   không đủ chỗ cho cả đợt thì đợt đó chờ lượt sau. Đợt mới đứng yên trong lượt nó vừa ra. Id nối tiếp.
+3. **Không có màn bất khả thi:** cấu hình mà mọi đợt cộng lại không đủ quái nhiệm vụ bị từ chối lúc mở
+   trận (Micro RPG từng có lỗi này); cùng với nhiệm vụ 0 con / số lẻ, loại quái không tồn tại, đợt rỗng
+   hoặc không đủ chỗ trong cụm, ngưỡng ra đợt âm / số lẻ.
+4. Đợt mở màn đặt y như trước F11 — cùng seed cùng ván (mọi test cũ giữ nguyên kỳ vọng).
+
+**Con số** (`battleConfig.ts`; agent đề xuất + `npm run tune` + script dò tạm cho màn 3, 27/10/2026):
+
+| Màn | Lượt | Mở màn                              | Đợt sau (ra khi sân còn ≤)   | Nhiệm vụ        |
+| --- | ---- | ----------------------------------- | ---------------------------- | --------------- |
+| 1   | 14   | 4 slime, cụm ±2                     | 2 slime (≤ 2)                | hạ 6 Slime      |
+| 2   | 13   | 6 slime, cụm ±3                     | 4 slime (≤ 3)                | hạ 8 Slime      |
+| 3   | 6    | Slime Vua (8 máu) + 4 slime, cụm ±4 | —                            | hạ 1 Slime Vua  |
+| 4   | 8    | 10 slime, hai cụm ±3                | —                            | hạ 9 Slime      |
+| 5   | 9    | 7 slime + 1 Slime Pháo, cụm ±5      | 3 slime + 1 Slime Pháo (≤ 2) | hạ 2 Slime Pháo |
+
+Màn 3 và 4 không có đợt sau: dò thử thấy đợt sau không đổi kết quả (màn 3 nhiệm vụ là trùm; màn 4 đợt sau
+chỉ ra khi đã hạ 9 — lúc nhiệm vụ đã xong). Màn 3: Slime Vua 6 → 8 máu, hộ vệ 3 → 4, cụm ±2 → ±4 — cụm hẹp
+thì Mưa băng (đóng băng cả trùm lẫn hộ vệ) dễ hơn Cầu lửa ~5%, vượt dung sai.
+
+**Bot** (`logic/autoPlay.ts`, không phải luật): ngắm chuẩn ưu tiên chém quái nhiệm vụ (sau quái bắn đang
+"!"); nhìn trước chấm điểm theo "việc còn phải làm" — máu quái nhiệm vụ còn thiếu, cộng máu quái phải dọn
+để gọi đợt có quái nhiệm vụ (không có nhiệm vụ: máu quái trên sân + các đợt chưa ra); skill đang nạp đáng
+bằng máu nó chém được thật (không quá máu còn lại mỗi con); quái sắp đánh 0,5 → 0,25. `npm run tune` bỏ
+qua tổ hợp núm vặn mà game từ chối (vd. nhiệm vụ nhiều hơn số quái).
+
+**Kiểm chứng tự động:**
+
+- Unit (`quest.test.ts`, 27 test): mở trận chưa có tiến độ; 10 ca cấu hình sai bị từ chối; chỉ quái đúng
+  loại mới tính; xong nhiệm vụ thắng ngay dù còn quái, không tung số di chuyển; nhát cuối vừa hết lượt vẫn
+  thắng; hết lượt chưa xong thì thua; skill tính vào nhiệm vụ và thắng được; màn không nhiệm vụ: còn đợt
+  thì chưa thắng, hết đợt mới thắng; đợt kế ra đúng ngưỡng, id nối tiếp qua nhiều đợt, đầy máu, mỗi con một
+  lát trong cụm, không đi ngay; thua thì không ra đợt; vòng ngoài đông thì vào ô trống gần nhất, không đủ
+  chỗ thì chờ; skill gọi đợt không tốn lượt. `autoPlay.test.ts`: ngắm chuẩn ưu tiên quái nhiệm vụ; nhìn
+  trước giết con cuối dù đợt kế sẽ ra, dồn đòn vào trùm nhiệm vụ, dọn sân để gọi đợt có quái nhiệm vụ.
+  `tuneCore.test.ts`: tổ hợp làm cấu hình sai bị bỏ qua. `balance.test.ts`: mọi màn × mọi skill trong dung sai.
+- E2E: ván seed 42 qua đủ 5 màn bằng nhiệm vụ (thắng ⇒ tiến độ ≥ nhiệm vụ), phải thấy ít nhất một đợt quái
+  mới (ảnh `18-dot-quai-moi.png`, "Slime 2/6"); ảnh màn chuẩn bị `12-chuan-bi.png` ghi nhiệm vụ.
+
+**Cân bằng (`npm run sim`, 500 ván, bộ Kiếm + Giáo + Cung, bot ngắm chuẩn):** màn 1 / 2 = 97,8% / 93,2% (dư
+3,08 / 2,46); màn 3 / 4 / 5 với Mưa băng = 90,2% / 81,6% / 77,6% (dư 1,31 / 0,79 / 0,76), với Cầu lửa =
+84,4% / 83,0% / 77,6% (dư 0,93 / 0,62 / 0,48) — mọi ô đạt mục tiêu F10.
+
+**Giới hạn đã biết:** bot nhìn trước (người chơi giỏi, dùng cho E2E) chỉ nhìn 1 lượt nên không lên kế hoạch
+dọn sân để gọi đợt có Slime Pháo thứ hai: màn 5 mang Cầu lửa nó chỉ thắng ~40% (bot thường 78%); các màn
+khác bằng hoặc hơn bot thường. Độ khó đo bằng bot thường nên bộ số không bị ảnh hưởng. Ở màn 3–4 đợt quái
+không có vai trò (xem Con số); thiết kế màn theo chủ đề (~20 màn mỗi chủ đề — chủ dự án bổ sung 27/10/2026)
+để đợt 7.
+
+**Nợ liên quan:** DEBT-009 (số chưa qua chơi thử).
+
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
 Trống. Việc tiếp theo nằm trong kế hoạch sau B6 (`docs/plans/2026-10-27-ke-hoach-sau-b6.md`, chủ dự án
-duyệt 27/10/2026): đợt 1 — thắng bằng nhiệm vụ, chờ chủ dự án trả lời các câu "Chủ dự án quyết".
+duyệt 27/10/2026): đợt 2 — thêm loại quái, chờ chủ dự án trả lời các câu "Chủ dự án quyết".
 
 ## Mẫu cho tính năng mới (copy khối này)
 

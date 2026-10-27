@@ -132,7 +132,8 @@ export function betterPick(a: LevelPick, b: LevelPick | null, currentTurns: numb
 
 /**
  * Số lượt (và giá trị các núm vặn riêng của màn) tốt nhất cho một màn theo `betterPick`; ngang nhau thì
- * giữ tổ hợp khai báo trước.
+ * giữ tổ hợp khai báo trước. F11: tổ hợp mà game từ chối (RangeError lúc mở trận — vd. nhiệm vụ cần
+ * nhiều quái hơn mọi đợt cộng lại) bị bỏ qua.
  */
 export function pickTurns(config: BattleConfig, level: number, setup: TuneSetup): LevelPick {
   const current = config.levels[level]?.turnLimit ?? 0;
@@ -142,11 +143,20 @@ export function pickTurns(config: BattleConfig, level: number, setup: TuneSetup)
   for (const combo of combinations(config, local)) {
     for (let turnLimit = min; turnLimit <= max; turnLimit++) {
       const tried = withTurnLimit(combo.config, level, turnLimit);
-      const candidate = { turnLimit, knobs: combo.knobs, ...measureLevel(tried, level, setup) };
+      let measuredLevel: ReturnType<typeof measureLevel>;
+      try {
+        measuredLevel = measureLevel(tried, level, setup);
+      } catch (error) {
+        if (error instanceof RangeError) continue; // game từ chối ngay khi mở trận, không tốn thời gian
+        throw error;
+      }
+      const candidate = { turnLimit, knobs: combo.knobs, ...measuredLevel };
       if (betterPick(candidate, best, current)) best = candidate;
     }
   }
-  if (best === null) throw new Error(`Khoảng số lượt rỗng: ${min}…${max}`);
+  if (best === null) {
+    throw new Error(`Màn ${level + 1}: không có tổ hợp hợp lệ (số lượt ${min}…${max})`);
+  }
   return best;
 }
 

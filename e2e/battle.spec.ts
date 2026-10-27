@@ -218,6 +218,8 @@ test('F06: chơi giỏi thắng màn nào sang màn kế, hạ trùm ở màn cu
   await game.openBattle(SEED);
 
   let mostHitsInOneStrike = 0;
+  // F11: lần đầu thấy đợt quái mới tràn vào (id sau đội hình mở màn) thì chụp ảnh làm bằng chứng.
+  let waveSeen = false;
   for (let level = 0; level <= LAST_LEVEL; level++) {
     // Màn mới: đầy máu, cầm vũ khí đầu, đủ lượt và đúng đội hình quái của màn (màn cuối có trùm).
     const { turnLimit, monsters } = levelAt(level, BATTLE_CONFIG);
@@ -255,6 +257,13 @@ test('F06: chơi giỏi thắng màn nào sang màn kế, hạ trùm ở màn cu
     mostHitsInOneStrike = Math.max(
       mostHitsInOneStrike,
       await playBestUntilOver(game, async (snapshot) => {
+        const newcomers = snapshot.battle.monsters.filter((m) => m.id > monsters.length);
+        if (!waveSeen && newcomers.length > 0) {
+          waveSeen = true;
+          expect(snapshot.battle.nextWave).toBeGreaterThan(0);
+          await game.advance(300);
+          await page.screenshot({ path: test.info().outputPath('18-dot-quai-moi.png') });
+        }
         const aiming = snapshot.battle.monsters.find(
           (m) => m.kind === 'slimeCannon' && willAttack(m, BATTLE_CONFIG),
         );
@@ -272,6 +281,9 @@ test('F06: chơi giỏi thắng màn nào sang màn kế, hạ trùm ở màn cu
 
     const won = (await game.snapshot()).battle;
     expect(won.phase).toBe('won');
+    // F11: thắng = xong nhiệm vụ của màn (không cần giết hết quái).
+    const { quest } = levelAt(level, BATTLE_CONFIG);
+    if (quest) expect(won.questProgress).toBeGreaterThanOrEqual(quest.count);
     expect(isGameCleared(won, BATTLE_CONFIG)).toBe(level === LAST_LEVEL);
     await game.advance(300); // cho chữ "THẮNG!" / "PHÁ ĐẢO!" kịp vẽ
     if (level === 0) {
@@ -287,6 +299,8 @@ test('F06: chơi giỏi thắng màn nào sang màn kế, hạ trùm ở màn cu
   }
   // Ván này phải có ít nhất một nhát trúng từ 2 quái trở lên, nếu không combo chưa được thử.
   expect(mostHitsInOneStrike).toBeGreaterThanOrEqual(2);
+  // F11: phải có lúc đợt quái mới tràn vào, nếu không luật đợt quái chưa được thử.
+  expect(waveSeen).toBe(true);
 
   // Phá đảo xong, chạm là chơi lại từ màn 1 (qua màn chuẩn bị).
   expect((await game.snapshot()).battle).toMatchObject({

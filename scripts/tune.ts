@@ -7,7 +7,6 @@ import type {
   BattleConfig,
   Difficulty,
   MonsterKind,
-  SkillKind,
 } from '../src/features/battle/logic/battleTypes';
 import { gamesArg, PLAYERS, TARGET_PLAYER, targetLoadouts, type Player } from './simCore';
 import { measured, measureLevel, tune, type Knob, type TuneSetup } from './tuneCore';
@@ -34,60 +33,64 @@ const monsterStat = (
   }),
 });
 
-/** Độ rộng cụm quái của một màn (quái càng tản càng khó gom combo). */
-const levelSpread = (level: number, values: readonly number[]): Knob => ({
-  name: `cụm màn ${level + 1}`,
+/** F11: số con nhiệm vụ phải giết của một màn. */
+const questCount = (level: number, values: readonly number[]): Knob => ({
+  name: `nhiệm vụ màn ${level + 1}`,
   values,
   level,
-  apply: (config, spread) => ({
+  apply: (config, count) => ({
     ...config,
-    levels: config.levels.map((l, i) => (i === level ? { ...l, spread } : l)),
+    levels: config.levels.map((l, i) =>
+      i === level && l.quest ? { ...l, quest: { ...l.quest, count } } : l,
+    ),
   }),
 });
 
-/** Số nhát chém trúng để nạp đầy một skill (núm vặn chung: skill dùng ở mọi màn từ màn mở khóa). */
-const skillCharge = (skill: SkillKind, values: readonly number[]): Knob => ({
-  name: `nạp ${BATTLE_CONFIG.skills[skill].name}`,
-  values,
-  apply: (config, chargeTurns) => ({
-    ...config,
-    skills: { ...config.skills, [skill]: { ...config.skills[skill], chargeTurns } },
-  }),
-});
-
-/** Số quái loại `kind` trong đội hình một màn (thêm/bớt ở cuối đội hình). */
-const levelCount = (level: number, kind: MonsterKind, values: readonly number[]): Knob => ({
-  name: `số ${BATTLE_CONFIG.monsterKinds[kind].name} màn ${level + 1}`,
+/** F11: số quái loại `kind` trong đợt sau đầu tiên của một màn (thêm/bớt ở đầu đợt). */
+const waveCount = (level: number, kind: MonsterKind, values: readonly number[]): Knob => ({
+  name: `đợt 2 ${BATTLE_CONFIG.monsterKinds[kind].name} màn ${level + 1}`,
   values,
   level,
   apply: (config, count) => ({
     ...config,
     levels: config.levels.map((l, i) => {
-      if (i !== level) return l;
-      const others = l.monsters.filter((k) => k !== kind);
-      return { ...l, monsters: [...others, ...Array<MonsterKind>(count).fill(kind)] };
+      const [first, ...rest] = l.waves ?? [];
+      if (i !== level || !first) return l;
+      const others = first.filter((k) => k !== kind);
+      return { ...l, waves: [[...Array<MonsterKind>(count).fill(kind), ...others], ...rest] };
     }),
   }),
 });
 
-// Số lượt đổi 1 là tỉ lệ thắng nhảy 10–30%, nên có thêm núm vặn mịn hơn chỉ ảnh hưởng một màn: cụm quái,
-// số quái của màn, Slime Vua (chỉ ở màn 3), Slime Pháo (chỉ ở màn 5). Giá trị thử gồm cả giá trị hiện tại.
-// Nạp skill là núm vặn chung: với người chơi trung bình, Cầu lửa thắng màn 4 hơn Mưa băng 6–9% nên chỉnh
-// riêng quái của màn không đưa được cả hai skill vào dung sai.
+/** F11: sân còn ≤ ngần này con thì đợt kế tràn vào. */
+const nextWaveAt = (level: number, values: readonly number[]): Knob => ({
+  name: `ra đợt khi còn ≤ màn ${level + 1}`,
+  values,
+  level,
+  apply: (config, at) => ({
+    ...config,
+    levels: config.levels.map((l, i) => (i === level ? { ...l, nextWaveAt: at } : l)),
+  }),
+});
+
+// F11 (đợt 1): mỗi màn có nhiệm vụ + đợt quái sau, nên núm vặn mịn là số con nhiệm vụ, cỡ đợt sau và
+// ngưỡng ra đợt; giữ thêm máu Slime Vua (chỉ ở màn 3). Giá trị thử quanh bộ số hiện tại (27/10/2026).
+// Cầu lửa nạp 6 (chủ dự án duyệt 27/10/2026) không dò lại. Màn 3 và 4 không có đợt sau (dò thử: đợt sau
+// không đổi kết quả); đội hình màn 3 (4 hộ vệ, cụm ±4) do script dò tạm chọn.
 const KNOBS: readonly Knob[] = [
-  skillCharge('fireball', [5, 6]),
-  levelSpread(2, [2, 3]),
-  monsterStat('máu Slime Vua', ['slimeKing'], 'hp', [5, 6, 7], 2),
-  levelCount(3, 'slime', [6, 7, 8, 9, 10]),
-  levelSpread(3, [2, 3, 4]),
-  levelSpread(4, [4, 5, 6]),
-  // Khai báo số slime trước số Slime Pháo: đội hình giữ thứ tự slime rồi tới Pháo như battleConfig.ts.
-  levelCount(4, 'slime', [6, 7]),
-  levelCount(4, 'slimeCannon', [1, 2]),
-  monsterStat('máu Slime Pháo', ['slimeCannon'], 'hp', [3, 4, 5], 4),
-  monsterStat('sức đánh Slime Pháo', ['slimeCannon'], 'attack', [2, 3], 4),
+  // Màn 1 dạy đợt quái: nhiệm vụ nhiều hơn 4 con mở màn để đợt sau phải ra.
+  questCount(0, [5, 6]),
+  waveCount(0, 'slime', [2, 3]),
+  nextWaveAt(0, [1, 2]),
+  questCount(1, [7, 8, 9]),
+  waveCount(1, 'slime', [3, 4]),
+  nextWaveAt(1, [2, 3]),
+  monsterStat('máu Slime Vua', ['slimeKing'], 'hp', [7, 8, 9], 2),
+  questCount(3, [8, 9, 10]),
+  waveCount(4, 'slime', [2, 3]),
+  nextWaveAt(4, [2, 3]),
 ];
-const TURN_RANGE: readonly [number, number] = [5, 13];
+const TURN_RANGE: readonly [number, number] = [4, 16];
 const SHOWN = 3;
 
 const targets = BATTLE_CONFIG.levels.map((level, i) => {

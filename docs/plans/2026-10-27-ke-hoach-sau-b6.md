@@ -101,6 +101,9 @@ nhiệm vụ; thử tay thấy dòng nhiệm vụ đếm đúng; `npm run tune` 
 
 **Chủ dự án quyết:** luật 1–3 ở trên; nhiệm vụ hiện ở đâu (gợi ý: thay ô "Quái: n" bằng "Slime 3/6").
 
+**Đã quyết (27/10/2026):** "cứ làm theo gợi ý" — 1 nhiệm vụ chính, đợt kế ra khi sân còn ≤ ngưỡng của
+màn, xong nhiệm vụ là thắng ngay, ô "Slime 3/6" thay "Quái: n". Nhiệm vụ phụ chờ đợt 3 (vàng). Làm ở F11.
+
 ## 5. Đợt 2 — Thêm loại quái
 
 **Mục tiêu:** nhiệm vụ "giết loại X" chỉ có nghĩa khi có nhiều loại. Mỗi loại quái mới phải đặt ra **một
@@ -182,6 +185,10 @@ bao nhiêu trận đủ vàng nâng một cấp — chủ dự án duyệt bản
 ## 10. Đợt 7 — Thiết kế màn (B5)
 
 **Mục tiêu:** 15–20 màn, chia chương 5 màn, màn cuối chương có trùm.
+
+> **Chủ dự án bổ sung 27/10/2026** (nguyên văn ở CLAUDE.md mục 1): màn chơi chia theo **chủ đề môi trường**
+> (núi lửa, băng, rừng rậm…), mỗi chủ đề **khoảng 20 màn**; game phải mở rộng được về sau. Mục tiêu
+> 15–20 màn ở trên cần sửa lại theo ý này khi bắt đầu đợt 7.
 
 **Cách làm nhanh:** **bộ sinh màn** — mô tả màn bằng ý ("chương 2, màn 3, có quái lao, khó vừa") → máy
 chọn đội hình, đợt quái, nhiệm vụ, số lượt sao cho mô phỏng đúng mục tiêu độ khó (đợt 0) → chủ dự án
