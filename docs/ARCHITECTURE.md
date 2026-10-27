@@ -67,6 +67,9 @@ src/
       logic/                 luật thuần + test đặt cạnh (*.test.ts) + battleConfig.ts
       view/                  scene Phaser, bố cục, sprite
       index.ts               cổng công khai duy nhất của tính năng
+    profile/                 hồ sơ người chơi (đợt 3): vàng, màn đã mở khóa — lưu localStorage, có số
+                             phiên bản dữ liệu; logic/ thuần (kho lưu truyền vào), view/profileStore.ts gắn
+                             localStorage. Tính năng khác chỉ dùng qua index.ts (ESLint chặn — DEBT-005)
 e2e/
   *.spec.ts                  test cả luồng, mỗi tính năng một file
   support/gameDriver.ts      cách duy nhất để test điều khiển game (phần chung)

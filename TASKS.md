@@ -113,4 +113,15 @@ Phạm vi chủ dự án chốt: "làm theo gợi ý của agent" — chọn 3�
 - [x] Bot: ngắm chuẩn giữ skill tới lượt Ma hiện hình (test trước)
 - [x] Dò số màn 6–7 (script tạm + `npm run tune`), đo người biết câu đố so với không biết
 - [x] E2E qua đủ 7 màn, ảnh màn 6 và Ma vô hình; thử tay màn 6–7 khung 375×760
-- [ ] FEATURE_MAP (F12), `npm run check`, mở PR, chủ dự án duyệt
+- [x] FEATURE_MAP (F12), `npm run check`, mở PR, chủ dự án duyệt (PR #24 gộp 27/10/2026)
+
+## Kế hoạch sau B6, đợt 3 — F13 Lưu tiến trình + vàng (27/10/2026)
+
+Phạm vi chủ dự án chốt: "agent đề xuất" số vàng mỗi loại quái và luật thua có giữ vàng không.
+
+- [x] Đề xuất: vàng theo độ khó hạ (1/1/2/2/3/5), thua giữ vàng, mở game vào màn cao nhất đã mở khóa
+- [x] Vàng trong trận (test trước); tính năng profile: đọc/ghi an toàn, phiên bản, bản sao dữ liệu lạ (test trước)
+- [x] Màn kết quả "+n vàng · tổng", màn chuẩn bị "Vàng: n"; `?level=` chỉ tới màn đã mở khóa (DEBT-011)
+- [x] ESLint chặn import vào ruột tính năng khác (DEBT-005)
+- [x] E2E lưu / mở lại / chặn `?level=`; thử tay khung 375×760
+- [ ] FEATURE_MAP (F13), `npm run check`, mở PR, chủ dự án duyệt

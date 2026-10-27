@@ -6,6 +6,7 @@ import { registerPixelSprites } from '../../../app/pixelSprites';
 import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE, type PaletteColor } from '../../../shared/palette';
 import { parseSeedParam } from '../../../shared/seedParam';
+import { applyBattleResult, loadProfile, saveProfile } from '../../profile';
 import { arcSectorAt } from '../logic/arena';
 import {
   canBeHit,
@@ -98,6 +99,8 @@ export class BattleScene extends Scene {
   private resultLayer!: GameObjects.Container;
   private resultTitle!: GameObjects.Text;
   private resultDetail!: GameObjects.Text;
+  /** Đợt 3: vàng nhặt trong trận + tổng vàng trong hồ sơ. */
+  private resultGold!: GameObjects.Text;
   private resultHint!: GameObjects.Text;
   private readonly monsterSprites = new Map<number, GameObjects.Image>();
   private spriteKeys!: Record<keyof typeof BATTLE_SPRITES, string>;
@@ -598,11 +601,20 @@ export class BattleScene extends Scene {
     this.resultDetail = this.add
       .text(GAME_WIDTH / 2, 310, '', { ...TEXT, fontSize: '16px' })
       .setOrigin(0.5);
+    this.resultGold = this.add
+      .text(GAME_WIDTH / 2, 342, '', { ...TEXT, fontSize: '16px', color: PALETTE.sand })
+      .setOrigin(0.5);
     this.resultHint = this.add
       .text(GAME_WIDTH / 2, 380, '', { ...TEXT, fontSize: '18px', color: PALETTE.sand })
       .setOrigin(0.5);
     this.resultLayer = this.add
-      .container(0, 0, [backdrop, this.resultTitle, this.resultDetail, this.resultHint])
+      .container(0, 0, [
+        backdrop,
+        this.resultTitle,
+        this.resultDetail,
+        this.resultGold,
+        this.resultHint,
+      ])
       .setDepth(DEPTH.result)
       .setVisible(false);
   }
@@ -630,6 +642,23 @@ export class BattleScene extends Scene {
       );
       this.resultHint.setText(`Chạm để chơi lại màn ${next}`);
     }
+    this.showGold(state);
     this.resultLayer.setVisible(true);
+  }
+
+  /**
+   * Đợt 3: cộng trận vào hồ sơ (vàng — thắng hay thua đều giữ; thắng thì mở khóa màn kế), lưu lại, và
+   * hiện số vàng. Gọi đúng một lần mỗi trận (lúc hiện màn kết quả). Không lưu được thì vẫn chơi tiếp.
+   */
+  private showGold(state: BattleState): void {
+    const profile = applyBattleResult(
+      loadProfile(),
+      { level: state.level, won: state.phase === 'won', gold: state.gold },
+      this.config.levels.length,
+    );
+    const saved = saveProfile(profile);
+    this.resultGold.setText(
+      saved ? `+${state.gold} vàng · tổng ${profile.gold}` : `+${state.gold} vàng (không lưu được)`,
+    );
   }
 }

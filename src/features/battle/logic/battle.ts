@@ -76,6 +76,9 @@ function validateBattleConfig(config: BattleConfig): void {
         `${label}: vòng bắn ${rule.shootRing} phải là số nguyên trong [1, ${ringCount - 2}]`,
       );
     }
+    if (rule.gold !== undefined && (!Number.isInteger(rule.gold) || rule.gold < 0)) {
+      problems.push(`${label}: vàng ${rule.gold} phải là số nguyên ≥ 0`);
+    }
     if (rule.step !== undefined && (!Number.isInteger(rule.step) || rule.step < 1)) {
       problems.push(`${label}: số vòng lao ${rule.step} phải là số nguyên ≥ 1`);
     }
@@ -272,6 +275,7 @@ export function createBattle(
     lastSkill: null,
     questProgress: 0,
     nextWave: 0,
+    gold: 0,
   };
 }
 
@@ -282,6 +286,15 @@ function questProgressAfter(state: BattleState, hits: readonly Hit[], level: Lev
   const kindById = new Map(state.monsters.map((m) => [m.id, m.kind]));
   const killed = hits.filter((hit) => hit.killed && kindById.get(hit.monsterId) === quest.kind);
   return state.questProgress + killed.length;
+}
+
+/** Đợt 3: vàng sau khi các quái trong `hits` trúng đòn — cộng vàng theo loại của từng con bị hạ. */
+function goldAfter(state: BattleState, hits: readonly Hit[], config: BattleConfig): number {
+  const kindById = new Map(state.monsters.map((m) => [m.id, m.kind]));
+  return hits.reduce((sum, hit) => {
+    const kind = kindById.get(hit.monsterId);
+    return hit.killed && kind !== undefined ? sum + (config.monsterKinds[kind].gold ?? 0) : sum;
+  }, state.gold);
 }
 
 /**
@@ -422,7 +435,8 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
     skill === undefined ? 0 : Math.min(state.skillCharge + 1, config.skills[skill].chargeTurns);
   const level = levelAt(state.level, config);
   const questProgress = questProgressAfter(state, hits, level);
-  const common = { turnsLeft, skillCharge, lastAttack, lastSkill: null, questProgress };
+  const gold = goldAfter(state, hits, config);
+  const common = { turnsLeft, skillCharge, lastAttack, lastSkill: null, questProgress, gold };
 
   // F11: xong nhiệm vụ thì thắng ngay — quái còn lại không đánh, không đi nữa.
   if (isLevelCleared(level, questProgress, survivors, state.nextWave)) {
@@ -587,7 +601,8 @@ export function castSkill(state: BattleState, config: BattleConfig): BattleState
   const lastSkill = { skill: kind, hits };
   const level = levelAt(state.level, config);
   const questProgress = questProgressAfter(state, hits, level);
-  const after = { ...state, monsters, skillCharge: 0, lastSkill, questProgress };
+  const gold = goldAfter(state, hits, config);
+  const after = { ...state, monsters, skillCharge: 0, lastSkill, questProgress, gold };
 
   if (isLevelCleared(level, questProgress, monsters, state.nextWave)) {
     return { ...after, phase: 'won', lossReason: null };

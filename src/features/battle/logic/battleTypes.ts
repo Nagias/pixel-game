@@ -68,6 +68,8 @@ export interface MonsterConfig {
   readonly step?: number;
   /** F12: quái ma — vô hình ở lượt chẵn của màn (lượt 2, 4, 6…): nhát chém và skill đi xuyên qua. */
   readonly ghost?: boolean;
+  /** Đợt 3: số vàng người chơi nhận khi hạ một con loại này (chém hay skill). Không có = 0. */
+  readonly gold?: number;
 }
 
 export interface HeroConfig {
@@ -212,4 +214,6 @@ export interface BattleState {
   readonly questProgress: number;
   /** F11: đợt kế sẽ ra — chỉ số trong `waves` của màn (bằng số đợt đã ra sau đợt mở màn). */
   readonly nextWave: number;
+  /** Đợt 3: vàng nhặt được trong trận này (thắng hay thua đều giữ — cộng vào hồ sơ ở tính năng profile). */
+  readonly gold: number;
 }
