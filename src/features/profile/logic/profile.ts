@@ -4,7 +4,7 @@ import { PROFILE_BACKUP_KEY, PROFILE_KEY, PROFILE_VERSION } from './profileConfi
 import type { BattleResult, KeyValueStore, Profile } from './profileTypes';
 
 export function emptyProfile(): Profile {
-  return { version: PROFILE_VERSION, gold: 0, unlockedLevel: 0 };
+  return { version: PROFILE_VERSION, gold: 0, unlockedLevel: 0, upgrades: {} };
 }
 
 const isCount = (value: unknown): value is number =>
@@ -19,11 +19,19 @@ function parseProfile(raw: string): Profile | null {
     return null;
   }
   if (typeof data !== 'object' || data === null || Array.isArray(data)) return null;
-  const { version, gold, unlockedLevel } = data as Record<string, unknown>;
-  // Chỉ có phiên bản 1. Đổi cấu trúc thì thêm bước chuyển từ phiên bản cũ ở đây.
-  if (version !== PROFILE_VERSION || !isCount(gold) || !isCount(unlockedLevel)) return null;
-  return { version, gold, unlockedLevel };
+  const { version, gold, unlockedLevel, upgrades } = data as Record<string, unknown>;
+  if (!isCount(gold) || !isCount(unlockedLevel)) return null;
+  // Bước chuyển từ phiên bản cũ: 1 → 2 thêm cấp nâng cấp (chưa nâng gì).
+  if (version === 1) return { version: PROFILE_VERSION, gold, unlockedLevel, upgrades: {} };
+  if (version !== PROFILE_VERSION || !isLevels(upgrades)) return null;
+  return { version, gold, unlockedLevel, upgrades };
 }
+
+const isLevels = (value: unknown): value is Record<string, number> =>
+  typeof value === 'object' &&
+  value !== null &&
+  !Array.isArray(value) &&
+  Object.values(value).every(isCount);
 
 /**
  * Đọc hồ sơ. Chưa có → hồ sơ trống (người chơi mới). Dữ liệu lạ → cất bản sao vào khóa dự phòng (nếu

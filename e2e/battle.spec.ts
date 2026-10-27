@@ -462,6 +462,35 @@ test('B4: ?level=4 mở thẳng màn chuẩn bị màn 4 (thử tay / E2E nhanh)
   expect(battle.monsters.map((m) => m.kind)).toEqual(levelAt(3, BATTLE_CONFIG).monsters);
 });
 
+test('Đợt 4: màn Nâng cấp — mua bằng vàng, giá tăng theo cấp, thiếu vàng thì không mua được, vào trận máu tối đa tăng', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.seedProfile({ gold: 35 });
+  await game.openLoadout(SEED);
+  expect(await game.loadoutSnapshot()).toMatchObject({ level: 0, gold: 35 });
+
+  expect(await game.openUpgrade()).toMatchObject({ gold: 35, upgrades: {} });
+  await game.buyUpgrade('hp'); // cấp 1: 10 vàng
+  expect(await game.upgradeSnapshot()).toMatchObject({ gold: 25, upgrades: { hp: 1 } });
+  await game.buyUpgrade('hp'); // cấp 2: 20 vàng
+  expect(await game.upgradeSnapshot()).toMatchObject({ gold: 5, upgrades: { hp: 2 } });
+  await game.buyUpgrade('crit'); // cần 10, chỉ có 5: không mua được
+  expect(await game.upgradeSnapshot()).toMatchObject({ gold: 5, upgrades: { hp: 2 } });
+  await game.advance(50);
+  await page.screenshot({ path: test.info().outputPath('23-nang-cap.png') });
+  expect(await game.storedProfile()).toMatchObject({ gold: 5, upgrades: { hp: 2 } });
+
+  // "XONG" về màn chuẩn bị đúng màn; vào trận thì máu tối đa +2 mỗi cấp.
+  await game.closeUpgrade();
+  expect(await game.loadoutSnapshot()).toMatchObject({ level: 0, gold: 5 });
+  await game.startBattle();
+  const hp = BATTLE_CONFIG.hero.hp + 2 * 2;
+  expect((await game.snapshot()).battle.heroHp).toBe(hp);
+  await game.advance(50);
+  await page.screenshot({ path: test.info().outputPath('24-tran-sau-nang-cap.png') });
+});
+
 test('Đợt 3: vàng và màn đã mở khóa được lưu — mở lại game vẫn còn; ?level= vượt màn đã mở thì bị chặn', async ({
   page,
   context,

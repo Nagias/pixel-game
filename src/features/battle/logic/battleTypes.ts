@@ -91,6 +91,24 @@ export interface Difficulty {
   readonly spareTurns: number;
 }
 
+/** Đợt 4: các chỉ số nâng cấp được bằng vàng. Thêm chỉ số = thêm tên ở đây + con số + hiệu lực ở upgrades.ts. */
+export type UpgradeKind = 'hp' | 'crit' | 'heal';
+
+export const UPGRADE_KINDS: readonly UpgradeKind[] = ['hp', 'crit', 'heal'];
+
+export interface UpgradeStat {
+  readonly name: string;
+  /** Hiệu lực mỗi cấp: hp — máu tối đa; crit — xác suất chí mạng (0–1) cộng cho mọi vũ khí; heal — máu hồi. */
+  readonly perLevel: number;
+  /** Giá vàng của từng cấp, theo thứ tự (cấp 1, cấp 2…); số phần tử = cấp tối đa. */
+  readonly costs: readonly number[];
+}
+
+export type UpgradeConfig = Readonly<Record<UpgradeKind, UpgradeStat>>;
+
+/** Đợt 4: cấp đã nâng theo tên chỉ số — dữ liệu hồ sơ, có thể có tên lạ hoặc cấp vượt giới hạn. */
+export type UpgradeLevels = Readonly<Record<string, number>>;
+
 /** F11: nhiệm vụ chính của màn — giết đủ `count` con loại `kind` là thắng ngay. */
 export interface QuestConfig {
   readonly kind: MonsterKind;
@@ -101,6 +119,11 @@ export interface QuestConfig {
 export interface LevelConfig {
   /** Đợt 0: độ khó mục tiêu của màn (chủ dự án duyệt). */
   readonly target?: Difficulty;
+  /**
+   * Đợt 4: mức nâng cấp người chơi lần đầu có được khi tới màn này (mua ngay khi đủ vàng) — mục tiêu độ khó
+   * đo với mức này. Game không đọc: chỉ mô phỏng / bộ dò số / balance.test.
+   */
+  readonly assumedUpgrades?: UpgradeLevels;
   /** Số lượt tấn công tối đa của màn. */
   readonly turnLimit: number;
   /** Đội hình mở màn, theo thứ tự id (phần tử đầu là quái id 1). */

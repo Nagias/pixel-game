@@ -124,4 +124,15 @@ Phạm vi chủ dự án chốt: "agent đề xuất" số vàng mỗi loại qu
 - [x] Màn kết quả "+n vàng · tổng", màn chuẩn bị "Vàng: n"; `?level=` chỉ tới màn đã mở khóa (DEBT-011)
 - [x] ESLint chặn import vào ruột tính năng khác (DEBT-005)
 - [x] E2E lưu / mở lại / chặn `?level=`; thử tay khung 375×760
-- [ ] FEATURE_MAP (F13), `npm run check`, mở PR, chủ dự án duyệt
+- [x] FEATURE_MAP (F13), `npm run check`, mở PR, chủ dự án duyệt (PR #25 gộp 27/10/2026)
+
+## Kế hoạch sau B6, đợt 4 — F14 Nâng cấp bằng vàng (27/10/2026)
+
+Phạm vi chủ dự án chốt: "agent đề xuất" chỉ số được nâng, bậc giá, giới hạn cấp.
+
+- [x] Đề xuất: Máu +2, Chí mạng +5%, Hồi máu +1; 3 cấp; giá 10 / 20 / 40
+- [x] Luật nâng cấp (test trước); hồ sơ phiên bản 2 + chuyển từ bản 1 (test trước)
+- [x] Màn Nâng cấp + nút từ màn chuẩn bị (test bố cục trước)
+- [x] Đo độ khó với nâng cấp dự kiến (`assumedUpgrades`), chỉnh màn 5 và 7
+- [x] E2E mua nâng cấp → vào trận máu tăng; thử tay khung 375×760
+- [ ] FEATURE_MAP (F14), `npm run check`, mở PR, chủ dự án duyệt

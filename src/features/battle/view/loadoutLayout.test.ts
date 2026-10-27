@@ -54,4 +54,16 @@ describe('B4 — bố cục màn chuẩn bị trận', () => {
     expect(loadoutTapAt(L.left + 10, y, [2], L)).toBeNull();
     expect(loadoutTapAt(180, 20, [2], L)).toBeNull();
   });
+
+  // Đợt 4: nút "NÂNG CẤP" ngay dưới nút "VÀO TRẬN", vừa ngón tay, không chồng nút nào, trong khung.
+  it('nút "NÂNG CẤP" dưới nút "VÀO TRẬN", không chồng, đủ cao, trong khung; chạm giữa là mở nâng cấp', () => {
+    const { start, upgrade } = L;
+    expect(upgrade.y).toBeGreaterThanOrEqual(start.y + start.height);
+    expect(upgrade.height).toBeGreaterThanOrEqual(44);
+    expect(upgrade.y + upgrade.height).toBeLessThanOrEqual(640);
+    expect(upgrade.x).toBeGreaterThanOrEqual(0);
+    expect(upgrade.x + upgrade.width).toBeLessThanOrEqual(360);
+    const u = center(upgrade);
+    expect(loadoutTapAt(u.x, u.y, [2, 1, 1], L)).toEqual({ kind: 'upgrade' });
+  });
 });
