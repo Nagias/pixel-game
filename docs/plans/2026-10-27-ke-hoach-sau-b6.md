@@ -162,6 +162,9 @@ dự kiến ở màn đó". Bộ dò số (đợt 0) chạy mô phỏng với m�
 
 **Chủ dự án quyết:** chỉ số nào được nâng; bậc giá; giới hạn cấp.
 
+**Đã quyết (27/10/2026):** "agent đề xuất" — Máu tối đa +2, Chí mạng +5% (mọi vũ khí), Hồi máu +1; mỗi chỉ số tối
+đa 3 cấp, giá 10 / 20 / 40 vàng; chưa nâng riêng từng vũ khí, chưa có "may mắn". Làm ở F14.
+
 ## 8. Đợt 5 — Quái hiếm, rơi đồ, cấp màu, túi đồ
 
 **Mục tiêu:** ý tưởng của chủ dự án ngày 27/10: từ các màn có skill, mỗi trận **có thể** có quái hiếm

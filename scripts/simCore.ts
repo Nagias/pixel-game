@@ -23,6 +23,8 @@ import type {
   SkillKind,
 } from '../src/features/battle/logic/battleTypes';
 import { allLoadouts, allWeapons, defaultLoadout } from '../src/features/battle/logic/loadout';
+import { UPGRADE_CONFIG } from '../src/features/battle/logic/battleConfig';
+import { withUpgrades } from '../src/features/battle/logic/upgrades';
 
 /**
  * Kiểu chơi: chọn có bấm skill không và chém thế nào, từ trạng thái trận và trạng thái ngẫu nhiên
@@ -100,7 +102,16 @@ export function playGame(
   return state;
 }
 
-/** Chơi `games` ván (seed 1…games) của một màn với một bộ đồ và một kiểu chơi. */
+/**
+ * Đợt 4: cấu hình để mô phỏng màn `level` — cộng mức nâng cấp dự kiến của màn (`assumedUpgrades`), vì mục
+ * tiêu độ khó tính theo người chơi đã nâng cấp tới mức đó.
+ */
+export function simConfig(config: BattleConfig, level: number): BattleConfig {
+  const assumed = config.levels[level]?.assumedUpgrades;
+  return assumed ? withUpgrades(config, assumed, UPGRADE_CONFIG) : config;
+}
+
+/** Chơi `games` ván (seed 1…games) của một màn với một bộ đồ và một kiểu chơi (với nâng cấp dự kiến). */
 export function simulateLevel(
   level: number,
   loadout: Loadout,
@@ -112,8 +123,9 @@ export function simulateLevel(
   let spareTurns = 0;
   let lostOutOfTurns = 0;
   let lostDefeated = 0;
+  const upgraded = simConfig(config, level);
   for (let seed = 1; seed <= games; seed++) {
-    const end = playGame(seed, level, loadout, player, config);
+    const end = playGame(seed, level, loadout, player, upgraded);
     if (end.phase === 'won') {
       won++;
       spareTurns += end.turnsLeft;

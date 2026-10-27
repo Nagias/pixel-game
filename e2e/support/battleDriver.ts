@@ -1,10 +1,14 @@
 // Phần điều khiển riêng của tính năng "battle" (F01–F06): đổi vũ khí, ngắm vùng xanh, chém.
 // B4: màn chuẩn bị trận — chọn món, chạm "VÀO TRẬN".
-import type { BattleSnapshot, LoadoutSnapshot } from '../../src/features/battle';
+import type { BattleSnapshot, LoadoutSnapshot, UpgradeSnapshot } from '../../src/features/battle';
 import * as autoPlay from '../../src/features/battle/logic/autoPlay';
 import type { Move } from '../../src/features/battle/logic/autoPlay';
 import { BATTLE_CONFIG } from '../../src/features/battle/logic/battleConfig';
-import type { SkillKind } from '../../src/features/battle/logic/battleTypes';
+import {
+  UPGRADE_KINDS,
+  type SkillKind,
+  type UpgradeKind,
+} from '../../src/features/battle/logic/battleTypes';
 import {
   barButtonCount,
   skillButtonIndex,
@@ -12,6 +16,7 @@ import {
   weaponButtonRects,
 } from '../../src/features/battle/view/battleLayout';
 import { LOADOUT_LAYOUT, optionRects } from '../../src/features/battle/view/loadoutLayout';
+import { buyButtonRect, UPGRADE_LAYOUT } from '../../src/features/battle/view/upgradeLayout';
 import { PROFILE_KEY, PROFILE_VERSION } from '../../src/features/profile/logic/profileConfig';
 import type { RngState } from '../../src/shared/random';
 import { GameDriver } from './gameDriver';
@@ -37,14 +42,55 @@ export class BattleDriver extends GameDriver {
    * Đợt 3: đặt hồ sơ người chơi trước khi game chạy — chỉ khi trình duyệt chưa có hồ sơ, để mở lại game
    * (trang mới cùng trình duyệt) vẫn thấy đúng tiến trình đã lưu.
    */
-  async seedProfile(patch: { gold?: number; unlockedLevel?: number }): Promise<void> {
-    const value = JSON.stringify({ version: PROFILE_VERSION, gold: 0, unlockedLevel: 0, ...patch });
+  async seedProfile(patch: {
+    gold?: number;
+    unlockedLevel?: number;
+    upgrades?: Record<string, number>;
+  }): Promise<void> {
+    const value = JSON.stringify({
+      version: PROFILE_VERSION,
+      gold: 0,
+      unlockedLevel: 0,
+      upgrades: {},
+      ...patch,
+    });
     await this.page.addInitScript(
       ([key, raw]) => {
         if (window.localStorage.getItem(key) === null) window.localStorage.setItem(key, raw);
       },
       [PROFILE_KEY, value] as const,
     );
+  }
+
+  upgradeSnapshot(): Promise<UpgradeSnapshot> {
+    return this.snapshotOf<UpgradeSnapshot>('upgrade');
+  }
+
+  /** Đợt 4: màn chuẩn bị — chạm "NÂNG CẤP", chờ màn Nâng cấp mở và nhận chạm. */
+  async openUpgrade(): Promise<UpgradeSnapshot> {
+    await this.waitLoadoutReady();
+    const { upgrade } = LOADOUT_LAYOUT;
+    await this.tapAt(upgrade.x + upgrade.width / 2, upgrade.y + upgrade.height / 2);
+    await this.waitSceneSwitch();
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const snapshot = await this.upgradeSnapshot();
+      if (snapshot.canTap) return snapshot;
+      await this.advance(SCENE_SWITCH_MS);
+    }
+    throw new Error('Màn Nâng cấp không nhận chạm sau 2 giây');
+  }
+
+  /** Đợt 4: màn Nâng cấp — chạm nút mua của chỉ số `kind`. */
+  async buyUpgrade(kind: UpgradeKind): Promise<void> {
+    const rect = buyButtonRect(UPGRADE_KINDS.indexOf(kind), UPGRADE_LAYOUT);
+    await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
+  }
+
+  /** Đợt 4: màn Nâng cấp — chạm "XONG", chờ quay lại màn chuẩn bị. */
+  async closeUpgrade(): Promise<void> {
+    const { back } = UPGRADE_LAYOUT;
+    await this.tapAt(back.x + back.width / 2, back.y + back.height / 2);
+    await this.waitSceneSwitch();
   }
 
   /** Đợt 3: hồ sơ đang lưu trong trình duyệt (null nếu chưa có). */

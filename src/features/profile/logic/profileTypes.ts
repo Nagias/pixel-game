@@ -5,6 +5,8 @@ export interface Profile {
   readonly gold: number;
   /** Màn cao nhất được chơi (đếm từ 0; 0 = mới mở màn 1). */
   readonly unlockedLevel: number;
+  /** Đợt 4 (phiên bản 2): cấp đã nâng theo tên chỉ số (luật nâng cấp nằm ở tính năng battle). */
+  readonly upgrades: Readonly<Record<string, number>>;
 }
 
 /** Kết quả một trận cần cộng vào hồ sơ. */

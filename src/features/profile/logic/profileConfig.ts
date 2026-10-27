@@ -1,7 +1,8 @@
 // Nơi DUY NHẤT chứa hằng số của hồ sơ người chơi.
 
 /** Phiên bản cấu trúc dữ liệu hiện tại. Đổi cấu trúc → tăng số này + thêm bước chuyển trong profile.ts. */
-export const PROFILE_VERSION = 1;
+// Lịch sử: 1 — vàng + màn đã mở khóa (đợt 3); 2 — thêm cấp nâng cấp (đợt 4).
+export const PROFILE_VERSION = 2;
 
 /** Khóa lưu hồ sơ trong localStorage. */
 export const PROFILE_KEY = 'pixelGame.profile';

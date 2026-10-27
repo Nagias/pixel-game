@@ -20,7 +20,8 @@ import {
   selectWeapon,
   willAttack,
 } from '../logic/battle';
-import { BATTLE_CONFIG } from '../logic/battleConfig';
+import { BATTLE_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
+import { withUpgrades } from '../logic/upgrades';
 import type { BattleState, Hit, Loadout, Monster, SkillKind } from '../logic/battleTypes';
 import { defaultLoadout } from '../logic/loadout';
 import {
@@ -79,7 +80,8 @@ const TEXT = {
 } as const;
 
 export class BattleScene extends Scene {
-  private readonly config = BATTLE_CONFIG;
+  /** Cấu hình trận đã cộng nâng cấp trong hồ sơ (đợt 4): máu tối đa, chí mạng, hồi máu. */
+  private config = BATTLE_CONFIG;
   private readonly fixedSeed = parseSeedParam(window.location.search);
   private level = 0;
   private loadout!: Loadout;
@@ -123,6 +125,7 @@ export class BattleScene extends Scene {
 
   /** Màn chuẩn bị gửi màn + bộ đồ. Không có (chỉ khi mở thẳng scene này) thì màn 1, bộ mặc định. */
   init(data: Partial<LoadoutSceneData>): void {
+    this.config = withUpgrades(BATTLE_CONFIG, loadProfile().upgrades, UPGRADE_CONFIG);
     this.level = data.level ?? 0;
     this.loadout = data.loadout ?? defaultLoadout(this.config);
   }

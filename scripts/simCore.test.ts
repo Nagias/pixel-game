@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { seedRng } from '../src/shared/random';
 import type { BattleConfig, BattleState, Monster } from '../src/features/battle/logic/battleTypes';
-import { PLAYERS, type Player } from './simCore';
+import { PLAYERS, simConfig, type Player } from './simCore';
 
 // F12: người chơi trung bình (bot Ngắm chuẩn — đo mục tiêu độ khó) biết câu đố Slime Ma: skill bấm lúc
 // Ma vô hình thì đi xuyên qua, nên giữ skill tới lượt Ma hiện hình. Không biết điều này thì Mưa băng (đầy
@@ -78,5 +78,20 @@ describe('bot Ngắm chuẩn — giữ skill tới lượt Slime Ma hiện hình
   it('sân không có Ma: bấm ngay như trước, lượt nào cũng vậy', () => {
     const noGhost = monsters.filter((m) => m.kind !== 'slimeGhost');
     expect(player(state(5, noGhost), seedRng(1), CONFIG)[0].cast).toBe(true);
+  });
+});
+
+// Đợt 4: mục tiêu độ khó đo theo người chơi có mức nâng cấp dự kiến ở màn đó (`assumedUpgrades` của màn) —
+// mô phỏng, bộ dò số và balance.test dùng chung simConfig.
+describe('simConfig — cấu hình mô phỏng của màn cộng nâng cấp dự kiến', () => {
+  it('màn có nâng cấp dự kiến: cộng vào cấu hình; màn không có: giữ nguyên', () => {
+    const [plain] = CONFIG.levels;
+    if (!plain) throw new Error('thiếu màn thử');
+    const withAssumed: BattleConfig = {
+      ...CONFIG,
+      levels: [plain, { ...plain, assumedUpgrades: { hp: 1, heal: 2 } }],
+    };
+    expect(simConfig(withAssumed, 0)).toBe(withAssumed);
+    expect(simConfig(withAssumed, 1).hero).toMatchObject({ hp: 7, healAmount: 2 });
   });
 });

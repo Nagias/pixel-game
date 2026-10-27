@@ -1,6 +1,6 @@
 // Nơi DUY NHẤT chứa con số cân bằng của trận đấu. Đổi số ở đây, không viết cứng ở chỗ khác.
 // NỢ DEBT-009: các con số hiện là phỏng đoán ban đầu, chưa qua chơi thử.
-import type { BattleConfig, Difficulty } from './battleTypes';
+import type { BattleConfig, Difficulty, UpgradeConfig } from './battleTypes';
 
 /**
  * Đợt 0 (chủ dự án duyệt 27/10/2026): dung sai của mục tiêu độ khó (`target` của mỗi màn) — kết quả mô
@@ -145,6 +145,8 @@ export const BATTLE_CONFIG: BattleConfig = {
   // F11 (đợt 1, chủ dự án duyệt luật 27/10/2026): mỗi màn một nhiệm vụ, xong là thắng; đợt sau tràn vào
   // khi sân còn ≤ nextWaveAt con. Nhiệm vụ, đợt quái, số lượt do agent đề xuất + `npm run tune` 27/10/2026
   // (số lượt màn 1–5: 10/11/8/9/8 → 14/13/6/8/9).
+  // Đợt 4: `assumedUpgrades` = nâng cấp người chơi lần đầu có khi tới màn (mua ngay khi đủ vàng; mô phỏng
+  // 27/10/2026: vào màn 3 ~14 vàng, màn 4 ~20, màn 6 ~39) — mục tiêu độ khó đo với mức nâng cấp này.
   levels: [
     // Màn 1 dạy đợt quái: hạ 6 mà mở màn chỉ 4 con, đợt 2 (2 con) ra khi sân còn ≤ 2.
     {
@@ -174,6 +176,7 @@ export const BATTLE_CONFIG: BattleConfig = {
       spread: 4,
       quest: { kind: 'slimeKing', count: 1 },
       target: { winRate: 0.88, spareTurns: 1.25 },
+      assumedUpgrades: { hp: 1 },
     },
     // B2 (chủ dự án duyệt 26/10/2026): quái tới từ hai phía — 2 cụm đối diện (5 + 5), đất của Rìu. F11:
     // hạ 9 trong 10 con; không cần đợt sau (nó chỉ ra khi đã hạ 9 — lúc nhiệm vụ đã xong).
@@ -195,17 +198,30 @@ export const BATTLE_CONFIG: BattleConfig = {
       splitOpposite: true,
       quest: { kind: 'slime', count: 9 },
       target: { winRate: 0.83, spareTurns: 0.75 },
+      assumedUpgrades: { hp: 1, crit: 1 },
     },
-    // B3 (chủ dự án duyệt 26/10/2026): slime + Slime Pháo trong một cụm ±5. F11: nhiệm vụ hạ 2 Slime Pháo —
-    // con thứ hai tới cùng đợt sau (3 slime + 1 Pháo) khi sân còn ≤ 2.
+    // B3 (chủ dự án duyệt 26/10/2026): slime + Slime Pháo trong một cụm. F11: nhiệm vụ hạ 2 Slime Pháo — con
+    // thứ hai tới cùng đợt sau khi sân còn ≤ 2. Đợt 4 (script dò tạm, với nâng cấp dự kiến): mở màn 7 → 8
+    // slime, cụm ±5 → ±4, đợt sau 3 → 1 slime — bộ số duy nhất vừa đạt mục tiêu vừa khó hơn màn 4 (luật B3).
     {
       turnLimit: 9,
-      monsters: ['slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slimeCannon'],
-      spread: 5,
-      waves: [['slime', 'slime', 'slime', 'slimeCannon']],
+      monsters: [
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slimeCannon',
+      ],
+      spread: 4,
+      waves: [['slime', 'slimeCannon']],
       nextWaveAt: 2,
       quest: { kind: 'slimeCannon', count: 2 },
       target: { winRate: 0.78, spareTurns: 0.5 },
+      assumedUpgrades: { hp: 1, crit: 1 },
     },
     // F12: màn giới thiệu Slime Lao — hạ 2 Slime Lao, con thứ hai tới cùng đợt sau. Màn giới thiệu quái mới
     // nên mục tiêu dễ hơn màn 5 (cuối chương) — agent đề xuất, chủ dự án duyệt qua PR. Đội hình do script
@@ -219,6 +235,7 @@ export const BATTLE_CONFIG: BattleConfig = {
       nextWaveAt: 1,
       quest: { kind: 'slimeCharger', count: 2 },
       target: { winRate: 0.9, spareTurns: 1.5 },
+      assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
     },
     // F12: màn giới thiệu Slime Ma — hạ 2 Slime Ma, con thứ hai tới cùng đợt sau (kèm 3 Slime Con làm mồi
     // combo). Đội hình do script dò tạm chọn: nhiều Ma hơn thì skill nào hợp (Cầu lửa 2 sát thương hạ Ma
@@ -227,10 +244,23 @@ export const BATTLE_CONFIG: BattleConfig = {
       turnLimit: 9,
       monsters: ['slimeGhost', 'slime', 'slime', 'slime', 'slime', 'slime'],
       spread: 4,
-      waves: [['slimeGhost', 'slimeMini', 'slimeMini', 'slimeMini']],
+      // Đợt 4 (`npm run tune` với nâng cấp dự kiến): Slime Con ra trước Slime Ma trong đợt sau.
+      waves: [['slimeMini', 'slimeMini', 'slimeMini', 'slimeGhost']],
       nextWaveAt: 1,
       quest: { kind: 'slimeGhost', count: 2 },
       target: { winRate: 0.85, spareTurns: 1 },
+      assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
     },
   ],
+};
+
+/**
+ * Đợt 4 (chủ dự án duyệt 27/10/2026 — "agent đề xuất"): nâng cấp bằng vàng, mỗi chỉ số tối đa 3 cấp, giá
+ * 10 / 20 / 40 (nâng hết cả ba: 210 vàng ≈ 3–4 lượt chơi hết 7 màn). Không có "+1 sát thương": slime 3 máu
+ * nên +1 sát thương làm game dễ hẳn; các chỉ số dưới tăng sức từ từ.
+ */
+export const UPGRADE_CONFIG: UpgradeConfig = {
+  hp: { name: 'Máu tối đa', perLevel: 2, costs: [10, 20, 40] },
+  crit: { name: 'Chí mạng', perLevel: 0.05, costs: [10, 20, 40] },
+  heal: { name: 'Hồi máu', perLevel: 1, costs: [10, 20, 40] },
 };

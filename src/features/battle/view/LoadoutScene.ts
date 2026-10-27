@@ -7,8 +7,9 @@ import { colorNumber, PALETTE } from '../../../shared/palette';
 import { parseLevelParam } from '../../../shared/levelParam';
 import { loadProfile, startLevel } from '../../profile';
 import { levelAt } from '../logic/battle';
-import { BATTLE_CONFIG } from '../logic/battleConfig';
+import { BATTLE_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
 import type { Loadout, SkillKind, WeaponSlot } from '../logic/battleTypes';
+import { withUpgrades } from '../logic/upgrades';
 import {
   allWeapons,
   chooseSkill,
@@ -72,7 +73,8 @@ interface OptionButton {
 }
 
 export class LoadoutScene extends Scene {
-  private readonly config = BATTLE_CONFIG;
+  /** Cấu hình trận đã cộng nâng cấp trong hồ sơ (đợt 4) — để dòng mô tả vũ khí đúng chí mạng thật. */
+  private config = BATTLE_CONFIG;
   private level = 0;
   /** Đợt 3: tổng vàng trong hồ sơ, đọc mỗi lần mở màn. */
   private gold = 0;
@@ -103,11 +105,12 @@ export class LoadoutScene extends Scene {
    * đã mở khóa), bộ đồ mặc định.
    */
   init(data: Partial<LoadoutSceneData>): void {
+    const profile = loadProfile();
+    this.config = withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG);
     // Chưa có túi đồ: sở hữu = mọi vũ khí trong cấu hình.
     const owned = allWeapons(this.config);
     this.rows = slotOptions(this.config, owned);
     const levelCount = this.config.levels.length;
-    const profile = loadProfile();
     this.gold = profile.gold;
     this.level =
       data.level ??
@@ -170,6 +173,7 @@ export class LoadoutScene extends Scene {
     this.rows.forEach((row, rowIndex) => this.createWeaponRow(row, rowIndex));
     this.createSkillRow(this.rows.length);
     this.createStartButton();
+    this.createUpgradeButton();
 
     this.input.on('pointerdown', (pointer: Input.Pointer) => this.handleTap(pointer.x, pointer.y));
     const clearSnapshot = setSnapshotProvider(() => this.snapshot());
@@ -190,7 +194,12 @@ export class LoadoutScene extends Scene {
     if (!this.canTap()) return;
     const counts = [...this.rows.map((row) => row.weapons.length), this.skills.length];
     const tap = loadoutTapAt(x, y, counts, LOADOUT_LAYOUT);
-    if (tap?.kind === 'start') {
+    if (tap?.kind === 'upgrade') {
+      // Đợt 4: sang màn Nâng cấp; "XONG" ở đó quay lại đúng màn và bộ đồ đang chọn.
+      this.starting = true;
+      const data: LoadoutSceneData = { level: this.level, loadout: this.loadout };
+      this.scene.start('upgrade', data);
+    } else if (tap?.kind === 'start') {
       this.starting = true;
       const data: LoadoutSceneData = { level: this.level, loadout: this.loadout };
       this.scene.start('battle', data);
@@ -304,6 +313,22 @@ export class LoadoutScene extends Scene {
         isSelected: (l: Loadout) => l.skill === kind,
       })),
     );
+  }
+
+  /** Đợt 4: nút "NÂNG CẤP" dưới nút "VÀO TRẬN" — nền tối hơn để không lẫn với nút chính. */
+  private createUpgradeButton(): void {
+    const { upgrade } = LOADOUT_LAYOUT;
+    this.add
+      .rectangle(upgrade.x, upgrade.y, upgrade.width, upgrade.height, colorNumber('navy'))
+      .setOrigin(0)
+      .setStrokeStyle(2, colorNumber('sand'));
+    this.add
+      .text(upgrade.x + upgrade.width / 2, upgrade.y + upgrade.height / 2, 'NÂNG CẤP', {
+        ...TEXT,
+        fontSize: '18px',
+        color: PALETTE.sand,
+      })
+      .setOrigin(0.5);
   }
 
   private createStartButton(): void {

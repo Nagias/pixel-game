@@ -31,13 +31,23 @@ describe('đọc / ghi hồ sơ', () => {
       version: PROFILE_VERSION,
       gold: 0,
       unlockedLevel: 0,
+      upgrades: {},
     });
   });
 
   it('ghi rồi đọc lại ra y hệt', () => {
     const { store } = memoryStore();
-    expect(writeProfile(store, profile({ gold: 42, unlockedLevel: 3 }))).toBe(true);
-    expect(readProfile(store)).toEqual(profile({ gold: 42, unlockedLevel: 3 }));
+    const saved = profile({ gold: 42, unlockedLevel: 3, upgrades: { hp: 2, crit: 1 } });
+    expect(writeProfile(store, saved)).toBe(true);
+    expect(readProfile(store)).toEqual(saved);
+  });
+
+  // Đợt 4: phiên bản 2 thêm các cấp đã nâng. Hồ sơ phiên bản 1 (đợt 3) tự chuyển lên, không mất gì.
+  it('hồ sơ phiên bản 1 chuyển lên phiên bản 2: giữ vàng và màn đã mở khóa, chưa nâng cấp gì', () => {
+    const raw = JSON.stringify({ version: 1, gold: 37, unlockedLevel: 4 });
+    const { store, data } = memoryStore({ [PROFILE_KEY]: raw });
+    expect(readProfile(store)).toEqual(profile({ gold: 37, unlockedLevel: 4 }));
+    expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
   });
 
   it.each([
@@ -47,8 +57,24 @@ describe('đọc / ghi hồ sơ', () => {
     ['màn mở khóa số lẻ', JSON.stringify({ version: 1, gold: 0, unlockedLevel: 1.5 })],
     ['thiếu trường', JSON.stringify({ version: 1, gold: 3 })],
     ['không phải object', JSON.stringify([1, 2])],
+    [
+      'cấp nâng cấp âm',
+      JSON.stringify({ version: 2, gold: 0, unlockedLevel: 0, upgrades: { hp: -1 } }),
+    ],
+    [
+      'cấp nâng cấp số lẻ',
+      JSON.stringify({ version: 2, gold: 0, unlockedLevel: 0, upgrades: { hp: 0.5 } }),
+    ],
+    [
+      'nâng cấp không phải object',
+      JSON.stringify({ version: 2, gold: 0, unlockedLevel: 0, upgrades: [1] }),
+    ],
+    ['phiên bản 2 thiếu nâng cấp', JSON.stringify({ version: 2, gold: 0, unlockedLevel: 0 })],
     // Người chơi mở bản game cũ hơn dữ liệu: không hiểu thì không được phá.
-    ['phiên bản mới hơn game', JSON.stringify({ version: 2, gold: 9, unlockedLevel: 4 })],
+    [
+      'phiên bản mới hơn game',
+      JSON.stringify({ version: 3, gold: 9, unlockedLevel: 4, upgrades: {} }),
+    ],
   ])('dữ liệu lạ (%s): cất bản sao để còn cứu, chơi tiếp bằng hồ sơ trống', (_name, raw) => {
     const { store, data } = memoryStore({ [PROFILE_KEY]: raw });
     expect(readProfile(store)).toEqual(emptyProfile());

@@ -87,7 +87,7 @@ const KNOBS: readonly Knob[] = [
   nextWaveAt(1, [2, 3]),
   monsterStat('máu Slime Vua', ['slimeKing'], 'hp', [7, 8, 9], 2),
   questCount(3, [8, 9, 10]),
-  waveCount(4, 'slime', [2, 3]),
+  waveCount(4, 'slime', [1, 2]),
   nextWaveAt(4, [2, 3]),
   // F12 (đợt 2): màn 6 giới thiệu Slime Lao, màn 7 giới thiệu Slime Ma (mỗi loại chỉ ở màn của nó). Đội
   // hình 2 màn do script dò tạm chọn (nhiều Lao/Ma hơn thì hai skill chênh nhau 10–15%).
