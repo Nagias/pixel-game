@@ -76,6 +76,9 @@ function validateBattleConfig(config: BattleConfig): void {
         `${label}: vòng bắn ${rule.shootRing} phải là số nguyên trong [1, ${ringCount - 2}]`,
       );
     }
+    if (rule.step !== undefined && (!Number.isInteger(rule.step) || rule.step < 1)) {
+      problems.push(`${label}: số vòng lao ${rule.step} phải là số nguyên ≥ 1`);
+    }
   }
   if (config.hero.hp < 1) problems.push('nhân vật phải có ít nhất 1 máu');
   if (!Number.isInteger(config.hero.healMinHits) || config.hero.healMinHits < 1) {
@@ -356,6 +359,16 @@ export function selectWeapon(state: BattleState, index: number, config: BattleCo
   return { ...state, weaponIndex: index };
 }
 
+/**
+ * F12: quái đánh trúng được ở lượt này không — quái ma vô hình ở lượt chẵn của màn (lượt 2, 4, 6…, đếm
+ * nhát chém sắp tới từ 1), nhát chém và skill đi xuyên qua. Nguồn duy nhất cho luật, bot và hình vẽ.
+ */
+export function canBeHit(monster: Monster, state: BattleState, config: BattleConfig): boolean {
+  if (!config.monsterKinds[monster.kind].ghost) return true;
+  const strike = levelAt(state.level, config).turnLimit - state.turnsLeft + 1;
+  return strike % 2 === 1;
+}
+
 /** Một lượt: người chơi đánh vào `aimSector` bằng vũ khí đang cầm, rồi quái còn sống di chuyển. */
 export function playTurn(state: BattleState, aimSector: number, config: BattleConfig): BattleState {
   if (state.phase !== 'playing') {
@@ -366,11 +379,14 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
   }
 
   const weapon = weaponAt(state.weaponIndex, config);
-
   // F03 — combo gom cụm: con thứ n bị chém ăn n × sát thương vũ khí. Con ít máu bị chém trước để
   // nhát mạnh nhất dồn vào con trâu nhất; bằng máu thì con gần nhân vật hơn trước, rồi theo id.
-  const targets = [...state.monsters]
-    .filter((monster) => isInZone(monster, aimSector, weapon, config.sectorCount))
+  const targets = state.monsters
+    .filter(
+      (monster) =>
+        canBeHit(monster, state, config) &&
+        isInZone(monster, aimSector, weapon, config.sectorCount),
+    )
     .sort((a, b) => a.hp - b.hp || a.ring - b.ring || a.id - b.id);
 
   // B6 — chí mạng: tung một lần cho cả nhát, chỉ khi có trúng và vũ khí có % chí mạng (0% không tung
@@ -554,12 +570,16 @@ export function castSkill(state: BattleState, config: BattleConfig): BattleState
     throw new Error(`Skill mới nạp ${state.skillCharge}/${skill.chargeTurns}, chưa bấm được`);
   }
 
+  // F12: quái ma đang vô hình thì skill đi xuyên qua — không mất máu, không bị đóng băng.
   const hits: Hit[] = [...state.monsters]
+    .filter((m) => canBeHit(m, state, config))
     .sort((a, b) => a.id - b.id)
     .map((m) => ({ monsterId: m.id, damage: skill.damage, killed: m.hp - skill.damage <= 0 }));
+  const struck = new Set(hits.map((hit) => hit.monsterId));
   const monsters: Monster[] = state.monsters
-    .filter((m) => m.hp - skill.damage > 0)
+    .filter((m) => !struck.has(m.id) || m.hp - skill.damage > 0)
     .map((m) => {
+      if (!struck.has(m.id)) return m;
       const hp = m.hp - skill.damage;
       if (skill.freezeTurns === 0) return { ...m, hp };
       return { ...m, hp, frozenTurns: Math.max(m.frozenTurns ?? 0, skill.freezeTurns) };
@@ -598,8 +618,16 @@ function moveMonsters(
     let roll: number;
     [roll, rng] = nextFloat(rng);
 
+    // F12: quái lao tiến tới `step` vòng — dừng ở ô trống xa nhất trước ô có quái, không quá vòng 0.
+    const rule = config.monsterKinds[monster.kind];
     let target = { sector: monster.sector, ring: monster.ring - 1 };
-    if (roll >= config.monsterKinds[monster.kind].advanceChance) {
+    const deepest = Math.max(0, monster.ring - (rule.step ?? 1));
+    for (let ring = target.ring - 1; ring >= deepest; ring--) {
+      if (occupied.has(key(target.sector, target.ring)) || occupied.has(key(monster.sector, ring)))
+        break;
+      target = { sector: monster.sector, ring };
+    }
+    if (roll >= rule.advanceChance) {
       let directionRoll: number;
       [directionRoll, rng] = nextFloat(rng);
       const step = directionRoll < 0.5 ? -1 : 1;

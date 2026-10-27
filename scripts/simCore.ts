@@ -9,6 +9,7 @@ import {
   type TurnPlan,
 } from '../src/features/battle/logic/autoPlay';
 import {
+  canBeHit,
   canCastSkill,
   castSkill,
   createBattle,
@@ -33,11 +34,18 @@ export type Player = (
   config: BattleConfig,
 ) => [TurnPlan, RngState];
 
-/** Hai kiểu chơi cũ bấm skill ngay khi đầy (B6). */
+/**
+ * Hai kiểu chơi cũ bấm skill ngay khi đầy (B6). F12: người chơi biết câu đố Slime Ma (`waitForGhosts`)
+ * giữ skill tới lượt Ma hiện hình — bấm lúc Ma vô hình thì skill đi xuyên qua nó.
+ */
 const castWhenReady =
-  (pick: (state: BattleState, rng: RngState, config: BattleConfig) => [Move, RngState]): Player =>
+  (
+    pick: (state: BattleState, rng: RngState, config: BattleConfig) => [Move, RngState],
+    waitForGhosts: boolean,
+  ): Player =>
   (state, rng, config) => {
-    const cast = canCastSkill(state, config);
+    const ghostHidden = state.monsters.some((m) => !canBeHit(m, state, config));
+    const cast = canCastSkill(state, config) && !(waitForGhosts && ghostHidden);
     const ready = cast ? castSkill(state, config) : state;
     const [move, next] =
       ready.phase === 'playing' ? pick(ready, rng, config) : [bestMove(state, config), rng];
@@ -47,8 +55,8 @@ const castWhenReady =
 /** Bot giỏi nhất đứng đầu. */
 export const PLAYERS: Record<string, Player> = {
   'Nhìn trước': (state, rng, config) => lookaheadTurn(state, rng, config),
-  'Ngắm chuẩn': castWhenReady((state, rng, config) => [bestMove(state, config), rng]),
-  'Chém bừa': castWhenReady((state, rng, config) => randomMove(state, rng, config)),
+  'Ngắm chuẩn': castWhenReady((state, rng, config) => [bestMove(state, config), rng], true),
+  'Chém bừa': castWhenReady((state, rng, config) => randomMove(state, rng, config), false),
 };
 
 /**

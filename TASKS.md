@@ -102,4 +102,15 @@ chủ đề) để đợt 7; đợt này chỉ làm cho dữ liệu màn mở r�
 - [x] `npm run tune` → áp số cho 5 màn, `balance.test.ts` xanh
 - [x] E2E: ván seed 42 qua 5 màn bằng nhiệm vụ, ảnh đợt quái mới
 - [x] Thử tay khung 375×760 theo `docs/MANUAL_TEST.md`
-- [ ] FEATURE_MAP (F11), `npm run check`, mở PR, chủ dự án duyệt
+- [x] FEATURE_MAP (F11), `npm run check`, mở PR, chủ dự án duyệt (PR #23 gộp 27/10/2026)
+
+## Kế hoạch sau B6, đợt 2 — F12 Thêm loại quái (27/10/2026)
+
+Phạm vi chủ dự án chốt: "làm theo gợi ý của agent" — chọn 3–4 loại, tên và hình agent phác.
+
+- [x] Chọn Slime Con, Slime Lao, Slime Khiên → bỏ Khiên (hết mồi là màn kẹt), thay Slime Ma
+- [x] Test luật trước → code: `step`, `ghost`; hình 3 quái; màn 6–7
+- [x] Bot: ngắm chuẩn giữ skill tới lượt Ma hiện hình (test trước)
+- [x] Dò số màn 6–7 (script tạm + `npm run tune`), đo người biết câu đố so với không biết
+- [x] E2E qua đủ 7 màn, ảnh màn 6 và Ma vô hình; thử tay màn 6–7 khung 375×760
+- [ ] FEATURE_MAP (F12), `npm run check`, mở PR, chủ dự án duyệt

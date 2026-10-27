@@ -2,6 +2,7 @@
 // B4: mở game và mỗi lần hết màn là màn chuẩn bị trận (chọn đồ) trước, rồi mới vào trận.
 import { expect, test } from '@playwright/test';
 import {
+  canBeHit,
   canCastSkill,
   isGameCleared,
   levelAt,
@@ -48,11 +49,17 @@ async function playBestUntilOver(
       await game.castSkill();
       if ((await game.snapshot()).battle.phase !== 'playing') break;
     }
-    await beforeStrike?.(await game.snapshot());
+    const before = await game.snapshot();
+    await beforeStrike?.(before);
+    // F12: quái ma đang vô hình thì nhát chém đi xuyên qua.
+    const hidden = before.battle.monsters
+      .filter((m) => !canBeHit(m, before.battle, BATTLE_CONFIG))
+      .map((m) => m.id);
     await game.play(move);
 
     const { lastAttack } = (await game.snapshot()).battle;
     const hits = lastAttack?.hits ?? [];
+    expect(hits.filter((hit) => hidden.includes(hit.monsterId))).toEqual([]);
     // B6: nhát chí mạng nhân hệ số cho mọi con trúng.
     const multiplier = lastAttack?.crit ? BATTLE_CONFIG.critMultiplier : 1;
     const weaponDamage = (BATTLE_CONFIG.weapons[move.weaponIndex]?.damage ?? 0) * multiplier;
@@ -220,6 +227,7 @@ test('F06: chơi giỏi thắng màn nào sang màn kế, hạ trùm ở màn cu
   let mostHitsInOneStrike = 0;
   // F11: lần đầu thấy đợt quái mới tràn vào (id sau đội hình mở màn) thì chụp ảnh làm bằng chứng.
   let waveSeen = false;
+  let ghostShot = false;
   for (let level = 0; level <= LAST_LEVEL; level++) {
     // Màn mới: đầy máu, cầm vũ khí đầu, đủ lượt và đúng đội hình quái của màn (màn cuối có trùm).
     const { turnLimit, monsters } = levelAt(level, BATTLE_CONFIG);
@@ -240,6 +248,10 @@ test('F06: chơi giỏi thắng màn nào sang màn kế, hạ trùm ở màn cu
       await game.advance(50);
       await page.screenshot({ path: test.info().outputPath('10-man-slime-phao.png') });
     }
+    if (monsters.includes('slimeCharger')) {
+      await game.advance(50);
+      await page.screenshot({ path: test.info().outputPath('19-man-slime-lao.png') });
+    }
     if (levelAt(level, BATTLE_CONFIG).splitOpposite) {
       // B2: nửa đầu đội hình ở một phía, nửa sau ở phía đối diện (lệch nửa vòng).
       const half = Math.ceil(start.monsters.length / 2);
@@ -257,6 +269,15 @@ test('F06: chơi giỏi thắng màn nào sang màn kế, hạ trùm ở màn cu
     mostHitsInOneStrike = Math.max(
       mostHitsInOneStrike,
       await playBestUntilOver(game, async (snapshot) => {
+        // F12: lần đầu Slime Ma vô hình (lượt chẵn) thì chụp ảnh — nó phải hiện mờ.
+        const hiddenGhost = snapshot.battle.monsters.some(
+          (m) => !canBeHit(m, snapshot.battle, BATTLE_CONFIG),
+        );
+        if (!ghostShot && hiddenGhost) {
+          ghostShot = true;
+          await game.advance(300);
+          await page.screenshot({ path: test.info().outputPath('20-slime-ma-vo-hinh.png') });
+        }
         const newcomers = snapshot.battle.monsters.filter((m) => m.id > monsters.length);
         if (!waveSeen && newcomers.length > 0) {
           waveSeen = true;
@@ -301,6 +322,8 @@ test('F06: chơi giỏi thắng màn nào sang màn kế, hạ trùm ở màn cu
   expect(mostHitsInOneStrike).toBeGreaterThanOrEqual(2);
   // F11: phải có lúc đợt quái mới tràn vào, nếu không luật đợt quái chưa được thử.
   expect(waveSeen).toBe(true);
+  // F12: phải có lúc Slime Ma vô hình, nếu không luật quái ma chưa được thử.
+  expect(ghostShot).toBe(true);
 
   // Phá đảo xong, chạm là chơi lại từ màn 1 (qua màn chuẩn bị).
   expect((await game.snapshot()).battle).toMatchObject({

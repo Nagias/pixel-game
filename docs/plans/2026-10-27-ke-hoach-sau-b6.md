@@ -128,6 +128,9 @@ nhiều hơn rõ rệt bot không biết (như Slime Pháo: 85% so với 13%).
 
 **Chủ dự án quyết:** chọn 3–4 loại; tên và hình (agent phác lưới ký tự như Slime Pháo).
 
+**Đã quyết (27/10/2026):** "làm theo gợi ý của agent" — agent chọn Slime Con (Mob), Slime Lao (Lao), Slime
+Ma (Ma). Lúc đầu chọn Có khiên thay Ma, bỏ vì hết "mồi" là màn kẹt, không bộ số nào đạt mục tiêu. Làm ở F12.
+
 ## 6. Đợt 3 — Lưu tiến trình + vàng
 
 **Mục tiêu:** nền cho mọi thứ "ngoài trận": nhớ màn đã qua, vàng, (sau này) đồ và nâng cấp. Tắt game
