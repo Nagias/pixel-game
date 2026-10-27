@@ -19,6 +19,7 @@
 | F09  | Quái bắn xa Slime Pháo + màn 5                     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                     | như F01                                                  |
 | F10  | Tự động cân bằng (mục tiêu, bot nhìn trước, dò số) | ✅ Xong    | `scripts/`, `logic/autoPlay.ts`, `logic/battleConfig.ts` | `scripts/tuneCore.test.ts`, `logic/balance.test.ts`      |
 | F11  | Thắng bằng nhiệm vụ + quái ra theo đợt             | ✅ Xong    | `src/features/battle/` (mở rộng F01)                     | `logic/quest.test.ts`, như F01                           |
+| F12  | Thêm Slime Con, Slime Lao, Slime Ma + màn 6–7      | ✅ Xong    | `src/features/battle/` (mở rộng F01)                     | `logic/monsters.test.ts`, như F01                        |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -570,10 +571,79 @@ không có vai trò (xem Con số); thiết kế màn theo chủ đề (~20 màn
 
 **Nợ liên quan:** DEBT-009 (số chưa qua chơi thử).
 
+## F12 — Thêm 3 loại quái: Slime Con, Slime Lao, Slime Ma + màn 6–7
+
+**Người chơi thấy và làm gì:** sau màn 5 có thêm 2 màn (game giờ 7 màn), mỗi màn giới thiệu một loại quái
+mới với một câu đố riêng; nhiệm vụ là hạ đúng loại đó.
+
+- **Slime Con** (slime đỏ nhỏ): 1 máu, đánh mất 1 — "mồi" kéo dài combo.
+- **Slime Lao** (vàng cát, hai sừng trắng): mỗi lần tiến thì **lao 2 vòng** — phải hạ trước khi nó áp sát.
+- **Slime Ma** (trắng ngà, đáy gợn sóng): **vô hình ở lượt chẵn** của màn (lượt 2, 4, 6…) — hiện mờ, nhát
+  chém và skill đi xuyên qua; canh lượt lẻ mà đánh.
+
+**Luật** (nguồn sự thật: `logic/battle.ts` `moveMonsters` / `canBeHit` + `logic/monsters.test.ts`; đợt 2
+kế hoạch sau B6, chủ dự án duyệt 27/10/2026 — "làm theo gợi ý của agent"):
+
+1. Đặc tính khai báo trong cấu hình loại quái, không viết code riêng từng loại: `step` (số vòng lao mỗi lần
+   tiến, mặc định 1) và `ghost` (vô hình ở lượt chẵn). Slime Con chỉ là con số.
+2. **Lao:** tiến thì đi tới `step` vòng, dừng ở ô trống xa nhất trước ô có quái (không nhảy qua), không quá
+   vòng 0; đi ngang vẫn 1 lát; lao vào vòng 0 thì lượt sau mới đánh (như F04).
+3. **Ma:** "lượt" = nhát chém sắp tới, đếm từ 1. Lượt chẵn: nhát chém không trúng (không mất máu, không tính
+   vào combo, không bị đẩy), skill cũng không trúng (không mất máu, không bị đóng băng). Vẫn đi và vẫn đánh
+   khi áp sát. Một hàm `canBeHit` dùng chung cho luật, bot và hình vẽ (mờ 30% lúc vô hình).
+4. Cấu hình sai bị từ chối lúc mở trận: số vòng lao không nguyên hoặc < 1.
+
+**Đổi so với đề xuất ban đầu:** lúc đầu agent chọn **Slime Khiên** (chỉ mất máu khi là con thứ ≥ n trong
+combo) thay vì Slime Ma. Bỏ vì: khiên chỉ vỡ khi có "mồi" trong cùng nhát, mồi chết dần, hết mồi là màn
+**kẹt — không thể thắng dù còn lượt**; dò nhiều biến thể (mồi Slime Con / slime thường, ngưỡng 2–3, skill
+xuyên hay không xuyên khiên) không bộ số nào đạt mục tiêu độ khó. Slime Ma là ứng viên khác trong cùng danh
+sách của kế hoạch, không có kiểu kẹt này.
+
+**Con số** (`battleConfig.ts`; agent đề xuất + script dò tạm + `npm run tune`, 27/10/2026):
+
+| Màn | Lượt | Mở màn (cụm ±4)       | Đợt sau (ra khi sân còn ≤ 1) | Nhiệm vụ       | Mục tiêu (agent đề xuất) |
+| --- | ---- | --------------------- | ---------------------------- | -------------- | ------------------------ |
+| 6   | 9    | 1 Slime Lao + 4 slime | 1 Slime Lao + 2 slime        | hạ 2 Slime Lao | 90% / 1,5 lượt dư        |
+| 7   | 9    | 1 Slime Ma + 5 slime  | 1 Slime Ma + 3 Slime Con     | hạ 2 Slime Ma  | 85% / 1,0 lượt dư        |
+
+Slime Con 1 máu / đánh 1; Slime Lao 3 máu / đánh 2 / lao 2 vòng; Slime Ma 2 máu / đánh 2; cả ba 60% tiến
+vào. Màn giới thiệu quái mới nên mục tiêu dễ hơn màn 5 (cuối chương). Đội hình chỉ 1 con đặc biệt mở màn +
+1 con ở đợt sau: nhiều Lao/Ma hơn thì hai skill chênh nhau 10–15% (Mưa băng đóng băng chặn cú lao; Cầu lửa
+2 sát thương hạ Ma nhanh) — vượt dung sai ±5%.
+
+**Bot** (không phải luật): bot ngắm chuẩn (`scripts/simCore.ts`) **giữ skill tới lượt Slime Ma hiện hình** —
+trước đó bấm ngay khi đầy, nên Mưa băng (đầy sau 3 nhát) hay bấm đúng lượt Ma vô hình còn Cầu lửa (đầy sau
+6 nhát) luôn bấm lúc Ma hiện hình: chênh nhau chỉ vì trùng nhịp. `hitIds` (dùng chung bot / E2E) bỏ quái ma
+đang vô hình.
+
+**Câu đố có tác dụng** (500 ván, bot ngắm chuẩn so với bot "không biết"): màn 6 — không ưu tiên Slime Lao
+thì thắng ~48% thay vì ~92%; màn 7 — tưởng Ma lúc nào cũng đánh được, bấm skill bất kể lượt thì thắng ~77%
+thay vì ~85% (Ma chỉ 2 máu nên phí vài nhát vẫn gỡ được).
+
+**Kiểm chứng tự động:**
+
+- Unit (`monsters.test.ts`, 12 test): Lao tiến 2 vòng giữ lát, không quá vòng 0, ô cách 2 vòng có quái thì
+  tiến 1, ô ngay trước có quái thì đứng yên, đi ngang 1 lát, lao vào vòng 0 lượt sau mới đánh; Ma lượt lẻ
+  trúng như thường, lượt chẵn nhát chém xuyên qua (không mất máu, không vào combo, không bị đẩy), skill xuyên
+  qua (không đóng băng), vẫn đánh khi áp sát; từ chối số vòng lao sai. `autoPlay.test.ts`: ngắm chuẩn không
+  tính Ma vô hình là trúng. `scripts/simCore.test.ts`: ngắm chuẩn giữ skill lúc Ma vô hình, bấm lúc Ma hiện
+  hình, không có Ma thì bấm ngay. `balance.test.ts`: màn 6–7 × mọi skill trong dung sai.
+- E2E: ván seed 42 qua đủ 7 màn; mọi nhát chém không trúng con Ma đang vô hình; phải có lúc Ma vô hình (ảnh
+  `20-slime-ma-vo-hinh.png`); ảnh mở màn 6 `19-man-slime-lao.png`.
+
+**Cân bằng (`npm run sim`, 500 ván, bộ Kiếm + Giáo + Cung, bot ngắm chuẩn):** màn 6 Mưa băng / Cầu lửa =
+93,2% / 91,4% (dư 1,31 / 1,11); màn 7 = 85,8% / 84,8% (dư 1,47 / 1,04) — đạt. Màn 1–5 giữ nguyên số F11.
+
+**Giới hạn đã biết:** mỗi loại quái mới hợp với một skill khác nhau, nên màn dùng nhiều quái đặc biệt khó
+đạt dung sai ±5% ở mọi skill — đợt 7 (thiết kế màn theo chủ đề) sẽ gặp lại chuyện này. Màn 7 dư 1,47 lượt
+với Mưa băng, sát mép trên (1,5). Hình 3 quái vẽ tạm bằng lưới ký tự (DEBT-007).
+
+**Nợ liên quan:** DEBT-007, DEBT-009.
+
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
 Trống. Việc tiếp theo nằm trong kế hoạch sau B6 (`docs/plans/2026-10-27-ke-hoach-sau-b6.md`, chủ dự án
-duyệt 27/10/2026): đợt 2 — thêm loại quái, chờ chủ dự án trả lời các câu "Chủ dự án quyết".
+duyệt 27/10/2026): đợt 3 — lưu tiến trình + vàng, chờ chủ dự án trả lời các câu "Chủ dự án quyết".
 
 ## Mẫu cho tính năng mới (copy khối này)
 

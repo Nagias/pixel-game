@@ -3,7 +3,15 @@
 // Không phải luật chơi — game không dùng file này.
 import { nextInt, seedRng, type RngState } from '../../../shared/random';
 import { isInZone } from './arena';
-import { canCastSkill, castSkill, levelAt, playTurn, selectWeapon, willAttack } from './battle';
+import {
+  canBeHit,
+  canCastSkill,
+  castSkill,
+  levelAt,
+  playTurn,
+  selectWeapon,
+  willAttack,
+} from './battle';
 import type { BattleConfig, BattleState } from './battleTypes';
 
 /** Một nước đi: cầm vũ khí nào, chém vào lát nào. */
@@ -12,12 +20,17 @@ export interface Move {
   readonly sector: number;
 }
 
-/** Id các quái sẽ trúng nếu chém bằng vũ khí `move.weaponIndex` vào lát `move.sector`. */
+/**
+ * Id các quái sẽ trúng nếu chém bằng vũ khí `move.weaponIndex` vào lát `move.sector` (F12: không gồm quái
+ * ma đang vô hình).
+ */
 export function hitIds(state: BattleState, move: Move, config: BattleConfig): number[] {
   const weapon = config.weapons[move.weaponIndex];
   if (!weapon) throw new Error(`Không có vũ khí số ${move.weaponIndex}`);
   return state.monsters
-    .filter((m) => isInZone(m, move.sector, weapon, config.sectorCount))
+    .filter(
+      (m) => canBeHit(m, state, config) && isInZone(m, move.sector, weapon, config.sectorCount),
+    )
     .map((m) => m.id);
 }
 

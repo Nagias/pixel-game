@@ -35,6 +35,9 @@ const CONFIG: BattleConfig = {
     slime: { name: 'Slime thử', hp: 2, advanceChance: 0.6, attack: 1 },
     slimeKing: { name: 'Vua thử', hp: 6, advanceChance: 0.6, attack: 2 },
     slimeCannon: { name: 'Pháo thử', hp: 2, advanceChance: 0.6, attack: 1, shootRing: 4 },
+    slimeMini: { name: 'Con thử', hp: 1, advanceChance: 0.6, attack: 1 },
+    slimeCharger: { name: 'Lao thử', hp: 2, advanceChance: 0.6, attack: 1, step: 2 },
+    slimeGhost: { name: 'Ma thử', hp: 2, advanceChance: 0.6, attack: 1, ghost: true },
   },
   hero: { hp: 5, healMinHits: 3, healAmount: 0 },
   critMultiplier: 2,
@@ -151,6 +154,18 @@ describe('bot chơi thử — dùng chung cho E2E và mô phỏng cân bằng', 
     const state = stateWith([monster(1, 10, 1), monster(2, 11, 1), king]);
     expect(bestMove(state, CONFIG).weaponIndex).toBe(0); // không có nhiệm vụ: Kiếm trúng 2 con
     expect(hitIds(state, bestMove(state, withQuest), withQuest)).toEqual([3]);
+  });
+
+  // F12: quái ma vô hình ở lượt chẵn — chém vào nó lúc đó là chém vào không khí.
+  it('ngắm chuẩn: lượt chẵn không tính quái ma là trúng; lượt lẻ thì có', () => {
+    const ghost: Monster = { id: 1, kind: 'slimeGhost', sector: 10, ring: 1, hp: 2 };
+    // Kiếm (rộng 5): quanh lát 10 trúng ma + 1 slime; quanh lát 21 trúng 2 slime.
+    const monsters = [ghost, monster(2, 11, 1), monster(3, 20, 1), monster(4, 21, 1)];
+    const odd = stateWith(monsters); // 8/8 lượt: nhát sắp tới là nhát 1
+    expect(hitIds(odd, bestMove(odd, CONFIG), CONFIG)).toEqual([1, 2]);
+    const even = { ...odd, turnsLeft: 7 }; // nhát 2
+    expect(hitIds(even, { weaponIndex: 0, sector: 10 }, CONFIG)).toEqual([2]);
+    expect(hitIds(even, bestMove(even, CONFIG), CONFIG)).toEqual([3, 4]);
   });
 
   it('ngắm chuẩn: quái bắn chưa tới vòng bắn (chưa "!") thì không được ưu tiên', () => {

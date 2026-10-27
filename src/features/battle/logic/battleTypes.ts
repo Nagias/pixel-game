@@ -49,7 +49,8 @@ export interface SkillConfig {
 }
 
 /** F06: các loại quái. Thêm loại mới = thêm tên ở đây + con số trong battleConfig.ts + hình. */
-export type MonsterKind = 'slime' | 'slimeKing' | 'slimeCannon';
+export type MonsterKind =
+  'slime' | 'slimeKing' | 'slimeCannon' | 'slimeMini' | 'slimeCharger' | 'slimeGhost';
 
 export interface MonsterConfig {
   readonly name: string;
@@ -63,6 +64,10 @@ export interface MonsterConfig {
    * trúng lúc đang có "!" mà còn sống thì choáng, lượt đó không bắn. Không có = quái cận chiến (vòng 0).
    */
   readonly shootRing?: number;
+  /** F12: mỗi lần tiến vào thì lao ngần này vòng (dừng trước ô có quái, không quá vòng 0). Mặc định 1. */
+  readonly step?: number;
+  /** F12: quái ma — vô hình ở lượt chẵn của màn (lượt 2, 4, 6…): nhát chém và skill đi xuyên qua. */
+  readonly ghost?: boolean;
 }
 
 export interface HeroConfig {

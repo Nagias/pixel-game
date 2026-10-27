@@ -47,6 +47,9 @@ const CONFIG: BattleConfig = {
     slime: { name: 'Slime thử', hp: 2, advanceChance: 1, attack: 1 },
     slimeKing: { name: 'Vua thử', hp: 6, advanceChance: 1, attack: 2 },
     slimeCannon: { name: 'Pháo thử', hp: 2, advanceChance: 1, attack: 1, shootRing: 4 },
+    slimeMini: { name: 'Con thử', hp: 1, advanceChance: 1, attack: 1 },
+    slimeCharger: { name: 'Lao thử', hp: 2, advanceChance: 1, attack: 1, step: 2 },
+    slimeGhost: { name: 'Ma thử', hp: 2, advanceChance: 1, attack: 1, ghost: true },
   },
   // B6: hồi máu 0 để các test luật cũ không đổi; test hồi máu / skill nằm ở skill.test.ts.
   hero: { hp: 5, healMinHits: 3, healAmount: 0 },
@@ -117,11 +120,9 @@ const pushing = (push: WeaponConfig['push'], patch: Partial<WeaponConfig> = {}):
 /** Mọi loại quái luôn tiến (advanceChance 1) hoặc luôn đi ngang (0) để kết quả đoán trước được. */
 const withAdvanceChance = (advanceChance: number): BattleConfig => ({
   ...CONFIG,
-  monsterKinds: {
-    slime: { ...CONFIG.monsterKinds.slime, advanceChance },
-    slimeKing: { ...CONFIG.monsterKinds.slimeKing, advanceChance },
-    slimeCannon: { ...CONFIG.monsterKinds.slimeCannon, advanceChance },
-  },
+  monsterKinds: Object.fromEntries(
+    Object.entries(CONFIG.monsterKinds).map(([kind, rule]) => [kind, { ...rule, advanceChance }]),
+  ) as BattleConfig['monsterKinds'],
 });
 
 const monster = (

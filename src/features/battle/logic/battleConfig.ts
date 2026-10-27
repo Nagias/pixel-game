@@ -89,6 +89,31 @@ export const BATTLE_CONFIG: BattleConfig = {
       attack: 2,
       shootRing: 4,
     },
+    // F12 (đợt 2, chủ dự án duyệt 27/10/2026 — "làm theo gợi ý của agent"): mỗi loại một câu đố.
+    // Slime Con: 1 máu, đánh nhẹ — "mồi" kéo dài combo: chém trúng nó cùng quái trâu thì quái trâu ăn ×2, ×3.
+    slimeMini: {
+      name: 'Slime Con',
+      hp: 1,
+      advanceChance: 0.6,
+      attack: 1,
+    },
+    // Slime Lao: mỗi lần tiến lao 2 vòng — phải hạ trước khi nó áp sát.
+    slimeCharger: {
+      name: 'Slime Lao',
+      hp: 3,
+      advanceChance: 0.6,
+      attack: 2,
+      step: 2,
+    },
+    // Slime Ma: vô hình ở lượt chẵn (chém, skill đều xuyên qua) — canh đúng lượt. Thay Slime Khiên: khiên chỉ
+    // vỡ khi có "mồi" trong cùng nhát, hết mồi là màn kẹt; mô phỏng không bộ số nào đạt mục tiêu.
+    slimeGhost: {
+      name: 'Slime Ma',
+      hp: 2,
+      advanceChance: 0.6,
+      attack: 2,
+      ghost: true,
+    },
   },
   // B6 (chủ dự án duyệt 27/10/2026): máu 10, nhát trúng ≥ 3 con hồi 1 máu, chí mạng ×2, hai skill
   // đánh cả sân mở từ màn 3. Con số cụ thể agent chọn bằng mô phỏng (giữ độ khó như trước B6).
@@ -173,6 +198,31 @@ export const BATTLE_CONFIG: BattleConfig = {
       nextWaveAt: 2,
       quest: { kind: 'slimeCannon', count: 2 },
       target: { winRate: 0.78, spareTurns: 0.5 },
+    },
+    // F12: màn giới thiệu Slime Lao — hạ 2 Slime Lao, con thứ hai tới cùng đợt sau. Màn giới thiệu quái mới
+    // nên mục tiêu dễ hơn màn 5 (cuối chương) — agent đề xuất, chủ dự án duyệt qua PR. Đội hình do script
+    // dò tạm chọn: 2–3 Slime Lao mở màn, hoặc đợt sau ra sớm, thì Mưa băng (đóng băng, chặn cú lao) dễ hơn Cầu
+    // lửa ~10%.
+    {
+      turnLimit: 9,
+      monsters: ['slimeCharger', 'slime', 'slime', 'slime', 'slime'],
+      spread: 4,
+      waves: [['slimeCharger', 'slime', 'slime']],
+      nextWaveAt: 1,
+      quest: { kind: 'slimeCharger', count: 2 },
+      target: { winRate: 0.9, spareTurns: 1.5 },
+    },
+    // F12: màn giới thiệu Slime Ma — hạ 2 Slime Ma, con thứ hai tới cùng đợt sau (kèm 3 Slime Con làm mồi
+    // combo). Đội hình do script dò tạm chọn: nhiều Ma hơn thì skill nào hợp (Cầu lửa 2 sát thương hạ Ma
+    // nhanh, Mưa băng đóng băng) chênh nhau 10–15%.
+    {
+      turnLimit: 9,
+      monsters: ['slimeGhost', 'slime', 'slime', 'slime', 'slime', 'slime'],
+      spread: 4,
+      waves: [['slimeGhost', 'slimeMini', 'slimeMini', 'slimeMini']],
+      nextWaveAt: 1,
+      quest: { kind: 'slimeGhost', count: 2 },
+      target: { winRate: 0.85, spareTurns: 1 },
     },
   ],
 };

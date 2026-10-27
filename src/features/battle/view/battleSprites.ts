@@ -70,8 +70,63 @@ const slimeCannon: PixelSprite = [
   '..00000000..',
 ];
 
+/** F12: Slime Con — slime đỏ nhỏ, 1 máu. 8×7. */
+const slimeMini: PixelSprite = [
+  '..0000..',
+  '.0C2220.',
+  '02C22220',
+  '02022020',
+  '02222220',
+  '.011110.',
+  '..0000..',
+];
+
+/** F12: Slime Lao — thân vàng cát, hai sừng trắng (lao 2 vòng mỗi lần tiến). 12×10. */
+const slimeCharger: PixelSprite = [
+  '.0........0.',
+  '0C0......0C0',
+  '0C00000000C0',
+  '.04CC444440.',
+  '044444444440',
+  '040044440040',
+  '044444444440',
+  '043444444340',
+  '.0333333330.',
+  '..00000000..',
+];
+
+/** F12: Slime Ma — trắng ngà viền xanh băng, đáy gợn sóng; lượt chẵn vô hình (view vẽ mờ). 12×10. */
+const slimeGhost: PixelSprite = [
+  '....0000....',
+  '..00CCCC00..',
+  '.0CCCCCCCC0.',
+  '.0C00CC00C0.',
+  '0CCCCCCCCCC0',
+  '0CCCC00CCCC0',
+  '0CCCCCCCCCC0',
+  '0BCCCCCCCCB0',
+  '0B0BB00BB0B0',
+  '00.00..00.00',
+];
+
 /** Tên hình quái trùng tên loại quái (MonsterKind) để view lấy hình theo `monster.kind`. */
-export const BATTLE_SPRITES = { hero, slime, slimeKing, slimeCannon } as const;
+export const BATTLE_SPRITES = {
+  hero,
+  slime,
+  slimeKing,
+  slimeCannon,
+  slimeMini,
+  slimeCharger,
+  slimeGhost,
+} as const;
 
 /** Phóng to nguyên lần để giữ nét pixel. */
-export const SPRITE_SCALE = { hero: 2, slime: 2, slimeKing: 2, slimeCannon: 2 } as const;
+export const SPRITE_SCALE = {
+  hero: 2,
+  slime: 2,
+  slimeKing: 2,
+  slimeCannon: 2,
+  slimeMini: 2,
+  slimeCharger: 2,
+  slimeGhost: 2,
+} as const;

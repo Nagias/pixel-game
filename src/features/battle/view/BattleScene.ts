@@ -8,6 +8,7 @@ import { colorNumber, PALETTE, type PaletteColor } from '../../../shared/palette
 import { parseSeedParam } from '../../../shared/seedParam';
 import { arcSectorAt } from '../logic/arena';
 import {
+  canBeHit,
   canCastSkill,
   castSkill,
   createBattle,
@@ -65,6 +66,8 @@ const DEPTH = { arena: 0, zone: 1, monster: 2, hero: 3, popup: 4, hud: 5, result
 const SKILL_COLOR: Record<SkillKind, PaletteColor> = { iceRain: 'sky', fireball: 'orange' };
 /** B6: quái bị đóng băng nhuộm màu này. */
 const FROZEN_TINT: PaletteColor = 'cyan';
+/** F12: độ đậm của quái ma lúc vô hình — đủ thấy để người chơi biết nó ở đâu. */
+const GHOST_HIDDEN_ALPHA = 0.3;
 
 const TEXT = {
   fontFamily: 'monospace',
@@ -334,6 +337,8 @@ export class BattleScene extends Scene {
       // B6: quái đang bị đóng băng nhuộm màu băng; hết băng thì về màu gốc.
       if ((monster.frozenTurns ?? 0) > 0) sprite.setTint(colorNumber(FROZEN_TINT));
       else sprite.clearTint();
+      // F12: quái ma đang vô hình (lượt chẵn) vẽ mờ — chém lúc này là xuyên qua.
+      sprite.setAlpha(canBeHit(monster, state, this.config) ? 1 : GHOST_HIDDEN_ALPHA);
     }
 
     this.syncThreatMarks(state);
