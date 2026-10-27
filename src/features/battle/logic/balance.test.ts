@@ -61,7 +61,9 @@ describe('cân bằng đã duyệt', () => {
   it('màn 4 (quái hai phía) khó hơn màn 3', () => {
     expect(BATTLE_CONFIG.levels[3]?.splitOpposite).toBe(true);
     expect(main(3).spareTurns).toBeLessThan(main(2).spareTurns);
-    expect(main(3).winRate).toBeLessThan(main(2).winRate);
+    // Chủ dự án duyệt 28/10/2026 thêm 10 lượt cho màn 1–5: bot "Ngắm chuẩn" thắng cả hai màn 100%, nên tỉ lệ
+    // thắng chỉ còn đòi không nhiều hơn (như hai quan hệ dưới) — "khó hơn" thể hiện ở lượt dư ít hơn.
+    expect(main(3).winRate).toBeLessThanOrEqual(main(2).winRate);
   });
 
   // Chủ dự án duyệt 26/10/2026 (B3): màn 5 có Slime Pháo (quái bắn xa), khó hơn màn 4.

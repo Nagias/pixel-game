@@ -195,6 +195,9 @@ export const BATTLE_CONFIG: BattleConfig = {
   // "Ngắm chuẩn" với nâng cấp dự kiến (`assumedUpgrades`). Đội hình, nhiệm vụ, đợt quái, số lượt do bộ sinh
   // màn chọn (`npm run levelgen`, bản mô tả ở scripts/levelGen.ts) — chỉ khớp % thắng; lượt dư mục tiêu ghi
   // bằng số đo. Màn 1–7 giữ đội hình đã duyệt (F06–F14), chỉ dò lại số. Lịch sử từng màn: FEATURE_MAP.md.
+  // Chủ dự án duyệt 28/10/2026 — màn đầu dễ hơn (người mới thắng màn 1–7 chỉ 6–30%): thêm lượt màn 1–5 +10,
+  // màn 6–16 giảm dần +8 → +1, màn 17–20 giữ nguyên; mục tiêu màn 1–16 ghi lại theo số đo mới (bot "Ngắm
+  // chuẩn" gần như luôn thắng — độ khó thật của các màn này nằm ở số lượt dư).
   levels: [
     // Màn 1: slime — dạy đợt quái (hạ nhiều hơn số quái mở màn).
     {
@@ -203,8 +206,8 @@ export const BATTLE_CONFIG: BattleConfig = {
       waves: [['slime', 'slime']],
       nextWaveAt: 1,
       quest: { kind: 'slime', count: 5 },
-      turnLimit: 13,
-      target: { winRate: 0.98, spareTurns: 3.5 },
+      turnLimit: 23,
+      target: { winRate: 1, spareTurns: 13.25 },
     },
     // Màn 2: slime đông hơn.
     {
@@ -213,16 +216,16 @@ export const BATTLE_CONFIG: BattleConfig = {
       waves: [['slime', 'slime', 'slime']],
       nextWaveAt: 2,
       quest: { kind: 'slime', count: 8 },
-      turnLimit: 15,
-      target: { winRate: 0.96, spareTurns: 3.25 },
+      turnLimit: 25,
+      target: { winRate: 1, spareTurns: 13 },
     },
     // Màn 3: trùm nhỏ Slime Vua (B1) — nhiệm vụ hạ trùm.
     {
       monsters: ['slimeKing', 'slime', 'slime', 'slime', 'slime'],
       spread: 3,
       quest: { kind: 'slimeKing', count: 1 },
-      turnLimit: 6,
-      target: { winRate: 0.94, spareTurns: 1.25 },
+      turnLimit: 16,
+      target: { winRate: 1, spareTurns: 11 },
       assumedUpgrades: { hp: 1 },
     },
     // Màn 4: slime tới từ hai phía (B2) — đất của Rìu. Script dò tạm (27/10/2026) chọn trong bản mô tả bộ số
@@ -232,8 +235,8 @@ export const BATTLE_CONFIG: BattleConfig = {
       spread: 4,
       splitOpposite: true,
       quest: { kind: 'slime', count: 8 },
-      turnLimit: 9,
-      target: { winRate: 0.91, spareTurns: 1 },
+      turnLimit: 19,
+      target: { winRate: 1, spareTurns: 11 },
       assumedUpgrades: { hp: 1, crit: 1 },
     },
     // Màn 5: Slime Pháo bắn xa (B3) — hạ 2 Pháo.
@@ -243,8 +246,8 @@ export const BATTLE_CONFIG: BattleConfig = {
       waves: [['slime', 'slimeCannon']],
       nextWaveAt: 2,
       quest: { kind: 'slimeCannon', count: 2 },
-      turnLimit: 9,
-      target: { winRate: 0.89, spareTurns: 1 },
+      turnLimit: 19,
+      target: { winRate: 1, spareTurns: 10.75 },
       assumedUpgrades: { hp: 1, crit: 1 },
     },
     // Màn 6: giới thiệu Slime Lao (F12).
@@ -254,8 +257,8 @@ export const BATTLE_CONFIG: BattleConfig = {
       waves: [['slimeCharger', 'slime', 'slime', 'slime']],
       nextWaveAt: 1,
       quest: { kind: 'slimeCharger', count: 2 },
-      turnLimit: 9,
-      target: { winRate: 0.87, spareTurns: 0.75 },
+      turnLimit: 17,
+      target: { winRate: 1, spareTurns: 8.75 },
       assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
     },
     // Màn 7: giới thiệu Slime Ma (F12), Slime Con làm mồi.
@@ -265,8 +268,8 @@ export const BATTLE_CONFIG: BattleConfig = {
       waves: [['slimeMini', 'slimeMini', 'slimeMini', 'slimeGhost']],
       nextWaveAt: 1,
       quest: { kind: 'slimeGhost', count: 2 },
-      turnLimit: 9,
-      target: { winRate: 0.85, spareTurns: 1.25 },
+      turnLimit: 16,
+      target: { winRate: 1, spareTurns: 8 },
       assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
     },
     // Màn 8: giới thiệu Yêu tinh — lính rừng, cứng hơn slime.
@@ -276,8 +279,8 @@ export const BATTLE_CONFIG: BattleConfig = {
       waves: [['goblin', 'goblin', 'slime', 'slime']],
       nextWaveAt: 2,
       quest: { kind: 'goblin', count: 4 },
-      turnLimit: 10,
-      target: { winRate: 0.82, spareTurns: 1.25 },
+      turnLimit: 16,
+      target: { winRate: 0.98, spareTurns: 6.5 },
       assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
     },
     // Màn 9: giới thiệu Sói rừng — lao 2 vòng.
@@ -287,8 +290,8 @@ export const BATTLE_CONFIG: BattleConfig = {
       waves: [['wolf', 'goblin', 'goblin']],
       nextWaveAt: 2,
       quest: { kind: 'wolf', count: 3 },
-      turnLimit: 8,
-      target: { winRate: 0.8, spareTurns: 0.75 },
+      turnLimit: 13,
+      target: { winRate: 1, spareTurns: 5.25 },
       assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
     },
     // Màn 10: TRÙM Người Cây.
@@ -296,8 +299,8 @@ export const BATTLE_CONFIG: BattleConfig = {
       monsters: ['treant', 'goblin', 'goblin'],
       spread: 3,
       quest: { kind: 'treant', count: 1 },
-      turnLimit: 9,
-      target: { winRate: 0.78, spareTurns: 1.5 },
+      turnLimit: 13,
+      target: { winRate: 0.99, spareTurns: 5 },
       assumedUpgrades: { hp: 2, crit: 1, heal: 1 },
     },
     // Màn 11: giới thiệu Yêu tinh cung thủ — bắn từ vòng 4.
@@ -307,8 +310,8 @@ export const BATTLE_CONFIG: BattleConfig = {
       waves: [['goblinArcher', 'goblin', 'goblin']],
       nextWaveAt: 2,
       quest: { kind: 'goblinArcher', count: 3 },
-      turnLimit: 9,
-      target: { winRate: 0.92, spareTurns: 1.75 },
+      turnLimit: 12,
+      target: { winRate: 1, spareTurns: 4.25 },
       assumedUpgrades: { hp: 2, crit: 1, heal: 1 },
     },
     // Màn 12: giới thiệu Dơi đêm — lượt chẵn vô hình. Đợt 5: sinh lại khi có quái hiếm (Yêu tinh hiếm ×2
@@ -319,8 +322,8 @@ export const BATTLE_CONFIG: BattleConfig = {
       waves: [['bat', 'slime', 'slime']],
       nextWaveAt: 2,
       quest: { kind: 'bat', count: 2 },
-      turnLimit: 9,
-      target: { winRate: 0.9, spareTurns: 1.25 },
+      turnLimit: 12,
+      target: { winRate: 1, spareTurns: 4 },
       assumedUpgrades: { hp: 2, crit: 1, heal: 1 },
     },
     // Màn 13: Yêu tinh + Sói tới từ hai phía.
@@ -330,8 +333,8 @@ export const BATTLE_CONFIG: BattleConfig = {
       waves: [['wolf', 'goblin', 'goblin']],
       nextWaveAt: 3,
       quest: { kind: 'goblin', count: 4 },
-      turnLimit: 9,
-      target: { winRate: 0.88, spareTurns: 1.75 },
+      turnLimit: 11,
+      target: { winRate: 0.97, spareTurns: 3.75 },
       assumedUpgrades: { hp: 2, crit: 2, heal: 1 },
       splitOpposite: true,
     },
@@ -342,8 +345,8 @@ export const BATTLE_CONFIG: BattleConfig = {
       waves: [['goblinArcher', 'goblin']],
       nextWaveAt: 2,
       quest: { kind: 'goblinArcher', count: 3 },
-      turnLimit: 9,
-      target: { winRate: 0.85, spareTurns: 1 },
+      turnLimit: 11,
+      target: { winRate: 0.97, spareTurns: 2.75 },
       assumedUpgrades: { hp: 2, crit: 2, heal: 1 },
     },
     // Màn 15: Dơi + Sói.
@@ -353,8 +356,8 @@ export const BATTLE_CONFIG: BattleConfig = {
       waves: [['wolf', 'bat']],
       nextWaveAt: 1,
       quest: { kind: 'wolf', count: 3 },
-      turnLimit: 12,
-      target: { winRate: 0.83, spareTurns: 1.25 },
+      turnLimit: 13,
+      target: { winRate: 0.98, spareTurns: 2 },
       assumedUpgrades: { hp: 2, crit: 2, heal: 1 },
     },
     // Màn 16: trộn Yêu tinh, Cung thủ, Dơi.
@@ -364,8 +367,8 @@ export const BATTLE_CONFIG: BattleConfig = {
       waves: [['goblin', 'goblin', 'goblinArcher', 'bat']],
       nextWaveAt: 2,
       quest: { kind: 'goblin', count: 5 },
-      turnLimit: 13,
-      target: { winRate: 0.81, spareTurns: 1.25 },
+      turnLimit: 14,
+      target: { winRate: 0.93, spareTurns: 2 },
       assumedUpgrades: { hp: 2, crit: 2, heal: 2 },
     },
     // Màn 17: bầy Sói hai phía.

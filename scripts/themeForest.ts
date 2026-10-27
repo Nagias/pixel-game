@@ -1,5 +1,6 @@
 // Bản mô tả chủ đề Rừng rậm (đợt 7, chủ dự án duyệt 27/10/2026) cho bộ sinh màn — 20 màn. Thêm chủ đề mới
 // = thêm một file như thế này (themeIce.ts, themeVolcano.ts…) và nối vào scripts/levelGen.ts.
+// NỢ DEBT-012: màn 1–16 ở đây còn mục tiêu cũ — đừng sinh lại các màn này trước khi trả nợ.
 import type { Difficulty, UpgradeLevels } from '../src/features/battle/logic/battleTypes';
 import type { LevelSpec } from './levelGenCore';
 
