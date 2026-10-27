@@ -67,6 +67,11 @@ chủ dự án chốt sau — chỉ sửa dữ liệu). Đồ rơi vĩnh viễn;
 **Đợt 6 — cửa hàng:** bán cố định 4 món cấp Hiếm (Kiếm, Rìu, Giáo, Cung), 25 vàng mỗi món, **có hạn 5
 trận** (thắng hay thua đều trừ); nút xem quảng cáo để giai đoạn D.
 
+**Duyệt bổ sung (28/10/2026):** chủ dự án giữ nguyên mọi lựa chọn agent tự chọn khi làm đợt 5–6 — quái hiếm
+thực tế từ màn 9 (màn 3–8 chỉ có slime ngoài loại nhiệm vụ), món rơi trùng / thấp hơn không đổi ra gì, Sử
+thi dùng tím đậm viền trắng; cửa hàng chỉ trừ hạn trận có mang món, mua thêm thì cộng dồn, không bán món đã
+có vĩnh viễn từ Hiếm trở lên. Chi tiết: `FEATURE_MAP.md` F16, F17.
+
 ## 2. Nhận xét của chủ dự án → đợt nào
 
 | Nhận xét (26–27/10/2026)                                                                                                | Đợt               |

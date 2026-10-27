@@ -877,7 +877,7 @@ nguồn sự thật: `logic/battle.ts` `withRare` / `rewardsAfter`, `logic/loot.
 **Thực tế khi chơi** (đo bằng script tạm, 300 ván mỗi màn, bot ngắm chuẩn): quái hiếm chỉ có từ **màn 9**
 (màn 3–8 ngoài loại nhiệm vụ chỉ có slime). Ở màn 9–20 khoảng 4–5% số trận hạ được quái hiếm (người chơi phải
 chủ động hạ nó trước khi xong nhiệm vụ) → tính cả bảo hiểm, cỡ **20 trận một món**; Sử thi trở lên chắc chắn
-sau tối đa 30 món.
+sau tối đa 30 món. Chủ dự án duyệt giữ nguyên ngày 28/10/2026 ("giữ các lựa chọn agent tự chọn ở đợt 5–6").
 
 **Cân bằng:** mô phỏng giờ có quái hiếm (15% trận). Màn 12 tụt khỏi dung sai (Cầu lửa 80% so với mục tiêu
 90% ± 8%) → sinh lại bằng `npm run levelgen` (4 quái mở màn, cụm ±5, 9 lượt, mục tiêu dư 1,25); 19 màn khác
@@ -906,7 +906,8 @@ vẫn đạt.
 - Thử tay khung 375×760: hồ sơ phiên bản 2 (100 vàng) mở ra đủ vàng và màn; màn Nâng cấp 4 hàng, mua May mắn
   15% → 20%, hồ sơ lưu bản 3; vào màn 16 thấy Dơi đêm hiếm phát sáng; console không lỗi.
 
-**Giới hạn đã biết:** món rơi không cao hơn món đang có là phí (40% là cấp Thường — trùng vũ khí gốc). Sét và
+**Giới hạn đã biết:** món rơi không cao hơn món đang có là phí (40% là cấp Thường — trùng vũ khí gốc; chủ dự
+án duyệt giữ nguyên 28/10/2026, chưa đổi món trùng ra vàng). Sét và
 ánh sáng là hình khối tạm; máy không có WebGL thì quái hiếm chỉ phập phồng, không phát sáng. Bảng Sweetie 16
 không có tím sáng nên Sử thi dùng tím đậm + viền trắng.
 
@@ -925,7 +926,8 @@ Cửa hàng: Kiếm, Rìu, Giáo, Cung — mỗi món cấp **Hiếm** (chữ xa
 
 1. Bán cố định 4 món cấp Hiếm, **25 vàng** mỗi món, **dùng 5 trận** — thắng hay thua đều trừ. Nút xem quảng
    cáo để giai đoạn D.
-2. **Agent chọn** (chỗ bản duyệt chưa nói, theo phương án gần nhất): chỉ trừ **trận có mang món đó** vào
+2. **Agent chọn, chủ dự án duyệt giữ nguyên 28/10/2026** (chỗ bản duyệt đầu chưa nói): chỉ trừ **trận có
+   mang món đó** vào
    (món nằm im trong túi không mất hạn); mua thêm khi còn hạn thì **cộng dồn** số trận; vũ khí đã có vĩnh
    viễn từ cấp Hiếm trở lên thì **không bán** (mua là phí).
 3. Món thuê còn hạn: vũ khí dùng cấp Hiếm, nhưng không bao giờ hạ món vĩnh viễn cao hơn (`effectiveTiers`
