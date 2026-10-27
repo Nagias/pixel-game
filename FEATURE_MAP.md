@@ -788,28 +788,36 @@ nhất — **không tự ghi** cấu hình, agent chép vào `battleConfig.ts`. 
 
 | Màn | Lượt | Mở màn (cụm)                                 | Đợt sau                         | Nhiệm vụ        | Mục tiêu (thắng / dư) |
 | --- | ---- | -------------------------------------------- | ------------------------------- | --------------- | --------------------- |
-| 1   | 13   | 4 Slime (±2)                                 | 2 Slime                         | hạ 5 Slime      | 98% / 3,5             |
-| 2   | 15   | 6 Slime (±3)                                 | 3 Slime                         | hạ 8 Slime      | 96% / 3,25            |
-| 3   | 6    | 1 Slime Vua + 4 Slime (±3)                   | —                               | hạ Slime Vua    | 94% / 1,25            |
-| 4   | 9    | 8 Slime (±4, hai phía)                       | —                               | hạ 8 Slime      | 91% / 1               |
-| 5   | 9    | 7 Slime + 1 Slime Pháo (±4)                  | 1 Slime + 1 Pháo                | hạ 2 Slime Pháo | 89% / 1               |
-| 6   | 9    | 1 Slime Lao + 5 Slime (±4)                   | 1 Lao + 3 Slime                 | hạ 2 Slime Lao  | 87% / 0,75            |
-| 7   | 9    | 1 Slime Ma + 5 Slime (±4)                    | 3 Slime Con + 1 Ma              | hạ 2 Slime Ma   | 85% / 1,25            |
-| 8   | 10   | 2 Yêu tinh + 3 Slime (±3)                    | 2 Yêu tinh + 2 Slime            | hạ 4 Yêu tinh   | 82% / 1,25            |
-| 9   | 8    | 2 Sói + 2 Yêu tinh (±4)                      | 1 Sói + 2 Yêu tinh              | hạ 3 Sói rừng   | 80% / 0,75            |
-| 10  | 9    | 1 Người Cây + 2 Yêu tinh (±3)                | —                               | hạ Người Cây    | 78% / 1,5             |
-| 11  | 9    | 2 Cung thủ + 3 Yêu tinh (±4)                 | 1 Cung thủ + 2 Yêu tinh         | hạ 3 Cung thủ   | 92% / 1,75            |
-| 12  | 9    | 1 Dơi + 3 Yêu tinh (±5) — F16 sinh lại       | 1 Dơi + 2 Slime                 | hạ 2 Dơi đêm    | 90% / 1,25            |
-| 13  | 9    | 4 Yêu tinh + 1 Sói (±3, hai phía)            | 1 Sói + 2 Yêu tinh              | hạ 4 Yêu tinh   | 88% / 1,75            |
-| 14  | 9    | 2 Cung thủ + 4 Yêu tinh (±4)                 | 1 Cung thủ + 1 Yêu tinh         | hạ 3 Cung thủ   | 85% / 1               |
-| 15  | 12   | 2 Dơi + 2 Sói + 2 Yêu tinh (±5)              | 1 Sói + 1 Dơi                   | hạ 3 Sói rừng   | 83% / 1,25            |
-| 16  | 13   | 3 Yêu tinh + 1 Cung thủ + 1 Dơi (±5)         | 2 Yêu tinh + 1 Cung thủ + 1 Dơi | hạ 5 Yêu tinh   | 81% / 1,25            |
+| 1   | 23   | 4 Slime (±2)                                 | 2 Slime                         | hạ 5 Slime      | 100% / 13,25          |
+| 2   | 25   | 6 Slime (±3)                                 | 3 Slime                         | hạ 8 Slime      | 100% / 13             |
+| 3   | 16   | 1 Slime Vua + 4 Slime (±3)                   | —                               | hạ Slime Vua    | 100% / 11             |
+| 4   | 19   | 8 Slime (±4, hai phía)                       | —                               | hạ 8 Slime      | 100% / 11             |
+| 5   | 19   | 7 Slime + 1 Slime Pháo (±4)                  | 1 Slime + 1 Pháo                | hạ 2 Slime Pháo | 100% / 10,75          |
+| 6   | 17   | 1 Slime Lao + 5 Slime (±4)                   | 1 Lao + 3 Slime                 | hạ 2 Slime Lao  | 100% / 8,75           |
+| 7   | 16   | 1 Slime Ma + 5 Slime (±4)                    | 3 Slime Con + 1 Ma              | hạ 2 Slime Ma   | 100% / 8              |
+| 8   | 16   | 2 Yêu tinh + 3 Slime (±3)                    | 2 Yêu tinh + 2 Slime            | hạ 4 Yêu tinh   | 98% / 6,5             |
+| 9   | 13   | 2 Sói + 2 Yêu tinh (±4)                      | 1 Sói + 2 Yêu tinh              | hạ 3 Sói rừng   | 100% / 5,25           |
+| 10  | 13   | 1 Người Cây + 2 Yêu tinh (±3)                | —                               | hạ Người Cây    | 99% / 5               |
+| 11  | 12   | 2 Cung thủ + 3 Yêu tinh (±4)                 | 1 Cung thủ + 2 Yêu tinh         | hạ 3 Cung thủ   | 100% / 4,25           |
+| 12  | 12   | 1 Dơi + 3 Yêu tinh (±5) — F16 sinh lại       | 1 Dơi + 2 Slime                 | hạ 2 Dơi đêm    | 100% / 4              |
+| 13  | 11   | 4 Yêu tinh + 1 Sói (±3, hai phía)            | 1 Sói + 2 Yêu tinh              | hạ 4 Yêu tinh   | 97% / 3,75            |
+| 14  | 11   | 2 Cung thủ + 4 Yêu tinh (±4)                 | 1 Cung thủ + 1 Yêu tinh         | hạ 3 Cung thủ   | 97% / 2,75            |
+| 15  | 13   | 2 Dơi + 2 Sói + 2 Yêu tinh (±5)              | 1 Sói + 1 Dơi                   | hạ 3 Sói rừng   | 98% / 2               |
+| 16  | 14   | 3 Yêu tinh + 1 Cung thủ + 1 Dơi (±5)         | 2 Yêu tinh + 1 Cung thủ + 1 Dơi | hạ 5 Yêu tinh   | 93% / 2               |
 | 17  | 13   | 2 Sói + 4 Yêu tinh (±3, hai phía)            | 3 Sói                           | hạ 4 Sói rừng   | 79% / 1               |
 | 18  | 9    | 2 Cung thủ + 2 Dơi + 2 Yêu tinh (±4)         | 1 Cung thủ + 1 Dơi              | hạ 3 Cung thủ   | 76% / 0,75            |
 | 19  | 8    | 2 Yêu tinh + 2 Sói + 2 Cung thủ + 1 Dơi (±4) | 1 Sói + 1 Cung thủ + 2 Dơi      | hạ 2 Sói rừng   | 74% / 1               |
 | 20  | 9    | 1 Người Cây + 1 Sói (±3)                     | 3 Yêu tinh                      | hạ Người Cây    | 72% / 1,5             |
 
 Con số màn 1–7 ở các mục F06–F14 phía trên là số cũ lúc làm tính năng đó — số hiện hành là bảng này.
+
+**Màn đầu dễ hơn (chủ dự án duyệt 28/10/2026):** chủ dự án chơi thử thấy màn đầu đã rất khó — mục tiêu cũ đo bằng
+bot "Ngắm chuẩn" (luôn chém chỗ tốt nhất, không trượt nhịp), còn người mới (đo bằng bot nửa chuẩn nửa chém bừa,
+300 ván) chỉ thắng màn 1–10 khoảng 6–30%. Thêm lượt: màn 1–5 **+10**, màn 6–16 giảm dần **+8, +7, +6, +5, +4,
++3, +3, +2, +2, +1, +1**, màn 17–20 giữ nguyên (độ khó hiện tại để ở màn cao). Người mới giờ thắng màn 1–9
+khoảng 56–98%, trùm màn 10 ~50%, rồi khó dần. Bảng trên đã ghi số lượt và mục tiêu mới (bot "Ngắm chuẩn" gần
+như luôn thắng màn 1–16 — độ khó của các màn này thể hiện ở số lượt dư). Quan hệ "màn 4 khó hơn màn 3" giờ chỉ
+đòi tỉ lệ thắng không nhiều hơn (cả hai 100%) và lượt dư ít hơn, như hai quan hệ còn lại.
 Màn 4 chọn tay (8 slime, ±4, 9 lượt) vì bộ sinh màn không ra tổ hợp nào vừa đạt mục tiêu vừa giữ được quan hệ
 "màn 5 khó hơn màn 4" — đã dò mọi tổ hợp màn 4 nằm giữa màn 3 và 5 (script tạm).
 

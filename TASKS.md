@@ -170,3 +170,12 @@ Phạm vi chủ dự án chốt (duyệt A–E): bán cố định 4 món cấp 
 - [x] Màn Cửa hàng, nút ở màn chuẩn bị, "Hiếm · n trận"
 - [x] E2E mua → màn chuẩn bị → trận → trừ hạn; thử tay khung 375×760
 - [x] FEATURE_MAP (F17), `npm run check`, mở PR, gộp khi CI xanh
+
+## Việc lẻ — màn đầu dễ hơn (28/10/2026)
+
+Chủ dự án chốt: màn 1–5 +10 lượt, màn 6–16 giảm dần +8 → +1, màn 17–20 giữ nguyên; mục tiêu đổi theo số đo mới.
+
+- [x] Đo người mới (nửa chuẩn nửa bừa): màn 1–10 chỉ thắng 6–30%
+- [x] Thêm lượt theo bảng, ghi mục tiêu mới màn 1–16, quan hệ màn 4 / màn 3 theo tỉ lệ thắng không nhiều hơn
+- [x] `npm run check`, E2E 20 test, thử tay màn 1 (23 lượt)
+- [x] FEATURE_MAP (F15), DEBT-012, mở PR, gộp khi CI xanh
