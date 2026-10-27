@@ -18,7 +18,8 @@ export const UPGRADE_LAYOUT: UpgradeLayout = {
   left: 18,
   width: 324,
   firstRowTop: 120,
-  rowHeight: 120,
+  // Đợt 5: 4 hàng (thêm May mắn) — hàng cuối vẫn trên dòng báo lỗi (y 500) và nút "XONG".
+  rowHeight: 96,
   buyWidth: 120,
   buyHeight: 56,
   back: { x: 18, y: 520, width: 324, height: 64 },

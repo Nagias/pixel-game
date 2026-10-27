@@ -7,9 +7,10 @@ import { colorNumber, PALETTE } from '../../../shared/palette';
 import { parseLevelParam } from '../../../shared/levelParam';
 import { loadProfile, startLevel } from '../../profile';
 import { levelAt } from '../logic/battle';
-import { BATTLE_CONFIG, CHAPTERS, UPGRADE_CONFIG } from '../logic/battleConfig';
+import { BATTLE_CONFIG, CHAPTERS, LOOT_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
 import { chapterOf } from '../logic/chapters';
 import type { Loadout, SkillKind, WeaponSlot } from '../logic/battleTypes';
+import { withWeaponTiers } from '../logic/loot';
 import { withUpgrades } from '../logic/upgrades';
 import {
   allWeapons,
@@ -24,6 +25,7 @@ import {
   slotOptions,
 } from '../logic/loadout';
 import { descriptionY, LOADOUT_LAYOUT, loadoutTapAt, optionRects, rowTop } from './loadoutLayout';
+import { addLightning, styleTierText } from './weaponTierStyle';
 
 /** Dữ liệu mở màn chuẩn bị: màn sắp chơi và bộ đồ lần trước (để chọn sẵn). */
 export interface LoadoutSceneData {
@@ -45,6 +47,8 @@ export interface LoadoutSnapshot {
   readonly canTap: boolean;
   /** Đợt 3: tổng vàng trong hồ sơ người chơi (hiện góc trên bên phải). */
   readonly gold: number;
+  /** Đợt 5: cấp màu của từng vũ khí (theo chỉ số trong config.weapons; 0 = Thường). */
+  readonly tiers: readonly number[];
 }
 
 const GAME_WIDTH = 360;
@@ -71,10 +75,15 @@ interface OptionButton {
   readonly frame: GameObjects.Rectangle;
   readonly name: GameObjects.Text;
   readonly sub: GameObjects.Text;
+  /** Đợt 5: cấp màu của vũ khí (> 0 thì dòng dưới ghi tên cấp, tô màu cấp). */
+  readonly tier: number;
 }
 
 export class LoadoutScene extends Scene {
-  /** Cấu hình trận đã cộng nâng cấp trong hồ sơ (đợt 4) — để dòng mô tả vũ khí đúng chí mạng thật. */
+  /**
+   * Cấu hình trận đã cộng nâng cấp (đợt 4) và cấp vũ khí đã rơi (đợt 5) trong hồ sơ — để nút và dòng mô tả
+   * vũ khí đúng chỉ số thật.
+   */
   private config = BATTLE_CONFIG;
   private level = 0;
   /** Đợt 3: tổng vàng trong hồ sơ, đọc mỗi lần mở màn. */
@@ -107,8 +116,13 @@ export class LoadoutScene extends Scene {
    */
   init(data: Partial<LoadoutSceneData>): void {
     const profile = loadProfile();
-    this.config = withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG);
-    // Chưa có túi đồ: sở hữu = mọi vũ khí trong cấu hình.
+    this.config = withWeaponTiers(
+      withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
+      profile.weaponTiers,
+      LOOT_CONFIG,
+    );
+    // Sở hữu = mọi vũ khí trong cấu hình; đợt 5: đồ rơi nâng cấp màu của chính vũ khí đó (cấp cao nhất đã
+    // có luôn mạnh nhất nên không cần chọn cấp).
     const owned = allWeapons(this.config);
     this.rows = slotOptions(this.config, owned);
     const levelCount = this.config.levels.length;
@@ -230,6 +244,7 @@ export class LoadoutScene extends Scene {
       skills: this.skills,
       canTap: this.canTap(),
       gold: this.gold,
+      tiers: this.config.weapons.map((weapon) => weapon.tier ?? 0),
     };
   }
 
@@ -255,7 +270,12 @@ export class LoadoutScene extends Scene {
 
   private createButtons(
     rowIndex: number,
-    options: readonly { name: string; sub: string; isSelected: (l: Loadout) => boolean }[],
+    options: readonly {
+      name: string;
+      sub: string;
+      tier?: number;
+      isSelected: (l: Loadout) => boolean;
+    }[],
   ): void {
     const rects = optionRects(rowIndex, options.length, LOADOUT_LAYOUT);
     options.forEach((option, i) => {
@@ -271,7 +291,9 @@ export class LoadoutScene extends Scene {
       const sub = this.add
         .text(centerX, rect.y + 38, option.sub, { ...TEXT, fontSize: '12px', strokeThickness: 3 })
         .setOrigin(0.5);
-      this.buttons.push({ isSelected: option.isSelected, frame, name, sub });
+      const tier = option.tier ?? 0;
+      if (tier === LOOT_CONFIG.tiers.length - 1) addLightning(this, rect);
+      this.buttons.push({ isSelected: option.isSelected, frame, name, sub, tier });
     });
   }
 
@@ -285,7 +307,9 @@ export class LoadoutScene extends Scene {
         return [
           {
             name: weapon.name,
-            sub: weapon.rangeLabel,
+            // Đợt 5: món có cấp màu thì dòng dưới ghi tên cấp (tầm đã có ở nhãn hàng bên trái).
+            sub: weapon.tier ? (LOOT_CONFIG.tiers[weapon.tier]?.name ?? '') : weapon.rangeLabel,
+            tier: weapon.tier ?? 0,
             isSelected: (l: Loadout) => l.weapons.includes(weaponIndex),
           },
         ];
@@ -355,12 +379,13 @@ export class LoadoutScene extends Scene {
       button.frame.setStrokeStyle(selected ? 3 : 1, colorNumber(selected ? 'lime' : 'slate'));
       button.name.setColor(selected ? PALETTE.white : PALETTE.mist);
       button.sub.setColor(selected ? PALETTE.sand : PALETTE.mist);
+      if (button.tier > 0) styleTierText(button.sub, button.tier);
     }
     this.rows.forEach((row, rowIndex) => {
       const chosen = this.loadout.weapons
         .map((index) => this.config.weapons[index])
         .find((weapon) => weapon?.slot === row.slot);
-      this.descriptions[rowIndex]?.setText(chosen ? describeWeapon(chosen) : '');
+      this.descriptions[rowIndex]?.setText(chosen ? describeWeapon(chosen, LOOT_CONFIG) : '');
     });
     const skill = this.loadout.skill;
     this.descriptions[this.rows.length]?.setText(

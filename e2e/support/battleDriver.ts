@@ -27,6 +27,14 @@ const SCENE_SWITCH_MS = 100;
 
 export type { Move };
 
+/** Hồ sơ đã lưu trong localStorage (đọc thô — test so với kỳ vọng). */
+interface StoredProfile {
+  readonly gold: number;
+  readonly unlockedLevel: number;
+  readonly weaponTiers: Record<string, number>;
+  readonly lootPity: Record<string, number>;
+}
+
 export class BattleDriver extends GameDriver {
   /**
    * Mở game ở màn chuẩn bị với seed cố định để ván chơi lặp lại y hệt; `level` (đếm từ 1) mở thẳng
@@ -46,12 +54,16 @@ export class BattleDriver extends GameDriver {
     gold?: number;
     unlockedLevel?: number;
     upgrades?: Record<string, number>;
+    weaponTiers?: Record<string, number>;
+    lootPity?: Record<string, number>;
   }): Promise<void> {
     const value = JSON.stringify({
       version: PROFILE_VERSION,
       gold: 0,
       unlockedLevel: 0,
       upgrades: {},
+      weaponTiers: {},
+      lootPity: {},
       ...patch,
     });
     await this.page.addInitScript(
@@ -94,9 +106,9 @@ export class BattleDriver extends GameDriver {
   }
 
   /** Đợt 3: hồ sơ đang lưu trong trình duyệt (null nếu chưa có). */
-  async storedProfile(): Promise<{ gold: number; unlockedLevel: number } | null> {
+  async storedProfile(): Promise<StoredProfile | null> {
     const raw = await this.page.evaluate((key) => window.localStorage.getItem(key), PROFILE_KEY);
-    return raw === null ? null : (JSON.parse(raw) as { gold: number; unlockedLevel: number });
+    return raw === null ? null : (JSON.parse(raw) as StoredProfile);
   }
 
   /** Mở game rồi vào trận ngay với bộ đồ mặc định. */
@@ -215,12 +227,12 @@ export class BattleDriver extends GameDriver {
 
 /** Id các quái sẽ trúng nếu chém bằng vũ khí `move.weaponIndex` vào lát `move.sector`. */
 export function hitIds(snapshot: BattleSnapshot, move: Move): number[] {
-  return autoPlay.hitIds(snapshot.battle, move, BATTLE_CONFIG);
+  return autoPlay.hitIds(snapshot.battle, move, snapshot.config);
 }
 
 /** Người chơi ngắm chuẩn — cùng bot với mô phỏng cân bằng (`npm run sim`). */
 export function bestMove(snapshot: BattleSnapshot): Move {
-  return autoPlay.bestMove(snapshot.battle, BATTLE_CONFIG);
+  return autoPlay.bestMove(snapshot.battle, snapshot.config);
 }
 
 /**
@@ -231,10 +243,10 @@ export function lookaheadTurn(
   snapshot: BattleSnapshot,
   rng: RngState,
 ): [plan: autoPlay.TurnPlan, next: RngState] {
-  return autoPlay.lookaheadTurn(snapshot.battle, rng, BATTLE_CONFIG);
+  return autoPlay.lookaheadTurn(snapshot.battle, rng, snapshot.config);
 }
 
 /** Người chơi chém trượt: một lát không trúng con quái nào. */
 export function missMove(snapshot: BattleSnapshot): Move {
-  return autoPlay.missMove(snapshot.battle, BATTLE_CONFIG);
+  return autoPlay.missMove(snapshot.battle, snapshot.config);
 }

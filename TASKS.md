@@ -149,3 +149,14 @@ và mỗi skill ±8%, bộ sinh màn, không cơ chế sân mới.
 - [x] E2E chơi liền 20 màn (seed 1, hồ sơ nâng cấp), ảnh quái rừng và trùm; sửa test Mưa băng
 - [x] Thử tay khung 375×760 → sửa màu băng không thấy trên quái xanh lá
 - [x] FEATURE_MAP (F15), `npm run check`, mở PR, gộp khi CI xanh
+
+## Kế hoạch sau B6, bước 2 lượt duyệt chung — F16 Quái hiếm, rơi đồ (27/10/2026)
+
+Phạm vi chủ dự án chốt (duyệt A–E): quái hiếm 15% từ màn 3 (không slime, ×2 máu, ×3 vàng), may mắn +5%/cấp,
+rơi 50%, 6 cấp màu, bảo hiểm 3 lần / 30 món, loại vũ khí tạm ngẫu nhiên, đồ vĩnh viễn, túi đồ ở màn chuẩn bị.
+
+- [x] Test luật trước: `loot.test.ts`, `rare.test.ts`, hồ sơ bản 3, may mắn
+- [x] Code: quái hiếm, may mắn, rơi đồ + bảo hiểm, cấp màu lên cấu hình, hồ sơ bản 3
+- [x] Màn hình: quái hiếm phát sáng, dòng rơi đồ, cấp màu ở màn chuẩn bị và thanh vũ khí, sét cấp Thần, hàng May mắn
+- [x] Cân bằng: sinh lại màn 12; E2E bot theo cấu hình thật; 2 E2E mới; thử tay khung 375×760
+- [x] FEATURE_MAP (F16), `npm run check`, mở PR, gộp khi CI xanh

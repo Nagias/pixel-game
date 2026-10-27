@@ -7,6 +7,10 @@ export interface Profile {
   readonly unlockedLevel: number;
   /** Đợt 4 (phiên bản 2): cấp đã nâng theo tên chỉ số (luật nâng cấp nằm ở tính năng battle). */
   readonly upgrades: Readonly<Record<string, number>>;
+  /** Đợt 5 (phiên bản 3): cấp cao nhất đã có của từng vũ khí (luật rơi đồ nằm ở tính năng battle). */
+  readonly weaponTiers: Readonly<Record<string, number>>;
+  /** Đợt 5 (phiên bản 3): bộ đếm bảo hiểm rơi đồ theo tên (tính năng battle đọc). */
+  readonly lootPity: Readonly<Record<string, number>>;
 }
 
 /** Kết quả một trận cần cộng vào hồ sơ. */
@@ -16,6 +20,8 @@ export interface BattleResult {
   readonly won: boolean;
   /** Vàng nhặt được trong trận (thắng hay thua đều giữ). */
   readonly gold: number;
+  /** Đợt 5: trận có hạ quái hiếm — cấp vũ khí và bộ đếm bảo hiểm sau khi tung rơi đồ (thay cái cũ). */
+  readonly loot?: Pick<Profile, 'weaponTiers' | 'lootPity'>;
 }
 
 /** Phần nhỏ của `Storage` (localStorage) mà hồ sơ cần — để logic test được không cần trình duyệt. */
