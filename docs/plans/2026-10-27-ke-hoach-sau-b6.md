@@ -1,6 +1,6 @@
 # Kế hoạch chỉnh sửa sau B6 (trước đồ họa thật)
 
-> **Trạng thái: chờ chủ dự án duyệt.** Bản đề xuất của agent ngày 27/10/2026, dựa trên nhận xét của chủ
+> **Trạng thái: chủ dự án duyệt ngày 27/10/2026.** Đợt 0 làm ở F10 (`FEATURE_MAP.md`). Bản đề xuất của agent ngày 27/10/2026, dựa trên nhận xét của chủ
 > dự án sau khi chơi thử (26–27/10) và bản nghiên cứu sâu Micro RPG (`.cache/research-micro-rpg-deep.md`,
 > nguồn công khai, chưa đưa vào repo). Mọi luật và con số dưới đây là **đề xuất**; ô "Chủ dự án quyết"
 > của mỗi đợt phải được trả lời trước khi làm đợt đó. Đồ họa thật (giai đoạn C) làm **sau** kế hoạch này.
@@ -65,11 +65,16 @@ duyệt — thay vì agent dò tay mỗi lần (B6 mất ~2 lượt dò, ~10 ph�
 | 0.3 | Bot "nhìn trước" thắng nhiều hơn bot cũ ở màn 4–5; mang Rìu ở màn 4 có lợi rõ hơn                       | sim       |
 | 0.4 | Job CI có bảng mô phỏng trong tóm tắt                                                                   | Xem CI    |
 
-**Chủ dự án quyết:**
+**Chủ dự án quyết:** (đã trả lời 27/10/2026: "Mục tiêu độ khó và dung sai theo gợi ý của bạn")
 
 1. Mục tiêu độ khó từng màn (agent gợi ý: màn đầu ≥ 98%, tụt dần ~4–5% mỗi màn, màn trùm thấp nhất
-   chương ~75–80% với bot giỏi).
-2. Dung sai chấp nhận (gợi ý ±5% tỉ lệ thắng, ±0,5 lượt dư).
+   chương ~75–80% với bot giỏi). → Chốt 98 / 93 / 88 / 83 / 78%. Lúc đầu đo bằng bot "Nhìn trước";
+   chủ dự án đổi sang đo bằng bot "Ngắm chuẩn" (người chơi trung bình) ngày 27/10/2026, vì đo bằng bot
+   giỏi thì người chơi trung bình chỉ thắng màn 4 45–60%.
+2. Dung sai chấp nhận (gợi ý ±5% tỉ lệ thắng, ±0,5 lượt dư). → Chốt như gợi ý.
+
+**Kết quả đợt 0** (chi tiết F10): 0.1 ✅ (chạy bộ dò trên cấu hình lúc làm B6), 0.2 ✅, 0.3 một nửa — bot nhìn trước
+thắng màn 4–5 nhiều hơn rõ (~95% so với ~81–84% của bot ngắm chuẩn), nhưng Rìu vẫn không hơn Kiếm ở màn 4 (thiết kế màn, đợt 7), 0.4 ✅.
 
 ## 4. Đợt 1 — Thắng bằng nhiệm vụ + quái ra theo đợt
 

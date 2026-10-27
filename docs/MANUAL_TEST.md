@@ -22,7 +22,9 @@ Unit test và E2E điều khiển game qua cầu nối `window.__PIXEL_GAME__` v
    Lần đầu bấm, ghi lại vị trí chạm (lắng nghe `pointerdown`, chỉ đọc) để chắc phép đổi đúng.
    Ảnh chụp chỉ còn góc trên bên trái (bị cắt, phóng to) dù cú bấm vẫn trúng: pane trình duyệt đang
    **bị ẩn** (`tabs_context` báo "hidden"). Mở lại pane bằng `preview_start` với `url` của game rồi đặt
-   lại khung 375×760 trên tab mới (gặp 27/10/2026).
+   lại khung 375×760 trên tab mới (gặp 27/10/2026). Pane ẩn còn làm ảnh chụp **chậm một nhịp** (chạm
+   xong mà ảnh vẫn như cũ): đọc `window.__PIXEL_GAME__.snapshot()` (chỉ đọc) xem đã đổi chưa rồi chụp
+   lại, đừng chạm thêm lần nữa (gặp 27/10/2026, đợt 0).
 3. **Chỉ thao tác như người:** bấm chuột vào đúng chỗ ngón tay sẽ chạm, dựa trên ảnh chụp màn hình. Không
    dùng cầu nối test hay gọi hàm trong game để điều khiển. Cầu nối chỉ được dùng **sau** khi thao tác,
    để đối chiếu điều mắt thấy với trạng thái thật.

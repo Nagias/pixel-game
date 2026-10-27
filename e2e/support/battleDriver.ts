@@ -12,6 +12,7 @@ import {
   weaponButtonRects,
 } from '../../src/features/battle/view/battleLayout';
 import { LOADOUT_LAYOUT, optionRects } from '../../src/features/battle/view/loadoutLayout';
+import type { RngState } from '../../src/shared/random';
 import { GameDriver } from './gameDriver';
 
 const FRAME_MS = 16;
@@ -151,6 +152,17 @@ export function hitIds(snapshot: BattleSnapshot, move: Move): number[] {
 /** Người chơi ngắm chuẩn — cùng bot với mô phỏng cân bằng (`npm run sim`). */
 export function bestMove(snapshot: BattleSnapshot): Move {
   return autoPlay.bestMove(snapshot.battle, BATTLE_CONFIG);
+}
+
+/**
+ * Đợt 0: người chơi nhìn trước 1 lượt — bot giỏi nhất của mô phỏng, tự quyết bấm hay giữ skill.
+ * `rng` là ngẫu nhiên riêng của người chơi (không phải của trận).
+ */
+export function lookaheadTurn(
+  snapshot: BattleSnapshot,
+  rng: RngState,
+): [plan: autoPlay.TurnPlan, next: RngState] {
+  return autoPlay.lookaheadTurn(snapshot.battle, rng, BATTLE_CONFIG);
 }
 
 /** Người chơi chém trượt: một lát không trúng con quái nào. */

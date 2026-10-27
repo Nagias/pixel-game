@@ -288,6 +288,10 @@ describe('createBattle — chặn cấu hình sai trước khi mở trận', () 
     ['màn không có quái', oneLevel({ monsters: [] })],
     ['màn có loại quái không tồn tại', oneLevel({ monsters: ['rong' as MonsterKind] })],
     ['màn thứ 2 không có lượt nào', { ...CONFIG, levels: [LEVEL_1, { ...LEVEL_1, turnLimit: 0 }] }],
+    // Đợt 0: mục tiêu độ khó vô nghĩa thì bộ dò số đề xuất sai — chặn sớm.
+    ['mục tiêu thắng lớn hơn 100%', oneLevel({ target: { winRate: 1.2, spareTurns: 1 } })],
+    ['mục tiêu thắng âm', oneLevel({ target: { winRate: -0.1, spareTurns: 1 } })],
+    ['mục tiêu lượt dư âm', oneLevel({ target: { winRate: 0.9, spareTurns: -1 } })],
   ])('từ chối: %s', (_label, config) => {
     expect(() => createBattle(1, config, 0)).toThrow(RangeError);
   });

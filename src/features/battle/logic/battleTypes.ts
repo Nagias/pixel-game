@@ -74,8 +74,20 @@ export interface HeroConfig {
   readonly healAmount: number;
 }
 
+/**
+ * Đợt 0: độ khó đo bằng mô phỏng — tỉ lệ thắng (0–1) và số lượt dư trung bình của ván thắng, với
+ * người chơi giỏi nhất của bộ mô phỏng (scripts/simCore.ts) và bộ đồ mặc định. Dùng cho cả mục tiêu
+ * và dung sai. Game không đọc: chỉ `npm run sim`, `npm run tune` và balance.test.ts.
+ */
+export interface Difficulty {
+  readonly winRate: number;
+  readonly spareTurns: number;
+}
+
 /** F06: một màn chơi. */
 export interface LevelConfig {
+  /** Đợt 0: độ khó mục tiêu của màn (chủ dự án duyệt). */
+  readonly target?: Difficulty;
   /** Số lượt tấn công tối đa của màn. */
   readonly turnLimit: number;
   /** Đội hình mở màn, theo thứ tự id (phần tử đầu là quái id 1). */
