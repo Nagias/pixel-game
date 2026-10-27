@@ -8,8 +8,8 @@ export default defineConfig({
     chunkSizeWarningLimit: 2000,
   },
   test: {
-    // Unit test chỉ cho luật chơi thuần; E2E nằm ở e2e/ và do Playwright chạy.
-    include: ['src/**/*.test.ts'],
+    // Unit test cho luật chơi thuần và công cụ cân bằng (scripts/); E2E nằm ở e2e/ và do Playwright chạy.
+    include: ['src/**/*.test.ts', 'scripts/**/*.test.ts'],
     environment: 'node',
   },
 });

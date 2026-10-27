@@ -41,6 +41,12 @@ jobs:
       - name: Kiểm tra toàn bộ (format, lint, kiểu, unit, build, E2E)
         run: npm run check
 
+      # Đợt 0: bảng mô phỏng cân bằng (so với mục tiêu độ khó) in vào tóm tắt job — PR nào đổi cân bằng
+      # cũng có số để xem. 200 ván cho nhanh; test cân bằng thật (500 ván) đã chạy trong `npm run check`.
+      - name: Bảng mô phỏng cân bằng vào tóm tắt job
+        if: ${{ !cancelled() }}
+        run: npm run sim --silent -- --games 200 >> "$GITHUB_STEP_SUMMARY"
+
       - name: Lưu ảnh chụp và báo cáo E2E làm bằng chứng
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7

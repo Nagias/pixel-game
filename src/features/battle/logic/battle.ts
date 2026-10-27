@@ -92,6 +92,13 @@ function validateBattleConfig(config: BattleConfig): void {
       : level.monsters.length;
     const slotCount = level.spread * 2 + 1;
     if (level.turnLimit < 1) problems.push(`${label}: phải có ít nhất 1 lượt`);
+    if (level.target) {
+      const { winRate, spareTurns } = level.target;
+      if (!(winRate >= 0 && winRate <= 1)) {
+        problems.push(`${label}: mục tiêu thắng ${winRate} nằm ngoài [0, 1]`);
+      }
+      if (!(spareTurns >= 0)) problems.push(`${label}: mục tiêu lượt dư phải ≥ 0`);
+    }
     if (count === 0) problems.push(`${label}: phải có ít nhất 1 quái`);
     if (count > slotCount)
       problems.push(`${label}: không đủ ${count} chỗ trong cụm ${slotCount} lát`);

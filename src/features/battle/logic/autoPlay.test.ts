@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { seedRng } from '../../../shared/random';
-import { bestMove, hitIds, missMove, randomMove } from './autoPlay';
+import { bestMove, hitIds, lookaheadTurn, missMove, randomMove } from './autoPlay';
 import type { BattleConfig, BattleState, Monster, WeaponConfig } from './battleTypes';
 
 // Cấu hình riêng cho test (không phụ thuộc battleConfig.ts): 3 vũ khí theo tầm như F02.
@@ -179,6 +179,67 @@ describe('bot chơi thử — dùng chung cho E2E và mô phỏng cân bằng', 
     const before = JSON.stringify(state);
     bestMove(state, CONFIG);
     missMove(state, CONFIG);
+    lookaheadTurn(state, seedRng(5), CONFIG);
     expect(JSON.stringify(state)).toBe(before);
+  });
+});
+
+// Đợt 0 (chủ dự án duyệt 27/10/2026): bot "nhìn trước 1 lượt" — mục tiêu độ khó đo bằng bot này.
+describe('bot nhìn trước 1 lượt', () => {
+  const withHp = (m: Monster, hp: number): Monster => ({ ...m, hp });
+
+  it('đổi vũ khí để hạ con cuối cùng — thắng ngay', () => {
+    const state = stateWith([withHp(monster(1, 7, 5), 1)]);
+    const [plan] = lookaheadTurn(state, seedRng(1), CONFIG);
+    expect(plan).toEqual({ cast: false, move: { weaponIndex: 2, sector: 7 } });
+  });
+
+  it('hạ con sắp đánh chết người thay vì chém trúng nhiều con (bot ngắm chuẩn thì thua)', () => {
+    const state = {
+      ...stateWith([
+        withHp(monster(1, 10, 1), 5),
+        withHp(monster(2, 11, 1), 5),
+        withHp(monster(3, 20, 0), 1),
+      ]),
+      heroHp: 1,
+    };
+    expect(hitIds(state, bestMove(state, CONFIG), CONFIG)).toEqual([1, 2]);
+    const [plan] = lookaheadTurn(state, seedRng(1), CONFIG);
+    expect(hitIds(state, plan.move, CONFIG)).toEqual([3]);
+  });
+
+  it('bấm skill khi skill hạ hết quái — thắng không tốn lượt', () => {
+    const state = {
+      ...stateWith([monster(1, 0, 5), monster(2, 12, 3)]),
+      loadout: { weapons: [0, 1, 2], skill: 'fireball' as const },
+      skillCharge: 3,
+    };
+    expect(lookaheadTurn(state, seedRng(1), CONFIG)[0].cast).toBe(true);
+  });
+
+  it('chưa đầy hoặc không mang skill thì không bấm', () => {
+    const notFull = {
+      ...stateWith([monster(1, 0, 5), monster(2, 12, 3)]),
+      loadout: { weapons: [0, 1, 2], skill: 'fireball' as const },
+      skillCharge: 2,
+    };
+    expect(lookaheadTurn(notFull, seedRng(1), CONFIG)[0].cast).toBe(false);
+    const none = stateWith([monster(1, 0, 5)]);
+    expect(lookaheadTurn(none, seedRng(1), CONFIG)[0].cast).toBe(false);
+  });
+
+  it('không nhìn trộm ngẫu nhiên của trận: đổi rng của trận không đổi nước đi', () => {
+    const monsters = [monster(1, 10, 1), monster(2, 11, 2), monster(3, 3, 5), monster(4, 4, 4)];
+    const a = lookaheadTurn({ ...stateWith(monsters), rng: seedRng(1) }, seedRng(9), CONFIG);
+    const b = lookaheadTurn({ ...stateWith(monsters), rng: seedRng(424_242) }, seedRng(9), CONFIG);
+    expect(a).toEqual(b);
+  });
+
+  it('cùng ngẫu nhiên của người chơi → cùng nước đi; ngẫu nhiên đi tiếp; chỉ dùng vũ khí đã mang', () => {
+    const state = stateWith([monster(1, 10, 1), monster(2, 11, 1), monster(3, 12, 1)], 1, [1, 2]);
+    const first = lookaheadTurn(state, seedRng(3), CONFIG);
+    expect(lookaheadTurn(state, seedRng(3), CONFIG)).toEqual(first);
+    expect(first[1]).not.toBe(seedRng(3));
+    expect([1, 2]).toContain(first[0].move.weaponIndex);
   });
 });

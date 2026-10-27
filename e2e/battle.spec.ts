@@ -14,10 +14,11 @@ import {
   weaponButtonRects,
 } from '../src/features/battle/view/battleLayout';
 import { LOADOUT_LAYOUT } from '../src/features/battle/view/loadoutLayout';
-import { BattleDriver, bestMove, hitIds, missMove } from './support/battleDriver';
+import { seedRng } from '../src/shared/random';
+import { BattleDriver, bestMove, hitIds, lookaheadTurn, missMove } from './support/battleDriver';
 
 // Seed cố định để ván chơi lặp lại y hệt (màn nào cũng dùng seed này). Đổi cân bằng mà ván này
-// không còn thắng được bằng cách ngắm chuẩn thì chọn seed khác và ghi lý do trong PR.
+// không còn thắng được bằng bot "Nhìn trước" thì chọn seed khác và ghi lý do trong PR.
 const SEED = 42;
 /** Màn kết quả cần hiện đủ lâu mới cho đi tiếp (chống chạm nhầm) — dư ra một chút. */
 const RESULT_SCREEN_WAIT_MS = 600;
@@ -26,8 +27,9 @@ const LEVEL_2 = levelAt(1, BATTLE_CONFIG);
 const LAST_LEVEL = BATTLE_CONFIG.levels.length - 1;
 
 /**
- * Ngắm chuẩn tới khi màn kết thúc. F03: mỗi nhát, sát thương phải tăng dần 1×, 2×, 3×… sát thương
- * vũ khí (combo gom cụm). Trả về số quái nhiều nhất trúng trong một nhát.
+ * Chơi giỏi nhất tới khi màn kết thúc — bot "Nhìn trước" (đợt 0), cùng bot đo mục tiêu độ khó của
+ * `npm run sim`: tự quyết bấm hay giữ skill (B6, không tốn lượt). F03: mỗi nhát, sát thương phải tăng
+ * dần 1×, 2×, 3×… sát thương vũ khí (combo gom cụm). Trả về số quái nhiều nhất trúng trong một nhát.
  */
 async function playBestUntilOver(
   game: BattleDriver,
@@ -35,14 +37,17 @@ async function playBestUntilOver(
   beforeStrike?: (snapshot: Awaited<ReturnType<BattleDriver['snapshot']>>) => Promise<void>,
 ): Promise<number> {
   let mostHitsInOneStrike = 0;
+  // Ngẫu nhiên riêng của người chơi, tách khỏi trận (như scripts/simCore.ts).
+  let rng = seedRng(SEED + 1_000_000);
   while ((await game.snapshot()).battle.phase === 'playing') {
-    // B6: bot bấm skill ngay khi đầy (không tốn lượt) — cùng cách chơi với `npm run sim`.
-    if (canCastSkill((await game.snapshot()).battle, BATTLE_CONFIG)) {
+    const [{ cast, move }, next] = lookaheadTurn(await game.snapshot(), rng);
+    rng = next;
+    if (cast) {
+      expect(canCastSkill((await game.snapshot()).battle, BATTLE_CONFIG)).toBe(true);
       await game.castSkill();
       if ((await game.snapshot()).battle.phase !== 'playing') break;
     }
     await beforeStrike?.(await game.snapshot());
-    const move = bestMove(await game.snapshot());
     await game.play(move);
 
     const { lastAttack } = (await game.snapshot()).battle;
@@ -203,7 +208,7 @@ test('chạm sân chém đúng lát vùng xanh, bằng đúng vũ khí đang c�
   expect(after.battle.lastAttack?.hits.map((hit) => hit.monsterId)).toEqual(expectedHitIds);
 });
 
-test('F06: ngắm chuẩn thắng màn nào sang màn kế, hạ trùm ở màn cuối là phá đảo, rồi chơi lại từ màn 1', async ({
+test('F06: chơi giỏi thắng màn nào sang màn kế, hạ trùm ở màn cuối là phá đảo, rồi chơi lại từ màn 1', async ({
   page,
 }) => {
   // Đi đủ mọi màn (mỗi màn qua màn chuẩn bị chờ 0,5 giây): lâu hơn mức 30 giây trên máy CI chậm.

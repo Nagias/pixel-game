@@ -1,9 +1,9 @@
 // Bot chơi thử: cách chọn nước đi của "người chơi" trong E2E và trong mô phỏng cân bằng
 // (`npm run sim`). Một nguồn duy nhất để ván E2E và số đo độ khó luôn cùng một cách chơi.
 // Không phải luật chơi — game không dùng file này.
-import { nextInt, type RngState } from '../../../shared/random';
+import { nextInt, seedRng, type RngState } from '../../../shared/random';
 import { isInZone } from './arena';
-import { willAttack } from './battle';
+import { canCastSkill, castSkill, playTurn, selectWeapon, willAttack } from './battle';
 import type { BattleConfig, BattleState } from './battleTypes';
 
 /** Một nước đi: cầm vũ khí nào, chém vào lát nào. */
@@ -68,6 +68,99 @@ export function missMove(state: BattleState, config: BattleConfig): Move {
     }
   }
   throw new Error('Không còn lát trống để chém trượt');
+}
+
+/** Một lượt của bot: có bấm skill trước không (B6, không tốn lượt), rồi chém thế nào. */
+export interface TurnPlan {
+  readonly cast: boolean;
+  readonly move: Move;
+}
+
+// Trọng số chấm điểm của bot nhìn trước — agent dò bằng mô phỏng 27/10/2026 (đợt 0): coi trọng máu
+// quái còn lại nhất; máu nhân vật và quái sắp đánh nhẹ hơn (nặng hơn thì bot chơi rụt rè, thua hết
+// lượt ở màn 5). Không phải con số cân bằng của game: chỉ đổi cách bot chơi.
+const WEIGHT_HERO_HP = 1;
+const WEIGHT_THREAT = 0.5;
+/** Skill đang nạp đáng bằng ngần này phần sát thương nó sẽ gây — để bot biết giữ skill. */
+const WEIGHT_STORED_SKILL = 0.7;
+/** Số tương lai giả lập cho mỗi nước thử. */
+const LOOKAHEAD_SAMPLES = 3;
+const WIN_SCORE = 1_000;
+
+/**
+ * Điểm một trạng thái sau lượt: thắng (càng dư lượt càng tốt) hơn mọi thứ, thua kém mọi thứ; còn
+ * lại = máu nhân vật − quái sắp đánh − máu quái còn lại (trừ phần skill đang nạp sẽ gây).
+ */
+function scoreState(state: BattleState, config: BattleConfig): number {
+  if (state.phase === 'won') return WIN_SCORE + state.turnsLeft;
+  if (state.phase === 'lost') return -WIN_SCORE;
+  const monsterHp = state.monsters.reduce((sum, m) => sum + m.hp, 0);
+  const threat = state.monsters
+    .filter((m) => willAttack(m, config))
+    .reduce((sum, m) => sum + config.monsterKinds[m.kind].attack, 0);
+  const kind = state.loadout.skill;
+  const stored =
+    kind === undefined
+      ? 0
+      : (state.skillCharge / config.skills[kind].chargeTurns) *
+        config.skills[kind].damage *
+        state.monsters.length;
+  return (
+    WEIGHT_HERO_HP * state.heroHp -
+    WEIGHT_THREAT * threat -
+    (monsterHp - WEIGHT_STORED_SKILL * stored)
+  );
+}
+
+/**
+ * Người chơi nhìn trước 1 lượt: thử mọi nước khác nhau (vũ khí đã mang × nhóm quái trúng, có/không
+ * bấm skill khi đầy) trên vài tương lai giả lập — sinh từ ngẫu nhiên RIÊNG của người chơi, không nhìn
+ * trộm ngẫu nhiên của trận — rồi chọn nước có điểm trung bình cao nhất (scoreState).
+ */
+export function lookaheadTurn(
+  state: BattleState,
+  rng: RngState,
+  config: BattleConfig,
+): [plan: TurnPlan, next: RngState] {
+  const futures: RngState[] = [];
+  let next = rng;
+  for (let i = 0; i < LOOKAHEAD_SAMPLES; i++) {
+    let value: number;
+    [value, next] = nextInt(next, 2 ** 32);
+    futures.push(seedRng(value));
+  }
+  const starts: { cast: boolean; state: BattleState }[] = [{ cast: false, state }];
+  if (canCastSkill(state, config)) starts.push({ cast: true, state: castSkill(state, config) });
+
+  let best: TurnPlan = { cast: false, move: bestMove(state, config) };
+  let bestScore = -Infinity;
+  for (const start of starts) {
+    if (start.state.phase === 'won') return [{ cast: true, move: best.move }, next];
+    const seen = new Set<string>();
+    for (const weaponIndex of start.state.loadout.weapons) {
+      for (let sector = 0; sector < config.sectorCount; sector++) {
+        const move = { weaponIndex, sector };
+        const ids = hitIds(start.state, move, config);
+        // Chém trượt thì vũ khí nào cũng như nhau; cùng vũ khí cùng nhóm quái trúng thì như nhau.
+        const key = ids.length === 0 ? 'trượt' : `${weaponIndex}:${ids.join(',')}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const armed =
+          weaponIndex === start.state.weaponIndex
+            ? start.state
+            : selectWeapon(start.state, weaponIndex, config);
+        let total = 0;
+        for (const future of futures) {
+          total += scoreState(playTurn({ ...armed, rng: future }, sector, config), config);
+        }
+        if (total > bestScore) {
+          bestScore = total;
+          best = { cast: start.cast, move };
+        }
+      }
+    }
+  }
+  return [best, next];
 }
 
 /** Người chơi chém bừa: vũ khí đã mang và lát ngẫu nhiên (RNG có seed — lặp lại được). */

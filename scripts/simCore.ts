@@ -1,7 +1,13 @@
 // Lõi mô phỏng cân bằng — dùng chung cho `npm run sim` và các script dò số tạm (vd. .cache/*.ts thử
 // nhiều bộ con số rồi chọn bộ gần mục tiêu nhất). Chỉ gọi luật thuần trong logic/: cùng seed cùng kết quả.
 import { seedRng, type RngState } from '../src/shared/random';
-import { bestMove, randomMove, type Move } from '../src/features/battle/logic/autoPlay';
+import {
+  bestMove,
+  lookaheadTurn,
+  randomMove,
+  type Move,
+  type TurnPlan,
+} from '../src/features/battle/logic/autoPlay';
 import {
   canCastSkill,
   castSkill,
@@ -15,14 +21,34 @@ import type {
   Loadout,
   SkillKind,
 } from '../src/features/battle/logic/battleTypes';
-import { allLoadouts, allWeapons } from '../src/features/battle/logic/loadout';
+import { allLoadouts, allWeapons, defaultLoadout } from '../src/features/battle/logic/loadout';
 
-/** Kiểu chơi: chọn nước đi từ trạng thái trận và trạng thái ngẫu nhiên riêng của người chơi. */
-export type Player = (state: BattleState, rng: RngState, config: BattleConfig) => [Move, RngState];
+/**
+ * Kiểu chơi: chọn có bấm skill không và chém thế nào, từ trạng thái trận và trạng thái ngẫu nhiên
+ * riêng của người chơi.
+ */
+export type Player = (
+  state: BattleState,
+  rng: RngState,
+  config: BattleConfig,
+) => [TurnPlan, RngState];
 
+/** Hai kiểu chơi cũ bấm skill ngay khi đầy (B6). */
+const castWhenReady =
+  (pick: (state: BattleState, rng: RngState, config: BattleConfig) => [Move, RngState]): Player =>
+  (state, rng, config) => {
+    const cast = canCastSkill(state, config);
+    const ready = cast ? castSkill(state, config) : state;
+    const [move, next] =
+      ready.phase === 'playing' ? pick(ready, rng, config) : [bestMove(state, config), rng];
+    return [{ cast, move }, next];
+  };
+
+/** Bot giỏi nhất đứng đầu — mục tiêu độ khó (`target` của màn) đo bằng bot này. */
 export const PLAYERS: Record<string, Player> = {
-  'Ngắm chuẩn': (state, rng, config) => [bestMove(state, config), rng],
-  'Chém bừa': (state, rng, config) => randomMove(state, rng, config),
+  'Nhìn trước': (state, rng, config) => lookaheadTurn(state, rng, config),
+  'Ngắm chuẩn': castWhenReady((state, rng, config) => [bestMove(state, config), rng]),
+  'Chém bừa': castWhenReady((state, rng, config) => randomMove(state, rng, config)),
 };
 
 export interface LevelResult {
@@ -34,7 +60,7 @@ export interface LevelResult {
   readonly lostDefeated: number;
 }
 
-/** Một ván: bot bấm skill ngay khi đầy (B6, không tốn lượt), rồi đổi vũ khí nếu cần và chém. */
+/** Một ván: mỗi lượt bot có thể bấm skill (B6, không tốn lượt), rồi đổi vũ khí nếu cần và chém. */
 export function playGame(
   seed: number,
   level: number,
@@ -46,12 +72,12 @@ export function playGame(
   // Ngẫu nhiên của người chơi tách khỏi ngẫu nhiên của trận, để đổi cách chơi không đổi ván.
   let rng = seedRng(seed + 1_000_000);
   while (state.phase === 'playing') {
-    if (canCastSkill(state, config)) {
+    const [{ cast, move }, next] = player(state, rng, config);
+    rng = next;
+    if (cast) {
       state = castSkill(state, config);
       if (state.phase !== 'playing') break;
     }
-    const [move, next] = player(state, rng, config);
-    rng = next;
     if (move.weaponIndex !== state.weaponIndex) {
       state = selectWeapon(state, move.weaponIndex, config);
     }
@@ -95,6 +121,27 @@ export function loadoutsForLevel(level: number, config: BattleConfig): Loadout[]
   if (level < config.skillUnlockLevel) return weaponSets;
   const skills = Object.keys(config.skills) as SkillKind[];
   return weaponSets.flatMap((loadout) => skills.map((skill) => ({ ...loadout, skill })));
+}
+
+/**
+ * Đợt 0: các bộ đồ phải đạt mục tiêu độ khó của màn — vũ khí mặc định (Kiếm + Giáo + Cung), với
+ * TỪNG skill nếu màn đã mở skill (để không skill nào làm màn dễ/khó hẳn).
+ */
+export function targetLoadouts(level: number, config: BattleConfig): Loadout[] {
+  const weapons = defaultLoadout(config).weapons;
+  if (level < config.skillUnlockLevel) return [{ weapons }];
+  return (Object.keys(config.skills) as SkillKind[]).map((skill) => ({ weapons, skill }));
+}
+
+/** Đọc `--games N` từ dòng lệnh (số ván mỗi màn mỗi bộ đồ); không có thì dùng `fallback`. */
+export function gamesArg(argv: readonly string[], fallback: number): number {
+  const at = argv.indexOf('--games');
+  if (at === -1) return fallback;
+  const games = Number(argv[at + 1]);
+  if (!Number.isInteger(games) || games < 1) {
+    throw new RangeError(`--games phải là số nguyên ≥ 1, nhận "${argv[at + 1]}"`);
+  }
+  return games;
 }
 
 export function loadoutName(loadout: Loadout, config: BattleConfig): string {
