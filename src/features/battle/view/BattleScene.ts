@@ -88,7 +88,8 @@ export class BattleScene extends Scene {
   private turnsText!: GameObjects.Text;
   private levelText!: GameObjects.Text;
   private heroHpText!: GameObjects.Text;
-  private monstersText!: GameObjects.Text;
+  /** F11: tiến độ nhiệm vụ (góc trên bên phải). */
+  private questText!: GameObjects.Text;
   /** F04: dấu "!" trên đầu quái sắp đánh, theo id quái. */
   private readonly threatMarks = new Map<number, GameObjects.Text>();
   private resultLayer!: GameObjects.Container;
@@ -462,7 +463,7 @@ export class BattleScene extends Scene {
     this.levelText = this.add
       .text(16, 46, '', { ...TEXT, fontSize: '20px', color: PALETTE.sand })
       .setDepth(DEPTH.hud);
-    this.monstersText = this.add
+    this.questText = this.add
       .text(GAME_WIDTH - 16, 16, '', { ...TEXT, fontSize: '20px' })
       .setOrigin(1, 0)
       .setDepth(DEPTH.hud);
@@ -477,11 +478,16 @@ export class BattleScene extends Scene {
   }
 
   private updateHud(): void {
-    const { turnLimit } = levelAt(this.battle.level, this.config);
+    const { turnLimit, quest } = levelAt(this.battle.level, this.config);
     this.turnsText.setText(`Lượt: ${this.battle.turnsLeft}/${turnLimit}`);
     this.levelText.setText(`Màn ${this.battle.level + 1}/${this.config.levels.length}`);
     this.heroHpText.setText(`Máu: ${this.battle.heroHp}/${this.config.hero.hp}`);
-    this.monstersText.setText(`Quái: ${this.battle.monsters.length}`);
+    // F11: ô nhiệm vụ thay ô "Quái: n" — "Slime 3/6" (màn không có nhiệm vụ thì vẫn đếm quái).
+    this.questText.setText(
+      quest
+        ? `${this.config.monsterKinds[quest.kind].name} ${this.battle.questProgress}/${quest.count}`
+        : `Quái: ${this.battle.monsters.length}`,
+    );
   }
 
   // ---------- Thanh nút vũ khí (F02) ----------
@@ -599,18 +605,23 @@ export class BattleScene extends Scene {
   private showResult(state: BattleState): void {
     this.endedAtMs = this.time.now;
     const next = nextLevelIndex(state, this.config) + 1;
+    // F11: thắng = xong nhiệm vụ (màn không có nhiệm vụ: diệt sạch quái).
+    const { quest } = levelAt(state.level, this.config);
+    const done = `${quest ? 'Xong nhiệm vụ' : 'Diệt sạch quái'}, còn dư ${state.turnsLeft} lượt`;
     if (isGameCleared(state, this.config)) {
       this.resultTitle.setText('PHÁ ĐẢO!').setColor(PALETTE.sand);
-      this.resultDetail.setText(`Diệt sạch quái, còn dư ${state.turnsLeft} lượt`);
+      this.resultDetail.setText(done);
       this.resultHint.setText(`Chạm để chơi lại từ màn ${next}`);
     } else if (state.phase === 'won') {
       this.resultTitle.setText('THẮNG!').setColor(PALETTE.lime);
-      this.resultDetail.setText(`Diệt sạch quái, còn dư ${state.turnsLeft} lượt`);
+      this.resultDetail.setText(done);
       this.resultHint.setText(`Chạm để sang màn ${next}`);
     } else {
       this.resultTitle.setText('THUA').setColor(PALETTE.orange);
       this.resultDetail.setText(
-        state.lossReason === 'heroDefeated' ? 'Bạn đã gục' : 'Hết lượt mà quái vẫn còn',
+        state.lossReason === 'heroDefeated'
+          ? 'Bạn đã gục'
+          : `Hết lượt mà ${quest ? 'chưa xong nhiệm vụ' : 'quái vẫn còn'}`,
       );
       this.resultHint.setText(`Chạm để chơi lại màn ${next}`);
     }

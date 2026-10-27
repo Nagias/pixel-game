@@ -5,6 +5,7 @@ import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
 import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE } from '../../../shared/palette';
 import { parseLevelParam } from '../../../shared/levelParam';
+import { levelAt } from '../logic/battle';
 import { BATTLE_CONFIG } from '../logic/battleConfig';
 import type { Loadout, SkillKind, WeaponSlot } from '../logic/battleTypes';
 import {
@@ -119,14 +120,30 @@ export class LoadoutScene extends Scene {
 
     this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, colorNumber('teal')).setOrigin(0);
     this.add
-      .text(GAME_WIDTH / 2, 40, `MÀN ${this.level + 1}/${this.config.levels.length}`, {
+      .text(GAME_WIDTH / 2, 30, `MÀN ${this.level + 1}/${this.config.levels.length}`, {
         ...TEXT,
         fontSize: '32px',
         color: PALETTE.sand,
       })
       .setOrigin(0.5);
+    // F11: báo nhiệm vụ trước trận để người chơi chọn đồ theo nó.
+    const { quest } = levelAt(this.level, this.config);
     this.add
-      .text(GAME_WIDTH / 2, 76, 'Chọn đồ mang vào trận', { ...TEXT, fontSize: '16px' })
+      .text(
+        GAME_WIDTH / 2,
+        62,
+        quest
+          ? `Nhiệm vụ: hạ ${quest.count} ${this.config.monsterKinds[quest.kind].name}`
+          : 'Nhiệm vụ: diệt sạch quái',
+        { ...TEXT, fontSize: '16px', color: PALETTE.lime },
+      )
+      .setOrigin(0.5);
+    this.add
+      .text(GAME_WIDTH / 2, 86, 'Chọn đồ mang vào trận', {
+        ...TEXT,
+        fontSize: '14px',
+        color: PALETTE.mist,
+      })
       .setOrigin(0.5);
 
     this.rows.forEach((row, rowIndex) => this.createWeaponRow(row, rowIndex));

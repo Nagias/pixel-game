@@ -134,6 +134,23 @@ describe('bộ dò số cân bằng (đợt 0)', () => {
     expect(betterPick(pick(false, 9), null, 7)).toBe(true);
   });
 
+  // F11: núm vặn nhân chéo có thể sinh màn bất khả thi (nhiệm vụ cần nhiều quái hơn mọi đợt cộng lại) —
+  // game từ chối cấu hình đó, bộ dò bỏ qua tổ hợp đó thay vì dừng cả lần dò.
+  it('tổ hợp làm cấu hình sai bị bỏ qua; không còn tổ hợp nào hợp lệ thì báo lỗi', () => {
+    const quest = (values: number[]) => ({
+      name: 'nhiệm vụ',
+      level: 0,
+      values,
+      apply: (config: BattleConfig, count: number): BattleConfig => ({
+        ...config,
+        levels: config.levels.map((l) => ({ ...l, quest: { kind: 'slime' as const, count } })),
+      }),
+    });
+    const [proposal] = tune(CONFIG, setup(4, [quest([2, 1])]));
+    expect(proposal?.levels[0]?.knobs).toEqual({ 'nhiệm vụ': 1 });
+    expect(() => tune(CONFIG, setup(4, [quest([2, 3])]))).toThrow('Màn 1: không có tổ hợp');
+  });
+
   it('màn không có mục tiêu thì báo lỗi rõ ràng', () => {
     expect(() => pickTurns(CONFIG, 0, { ...setup(3), targets: [] })).toThrow(
       'Màn 1 chưa có mục tiêu',

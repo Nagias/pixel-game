@@ -3,7 +3,7 @@
 // Không phải luật chơi — game không dùng file này.
 import { nextInt, seedRng, type RngState } from '../../../shared/random';
 import { isInZone } from './arena';
-import { canCastSkill, castSkill, playTurn, selectWeapon, willAttack } from './battle';
+import { canCastSkill, castSkill, levelAt, playTurn, selectWeapon, willAttack } from './battle';
 import type { BattleConfig, BattleState } from './battleTypes';
 
 /** Một nước đi: cầm vũ khí nào, chém vào lát nào. */
@@ -23,9 +23,10 @@ export function hitIds(state: BattleState, move: Move, config: BattleConfig): nu
 
 /**
  * Người chơi ngắm chuẩn: trước hết chém trúng nhiều quái bắn đang có "!" nhất (B3 — hạ hoặc làm nó
- * choáng; quái đang bị đóng băng thì không — B6); rồi vũ khí + lát trúng nhiều quái nhất; hòa thì
- * ưu tiên quái đang ở gần nhân vật hơn (nguy hiểm hơn); vẫn hòa thì vũ khí và lát đứng trước. B4: chỉ
- * xét vũ khí đã mang vào trận. B6: bấm skill thì xem canCastSkill (bot bấm ngay khi đầy).
+ * choáng; quái đang bị đóng băng thì không — B6); rồi trúng nhiều quái của nhiệm vụ nhất (F11); rồi vũ
+ * khí + lát trúng nhiều quái nhất; hòa thì ưu tiên quái đang ở gần nhân vật hơn (nguy hiểm hơn); vẫn
+ * hòa thì vũ khí và lát đứng trước. B4: chỉ xét vũ khí đã mang vào trận. B6: bấm skill thì xem
+ * canCastSkill (bot bấm ngay khi đầy).
  */
 export function bestMove(state: BattleState, config: BattleConfig): Move {
   const byId = new Map(state.monsters.map((m) => [m.id, m]));
@@ -34,13 +35,15 @@ export function bestMove(state: BattleState, config: BattleConfig): Move {
       .filter((m) => config.monsterKinds[m.kind].shootRing !== undefined && willAttack(m, config))
       .map((m) => m.id),
   );
+  const questKind = levelAt(state.level, config).quest?.kind;
   let best: Move = { weaponIndex: state.weaponIndex, sector: 0 };
-  let bestScore = [-1, -1, -1];
+  let bestScore = [-1, -1, -1, -1];
   for (const weaponIndex of state.loadout.weapons) {
     for (let sector = 0; sector < config.sectorCount; sector++) {
       const ids = hitIds(state, { weaponIndex, sector }, config);
       const score = [
         ids.filter((id) => aimingShooters.has(id)).length,
+        ids.filter((id) => byId.get(id)?.kind === questKind).length,
         ids.length,
         ids.reduce((sum, id) => sum + (config.ringCount - (byId.get(id)?.ring ?? 0)), 0),
       ];
@@ -78,9 +81,10 @@ export interface TurnPlan {
 
 // Trọng số chấm điểm của bot nhìn trước — agent dò bằng mô phỏng 27/10/2026 (đợt 0): coi trọng máu
 // quái còn lại nhất; máu nhân vật và quái sắp đánh nhẹ hơn (nặng hơn thì bot chơi rụt rè, thua hết
-// lượt ở màn 5). Không phải con số cân bằng của game: chỉ đổi cách bot chơi.
+// lượt ở màn 5). Không phải con số cân bằng của game: chỉ đổi cách bot chơi. F11: quái sắp đánh 0,5 →
+// 0,25 — Cung kéo Slime Pháo vào vòng bắn nên bot sợ bắn Pháo (màn 5 Mưa băng thắng 35% → 82%).
 const WEIGHT_HERO_HP = 1;
-const WEIGHT_THREAT = 0.5;
+const WEIGHT_THREAT = 0.25;
 /** Skill đang nạp đáng bằng ngần này phần sát thương nó sẽ gây — để bot biết giữ skill. */
 const WEIGHT_STORED_SKILL = 0.7;
 /** Số tương lai giả lập cho mỗi nước thử. */
@@ -88,23 +92,65 @@ const LOOKAHEAD_SAMPLES = 3;
 const WIN_SCORE = 1_000;
 
 /**
+ * F11: việc còn phải làm để thắng màn — `hp`: lượng máu quái còn phải chém; `targets`: máu còn lại của
+ * từng quái trên sân cần chém (để biết skill đánh cả sân đáng bao nhiêu).
+ * - Không có nhiệm vụ: máu quái trên sân + máu các đợt chưa ra (giết con cuối gọi đợt kế không bị coi
+ *   là thiệt).
+ * - Có nhiệm vụ: máu đầy của số con nhiệm vụ còn thiếu, trừ máu đã chém mất của con nhiệm vụ trên sân
+ *   (bị thương nặng nhất trước). Con nhiệm vụ trên sân không đủ mà còn đợt chưa ra thì cộng thêm máu
+ *   của những con khác phải dọn để sân còn ≤ nextWaveAt (con yếu nhất trước) — để gọi đợt kế.
+ */
+function workLeft(state: BattleState, config: BattleConfig): { hp: number; targets: number[] } {
+  const level = levelAt(state.level, config);
+  const { quest } = level;
+  const unspawned = (level.waves ?? []).slice(state.nextWave);
+  const sum = (values: readonly number[]) => values.reduce((total, v) => total + v, 0);
+  if (!quest) {
+    const onField = state.monsters.map((m) => m.hp);
+    const later = unspawned.flat().map((kind) => config.monsterKinds[kind].hp);
+    return { hp: sum(onField) + sum(later), targets: onField };
+  }
+  const fullHp = config.monsterKinds[quest.kind].hp;
+  const remaining = Math.max(0, quest.count - state.questProgress);
+  const questOnField = state.monsters.filter((m) => m.kind === quest.kind);
+  const questTargets = questOnField
+    .map((m) => m.hp)
+    .sort((a, b) => a - b)
+    .slice(0, remaining);
+  const wounded = sum(questTargets.map((hp) => fullHp - hp));
+  let gate: number[] = [];
+  if (remaining > questOnField.length && unspawned.length > 0) {
+    const mustClear = state.monsters.length - questOnField.length - (level.nextWaveAt ?? 0);
+    gate = state.monsters
+      .filter((m) => m.kind !== quest.kind)
+      .map((m) => m.hp)
+      .sort((a, b) => a - b)
+      .slice(0, Math.max(0, mustClear));
+  }
+  return { hp: remaining * fullHp - wounded + sum(gate), targets: [...questTargets, ...gate] };
+}
+
+/**
  * Điểm một trạng thái sau lượt: thắng (càng dư lượt càng tốt) hơn mọi thứ, thua kém mọi thứ; còn
- * lại = máu nhân vật − quái sắp đánh − máu quái còn lại (trừ phần skill đang nạp sẽ gây).
+ * lại = máu nhân vật − quái sắp đánh − việc còn phải làm (workLeft, trừ phần skill đang nạp sẽ gây lên
+ * những con cần chém).
  */
 function scoreState(state: BattleState, config: BattleConfig): number {
   if (state.phase === 'won') return WIN_SCORE + state.turnsLeft;
   if (state.phase === 'lost') return -WIN_SCORE;
-  const monsterHp = state.monsters.reduce((sum, m) => sum + m.hp, 0);
+  const work = workLeft(state, config);
+  const monsterHp = work.hp;
   const threat = state.monsters
     .filter((m) => willAttack(m, config))
     .reduce((sum, m) => sum + config.monsterKinds[m.kind].attack, 0);
+  // Skill đang nạp đáng bằng phần máu nó sẽ chém được trên những con cần chém (không quá máu còn lại của
+  // mỗi con — F11: trước đó tính đủ sát thương cả cho con sắp chết, nên bot né giết, giữ skill mãi).
   const kind = state.loadout.skill;
   const stored =
     kind === undefined
       ? 0
       : (state.skillCharge / config.skills[kind].chargeTurns) *
-        config.skills[kind].damage *
-        state.monsters.length;
+        work.targets.reduce((sum, hp) => sum + Math.min(config.skills[kind].damage, hp), 0);
   return (
     WEIGHT_HERO_HP * state.heroHp -
     WEIGHT_THREAT * threat -

@@ -13,6 +13,7 @@ import {
   type LevelConfig,
   type Loadout,
   type Monster,
+  type MonsterKind,
   type SkillConfig,
   type WeaponConfig,
 } from './battleTypes';
@@ -86,10 +87,6 @@ function validateBattleConfig(config: BattleConfig): void {
   if (levels.length === 0) problems.push('phải có ít nhất 1 màn');
   levels.forEach((level, i) => {
     const label = `màn ${i + 1}`;
-    // Màn hai phía: cụm đông nhất là cụm trước (nửa đầu, làm tròn lên).
-    const count = level.splitOpposite
-      ? Math.ceil(level.monsters.length / 2)
-      : level.monsters.length;
     const slotCount = level.spread * 2 + 1;
     if (level.turnLimit < 1) problems.push(`${label}: phải có ít nhất 1 lượt`);
     if (level.target) {
@@ -99,9 +96,6 @@ function validateBattleConfig(config: BattleConfig): void {
       }
       if (!(spareTurns >= 0)) problems.push(`${label}: mục tiêu lượt dư phải ≥ 0`);
     }
-    if (count === 0) problems.push(`${label}: phải có ít nhất 1 quái`);
-    if (count > slotCount)
-      problems.push(`${label}: không đủ ${count} chỗ trong cụm ${slotCount} lát`);
     if (slotCount > sectorCount) {
       problems.push(`${label}: cụm quái ${slotCount} lát rộng hơn vòng tròn`);
     }
@@ -111,9 +105,40 @@ function validateBattleConfig(config: BattleConfig): void {
     if (level.splitOpposite && slotCount * 2 > sectorCount) {
       problems.push(`${label}: hai cụm ${slotCount} lát chồng lên nhau`);
     }
-    for (const kind of level.monsters) {
+    // F11: đợt mở màn và mọi đợt sau cùng một luật đặt quái.
+    const lineups = [level.monsters, ...(level.waves ?? [])];
+    lineups.forEach((lineup, wave) => {
+      const where = wave === 0 ? label : `${label}, đợt ${wave + 1}`;
+      // Màn hai phía: cụm đông nhất là cụm trước (nửa đầu, làm tròn lên).
+      const count = level.splitOpposite ? Math.ceil(lineup.length / 2) : lineup.length;
+      if (count === 0) problems.push(`${where}: phải có ít nhất 1 quái`);
+      if (count > slotCount) {
+        problems.push(`${where}: không đủ ${count} chỗ trong cụm ${slotCount} lát`);
+      }
+      for (const kind of lineup) {
+        if (!Object.hasOwn(monsterKinds, kind)) {
+          problems.push(`${where}: loại quái "${String(kind)}" không tồn tại`);
+        }
+      }
+    });
+    const nextWaveAt = level.nextWaveAt ?? 0;
+    if (!Number.isInteger(nextWaveAt) || nextWaveAt < 0) {
+      problems.push(`${label}: ngưỡng ra đợt phải là số nguyên ≥ 0`);
+    }
+    if (level.quest) {
+      const { kind, count } = level.quest;
+      if (!Number.isInteger(count) || count < 1) {
+        problems.push(`${label}: nhiệm vụ phải giết số nguyên ≥ 1 con`);
+      }
       if (!Object.hasOwn(monsterKinds, kind)) {
-        problems.push(`${label}: loại quái "${String(kind)}" không tồn tại`);
+        problems.push(`${label}: nhiệm vụ giết loại quái "${String(kind)}" không tồn tại`);
+      }
+      // Micro RPG từng có màn bất khả thi vì quái nhiệm vụ không ra đủ: chặn ngay từ cấu hình.
+      const available = lineups.flat().filter((k) => k === kind).length;
+      if (available < count) {
+        problems.push(
+          `${label}: nhiệm vụ cần ${count} con "${kind}" mà mọi đợt chỉ có ${available}`,
+        );
       }
     }
   });
@@ -132,24 +157,78 @@ export function levelAt(index: number, config: BattleConfig): LevelConfig {
   return level;
 }
 
-/** Chọn `count` độ lệch khác nhau trong cụm ±spread (xáo một phần Fisher–Yates). */
-function pickOffsets(rng: RngState, count: number, spread: number): [number[], RngState] {
-  const slotCount = spread * 2 + 1;
-  const offsets = Array.from({ length: slotCount }, (_, i) => i - spread);
+/**
+ * Chọn `count` lát trống khác nhau quanh `center`: trước hết ngẫu nhiên trong cụm ±spread (xáo một phần
+ * Fisher–Yates); F11: cụm thiếu lát trống thì lấy thêm lát trống gần cụm nhất. Lát chọn được ghi vào
+ * `taken`. Người gọi bảo đảm vòng còn đủ lát trống.
+ */
+function pickSectors(
+  rng: RngState,
+  center: number,
+  count: number,
+  spread: number,
+  taken: Set<number>,
+  sectorCount: number,
+): [number[], RngState] {
+  const at = (offset: number) => wrapSector(center + offset, sectorCount);
+  const offsets = Array.from({ length: spread * 2 + 1 }, (_, i) => i - spread).filter(
+    (offset) => !taken.has(at(offset)),
+  );
+  const inCluster = Math.min(count, offsets.length);
   let next = rng;
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < inCluster; i++) {
     let pick: number;
-    [pick, next] = nextInt(next, slotCount - i);
+    [pick, next] = nextInt(next, offsets.length - i);
     const j = i + pick;
     [offsets[i], offsets[j]] = [offsets[j] as number, offsets[i] as number];
   }
-  return [offsets.slice(0, count), next];
+  const sectors = offsets.slice(0, inCluster).map(at);
+  for (const sector of sectors) taken.add(sector);
+  for (let distance = spread + 1; sectors.length < count && distance <= sectorCount; distance++) {
+    for (const sector of [at(distance), at(-distance)]) {
+      if (sectors.length < count && !taken.has(sector)) {
+        sectors.push(sector);
+        taken.add(sector);
+      }
+    }
+  }
+  return [sectors, next];
 }
 
 /**
- * Mở màn `level`: đội hình quái của màn xuất hiện thành cụm ở vòng ngoài cùng, mỗi con một lát
- * khác nhau — hoặc hai cụm đối diện nếu màn `splitOpposite` (B2). Màn nào cũng bắt đầu đầy máu,
- * cầm món đầu tiên của bộ đồ mang vào (B4; không truyền thì mang bộ mặc định — món đầu mỗi tầm).
+ * Đặt một tốp quái lên vòng ngoài cùng, đầy máu, id từ `firstId`: một cụm ±spread quanh một lát ngẫu
+ * nhiên, mỗi con một lát — hoặc hai cụm đối diện nếu màn `splitOpposite` (B2). F11: không đặt lên lát
+ * đã có quái ở vòng ngoài (`taken`).
+ */
+function placeLineup(
+  rngIn: RngState,
+  lineup: readonly MonsterKind[],
+  firstId: number,
+  level: LevelConfig,
+  taken: Set<number>,
+  config: BattleConfig,
+): [Monster[], RngState] {
+  const { sectorCount } = config;
+  const [center, rngAfterCenter] = nextInt(rngIn, sectorCount);
+  const frontCount = level.splitOpposite ? Math.ceil(lineup.length / 2) : lineup.length;
+  const pick = (rng: RngState, at: number, count: number) =>
+    pickSectors(rng, at, count, level.spread, taken, sectorCount);
+  const [front, rngAfterFront] = pick(rngAfterCenter, center, frontCount);
+  const [back, rng] = pick(rngAfterFront, center + sectorCount / 2, lineup.length - frontCount);
+  const sectors = [...front, ...back];
+  const monsters = lineup.map((kind, index) => ({
+    id: firstId + index,
+    kind,
+    sector: sectors[index] as number,
+    ring: config.ringCount - 1,
+    hp: config.monsterKinds[kind].hp,
+  }));
+  return [monsters, rng];
+}
+
+/**
+ * Mở màn `level`: đội hình mở màn xuất hiện ở vòng ngoài cùng (placeLineup). Màn nào cũng bắt đầu đầy
+ * máu, cầm món đầu tiên của bộ đồ mang vào (B4; không truyền thì mang bộ mặc định — món đầu mỗi tầm).
  */
 export function createBattle(
   seed: number,
@@ -164,31 +243,21 @@ export function createBattle(
       `Màn ${level + 1} chưa được mang skill (mở từ màn ${config.skillUnlockLevel + 1})`,
     );
   }
-  const { turnLimit, monsters: lineup, spread, splitOpposite } = levelAt(level, config);
-
-  const [center, rngAfterCenter] = nextInt(seedRng(seed), config.sectorCount);
-  const frontCount = splitOpposite ? Math.ceil(lineup.length / 2) : lineup.length;
-  const [front, rngAfterFront] = pickOffsets(rngAfterCenter, frontCount, spread);
-  const [back, rng] = pickOffsets(rngAfterFront, lineup.length - frontCount, spread);
-  const backCenter = center + config.sectorCount / 2;
-  const sectors = [
-    ...front.map((offset) => center + offset),
-    ...back.map((offset) => backCenter + offset),
-  ];
-
-  const monsters: Monster[] = lineup.map((kind, index) => ({
-    id: index + 1,
-    kind,
-    sector: wrapSector(sectors[index] as number, config.sectorCount),
-    ring: config.ringCount - 1,
-    hp: config.monsterKinds[kind].hp,
-  }));
+  const levelConfig = levelAt(level, config);
+  const [monsters, rng] = placeLineup(
+    seedRng(seed),
+    levelConfig.monsters,
+    1,
+    levelConfig,
+    new Set(),
+    config,
+  );
 
   return {
     seed,
     rng,
     level,
-    turnsLeft: turnLimit,
+    turnsLeft: levelConfig.turnLimit,
     heroHp: config.hero.hp,
     loadout,
     weaponIndex: loadout.weapons[0] as number,
@@ -198,6 +267,53 @@ export function createBattle(
     lastAttack: null,
     skillCharge: 0,
     lastSkill: null,
+    questProgress: 0,
+    nextWave: 0,
+  };
+}
+
+/** F11: tiến độ nhiệm vụ sau khi các quái trong `hits` trúng đòn (đếm con chết đúng loại nhiệm vụ). */
+function questProgressAfter(state: BattleState, hits: readonly Hit[], level: LevelConfig): number {
+  const { quest } = level;
+  if (!quest) return state.questProgress;
+  const kindById = new Map(state.monsters.map((m) => [m.id, m.kind]));
+  const killed = hits.filter((hit) => hit.killed && kindById.get(hit.monsterId) === quest.kind);
+  return state.questProgress + killed.length;
+}
+
+/**
+ * F11: màn đã thắng — xong nhiệm vụ; màn không có nhiệm vụ thì sân sạch và đã ra hết các đợt quái.
+ */
+function isLevelCleared(
+  level: LevelConfig,
+  questProgress: number,
+  monsters: readonly Monster[],
+  nextWave: number,
+): boolean {
+  if (level.quest) return questProgress >= level.quest.count;
+  return monsters.length === 0 && nextWave >= (level.waves?.length ?? 0);
+}
+
+/**
+ * F11: sân còn ≤ nextWaveAt con và còn đợt chưa ra thì đợt kế tràn vào vòng ngoài cùng (placeLineup),
+ * id nối tiếp mọi con đã ra. Vòng ngoài không đủ lát trống cho cả đợt thì đợt đó chờ lượt sau.
+ */
+function spawnWave(state: BattleState, config: BattleConfig): BattleState {
+  const level = levelAt(state.level, config);
+  const waves = level.waves ?? [];
+  const lineup = waves[state.nextWave];
+  if (!lineup || state.monsters.length > (level.nextWaveAt ?? 0)) return state;
+  const outer = config.ringCount - 1;
+  const taken = new Set(state.monsters.filter((m) => m.ring === outer).map((m) => m.sector));
+  if (config.sectorCount - taken.size < lineup.length) return state;
+  const spawned = waves.slice(0, state.nextWave).reduce((sum, wave) => sum + wave.length, 0);
+  const firstId = level.monsters.length + spawned + 1;
+  const [monsters, rng] = placeLineup(state.rng, lineup, firstId, level, taken, config);
+  return {
+    ...state,
+    rng,
+    monsters: [...state.monsters, ...monsters],
+    nextWave: state.nextWave + 1,
   };
 }
 
@@ -288,15 +404,18 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
   const skill = state.loadout.skill;
   const skillCharge =
     skill === undefined ? 0 : Math.min(state.skillCharge + 1, config.skills[skill].chargeTurns);
-  const common = { turnsLeft, skillCharge, lastAttack, lastSkill: null };
+  const level = levelAt(state.level, config);
+  const questProgress = questProgressAfter(state, hits, level);
+  const common = { turnsLeft, skillCharge, lastAttack, lastSkill: null, questProgress };
 
-  if (survivors.length === 0) {
+  // F11: xong nhiệm vụ thì thắng ngay — quái còn lại không đánh, không đi nữa.
+  if (isLevelCleared(level, questProgress, survivors, state.nextWave)) {
     return {
       ...state,
       ...common,
       rng,
       heroHp: state.heroHp + healed,
-      monsters: [],
+      monsters: survivors,
       phase: 'won',
       lossReason: null,
     };
@@ -341,7 +460,8 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
   if (turnsLeft <= 0) {
     return { ...base, phase: 'lost', lossReason: 'outOfTurns' };
   }
-  return { ...base, phase: 'playing', lossReason: null };
+  // F11: đợt mới ra sau khi quái cũ đã đi — nó đứng ở vòng ngoài, lượt sau mới đi.
+  return spawnWave({ ...base, phase: 'playing', lossReason: null }, config);
 }
 
 /**
@@ -419,8 +539,9 @@ export function canCastSkill(state: BattleState, config: BattleConfig): boolean 
 
 /**
  * B6: bấm skill — mọi quái trên sân mất `damage` máu (không combo, không chí mạng, không đẩy), con còn
- * sống bị đóng băng `freezeTurns` lượt. Không tốn lượt, quái không di chuyển, không tung số ngẫu nhiên;
- * nạp lại từ 0. Hạ hết quái thì thắng ngay.
+ * sống bị đóng băng `freezeTurns` lượt. Không tốn lượt, quái không di chuyển; nạp lại từ 0. F11: quái
+ * chết tính vào nhiệm vụ, xong nhiệm vụ thì thắng ngay; sân còn ít quái thì đợt kế ra ngay (spawnWave —
+ * chỉ lúc đó mới tung số ngẫu nhiên).
  */
 export function castSkill(state: BattleState, config: BattleConfig): BattleState {
   if (state.phase !== 'playing') {
@@ -444,11 +565,14 @@ export function castSkill(state: BattleState, config: BattleConfig): BattleState
       return { ...m, hp, frozenTurns: Math.max(m.frozenTurns ?? 0, skill.freezeTurns) };
     });
   const lastSkill = { skill: kind, hits };
+  const level = levelAt(state.level, config);
+  const questProgress = questProgressAfter(state, hits, level);
+  const after = { ...state, monsters, skillCharge: 0, lastSkill, questProgress };
 
-  if (monsters.length === 0) {
-    return { ...state, monsters, skillCharge: 0, lastSkill, phase: 'won', lossReason: null };
+  if (isLevelCleared(level, questProgress, monsters, state.nextWave)) {
+    return { ...after, phase: 'won', lossReason: null };
   }
-  return { ...state, monsters, skillCharge: 0, lastSkill };
+  return spawnWave(after, config);
 }
 
 /**

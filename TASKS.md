@@ -89,3 +89,17 @@ không lưu tiến trình, không phần thưởng.
 - [x] E2E: đi liền 3 màn tới phá đảo rồi về màn 1; thua ở màn 2 thì chơi lại màn 2
 - [x] FEATURE_MAP (F06), DEBT-007, DEBT-009
 - [ ] `npm run check`, mở PR #7, CI xanh, chủ dự án duyệt → gộp
+
+## Kế hoạch sau B6, đợt 1 — F11 Thắng bằng nhiệm vụ + quái ra theo đợt (27/10/2026)
+
+Phạm vi chủ dự án chốt: "cứ làm theo gợi ý" — 1 nhiệm vụ chính "giết N con loại X", đợt kế ra khi sân
+còn ≤ ngưỡng, xong nhiệm vụ là thắng ngay, ô "Slime 3/6" thay "Quái: n". Màn theo chủ đề (~20 màn mỗi
+chủ đề) để đợt 7; đợt này chỉ làm cho dữ liệu màn mở rộng được.
+
+- [x] Test luật trước (đỏ) → code (xanh): `quest`, `waves`, `nextWaveAt`, chặn màn bất khả thi
+- [x] Thanh trên "Slime 2/6", màn chuẩn bị ghi nhiệm vụ, màn kết quả "Xong nhiệm vụ"
+- [x] Bot: ngắm chuẩn ưu tiên quái nhiệm vụ; nhìn trước tính "việc còn phải làm" (test trước)
+- [x] `npm run tune` → áp số cho 5 màn, `balance.test.ts` xanh
+- [x] E2E: ván seed 42 qua 5 màn bằng nhiệm vụ, ảnh đợt quái mới
+- [x] Thử tay khung 375×760 theo `docs/MANUAL_TEST.md`
+- [ ] FEATURE_MAP (F11), `npm run check`, mở PR, chủ dự án duyệt

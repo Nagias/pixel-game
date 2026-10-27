@@ -73,10 +73,11 @@ export const BATTLE_CONFIG: BattleConfig = {
       // F04: quái áp sát (vòng 0) đánh mỗi lượt, mỗi con trừ máu nhân vật theo sức đánh.
       attack: 2,
     },
-    // F06: trùm màn 3 — trâu hơn, đánh đau hơn, còn lại y như slime.
+    // F06: trùm màn 3 — trâu hơn, đánh đau hơn, còn lại y như slime. F11: 6 → 8 máu (nhiệm vụ màn 3 là hạ
+    // trùm, xong là thắng — 6 máu thì thắng 100%).
     slimeKing: {
       name: 'Slime Vua',
-      hp: 6,
+      hp: 8,
       advanceChance: 0.6,
       attack: 4,
     },
@@ -105,35 +106,46 @@ export const BATTLE_CONFIG: BattleConfig = {
   },
   skillUnlockLevel: 2,
   // F06: các màn nối tiếp. Màn 2 có 6 con trong một cụm nên cụm rộng ±3 lát (cụm ±2 chỉ có 5 chỗ).
-  // B6: số lượt chỉnh lại theo máu quái mới và skill (màn 1–5: 8/10/10/10/10 → 10/12/9/8/8).
   // Đợt 0 (chủ dự án duyệt 27/10/2026): mục tiêu độ khó theo gợi ý của agent — màn đầu ≥ 98%, tụt dần
-  // ~5% mỗi màn, màn cuối chương ~78%; lượt dư tụt dần theo (chọn khớp với tỉ lệ thắng: hai số cùng
-  // đi theo số lượt). Đo bằng người chơi trung bình (bot "Ngắm chuẩn", chủ dự án chốt 27/10/2026).
-  // Số lượt và đội hình do `npm run tune` đề xuất 27/10/2026 (màn 1–5: 10/12/9/8/8 → 10/11/8/9/8).
+  // ~5% mỗi màn, màn cuối chương ~78%; lượt dư tụt dần theo. Đo bằng người chơi trung bình (bot "Ngắm
+  // chuẩn", chủ dự án chốt 27/10/2026).
+  // F11 (đợt 1, chủ dự án duyệt luật 27/10/2026): mỗi màn một nhiệm vụ, xong là thắng; đợt sau tràn vào
+  // khi sân còn ≤ nextWaveAt con. Nhiệm vụ, đợt quái, số lượt do agent đề xuất + `npm run tune` 27/10/2026
+  // (số lượt màn 1–5: 10/11/8/9/8 → 14/13/6/8/9).
   levels: [
+    // Màn 1 dạy đợt quái: hạ 6 mà mở màn chỉ 4 con, đợt 2 (2 con) ra khi sân còn ≤ 2.
     {
-      turnLimit: 10,
+      turnLimit: 14,
       monsters: ['slime', 'slime', 'slime', 'slime'],
       spread: 2,
+      waves: [['slime', 'slime']],
+      nextWaveAt: 2,
+      quest: { kind: 'slime', count: 6 },
       target: { winRate: 0.98, spareTurns: 3 },
     },
     {
-      turnLimit: 11,
+      turnLimit: 13,
       monsters: ['slime', 'slime', 'slime', 'slime', 'slime', 'slime'],
       spread: 3,
+      waves: [['slime', 'slime', 'slime', 'slime']],
+      nextWaveAt: 3,
+      quest: { kind: 'slime', count: 8 },
       target: { winRate: 0.93, spareTurns: 2.5 },
     },
-    // Màn trùm: chủ dự án duyệt 26/10/2026 (trước đó 2 slime, 12 lượt — dễ hơn màn 2).
+    // Màn trùm (chủ dự án duyệt 26/10/2026). F11: nhiệm vụ hạ Slime Vua, slime chỉ là hộ vệ nên không cần
+    // đợt sau (dò thử: đợt sau không đổi kết quả). Hộ vệ 3 → 4 con, cụm ±2 → ±4 (script dò tạm 27/10/2026:
+    // với cụm hẹp, Mưa băng dễ hơn Cầu lửa ~5%, vượt dung sai).
     {
-      turnLimit: 8,
-      monsters: ['slimeKing', 'slime', 'slime', 'slime'],
-      spread: 2,
+      turnLimit: 6,
+      monsters: ['slimeKing', 'slime', 'slime', 'slime', 'slime'],
+      spread: 4,
+      quest: { kind: 'slimeKing', count: 1 },
       target: { winRate: 0.88, spareTurns: 1.25 },
     },
-    // B2 (chủ dự án duyệt 26/10/2026): quái tới từ hai phía — 2 cụm đối diện, đất của Rìu. Đợt 0: 8 → 10
-    // slime (cụm 5 + 5), cụm ±2 → ±3 lát (`npm run tune`).
+    // B2 (chủ dự án duyệt 26/10/2026): quái tới từ hai phía — 2 cụm đối diện (5 + 5), đất của Rìu. F11:
+    // hạ 9 trong 10 con; không cần đợt sau (nó chỉ ra khi đã hạ 9 — lúc nhiệm vụ đã xong).
     {
-      turnLimit: 9,
+      turnLimit: 8,
       monsters: [
         'slime',
         'slime',
@@ -148,15 +160,19 @@ export const BATTLE_CONFIG: BattleConfig = {
       ],
       spread: 3,
       splitOpposite: true,
+      quest: { kind: 'slime', count: 9 },
       target: { winRate: 0.83, spareTurns: 0.75 },
     },
-    // B3 (chủ dự án duyệt 26/10/2026): slime + Slime Pháo trong một cụm. Đợt 0 (`npm run tune`): 6 slime +
-    // 2 Pháo → 7 slime + 1 Pháo, cụm ±4 → ±5 lát.
+    // B3 (chủ dự án duyệt 26/10/2026): slime + Slime Pháo trong một cụm ±5. F11: nhiệm vụ hạ 2 Slime Pháo —
+    // con thứ hai tới cùng đợt sau (3 slime + 1 Pháo) khi sân còn ≤ 2.
     {
-      turnLimit: 8,
-      target: { winRate: 0.78, spareTurns: 0.5 },
+      turnLimit: 9,
       monsters: ['slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slimeCannon'],
       spread: 5,
+      waves: [['slime', 'slime', 'slime', 'slimeCannon']],
+      nextWaveAt: 2,
+      quest: { kind: 'slimeCannon', count: 2 },
+      target: { winRate: 0.78, spareTurns: 0.5 },
     },
   ],
 };

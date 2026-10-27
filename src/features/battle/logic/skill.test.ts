@@ -87,6 +87,8 @@ function stateWith(monsters: Monster[], overrides: Partial<BattleState> = {}): B
     lastAttack: null,
     skillCharge: 0,
     lastSkill: null,
+    questProgress: 0,
+    nextWave: 0,
     ...overrides,
   };
 }

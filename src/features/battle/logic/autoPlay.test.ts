@@ -69,6 +69,8 @@ function stateWith(monsters: Monster[], weaponIndex = 0, weapons = [0, 1, 2]): B
     lastAttack: null,
     skillCharge: 0,
     lastSkill: null,
+    questProgress: 0,
+    nextWave: 0,
   };
 }
 
@@ -130,6 +132,25 @@ describe('bot chơi thử — dùng chung cho E2E và mô phỏng cân bằng', 
     expect(bestMove(state, CONFIG).weaponIndex).toBe(0); // không có quái bắn: Kiếm trúng 2 con
     const move = bestMove(state, withShooter);
     expect(hitIds(state, move, withShooter)).toContain(3);
+  });
+
+  // F11: người chơi nhắm vào quái của nhiệm vụ trước nhát trúng nhiều quái hơn (sau quái bắn đang "!").
+  it('ngắm chuẩn: ưu tiên chém trúng quái nhiệm vụ hơn trúng nhiều quái', () => {
+    const withQuest: BattleConfig = {
+      ...CONFIG,
+      levels: [
+        {
+          turnLimit: 8,
+          monsters: ['slime', 'slime', 'slimeKing'],
+          spread: 2,
+          quest: { kind: 'slimeKing', count: 1 },
+        },
+      ],
+    };
+    const king: Monster = { id: 3, kind: 'slimeKing', sector: 3, ring: 4, hp: 6 };
+    const state = stateWith([monster(1, 10, 1), monster(2, 11, 1), king]);
+    expect(bestMove(state, CONFIG).weaponIndex).toBe(0); // không có nhiệm vụ: Kiếm trúng 2 con
+    expect(hitIds(state, bestMove(state, withQuest), withQuest)).toEqual([3]);
   });
 
   it('ngắm chuẩn: quái bắn chưa tới vòng bắn (chưa "!") thì không được ưu tiên', () => {
@@ -206,6 +227,59 @@ describe('bot nhìn trước 1 lượt', () => {
     expect(hitIds(state, bestMove(state, CONFIG), CONFIG)).toEqual([1, 2]);
     const [plan] = lookaheadTurn(state, seedRng(1), CONFIG);
     expect(hitIds(state, plan.move, CONFIG)).toEqual([3]);
+  });
+
+  // F11: giết con cuối làm đợt kế tràn vào (máu quái trên sân tăng) — bot vẫn phải giết, vì việc còn
+  // phải làm cho màn giảm đi.
+  it('hạ con cuối dù đợt kế sẽ tràn vào', () => {
+    const withWaves: BattleConfig = {
+      ...CONFIG,
+      levels: [
+        { turnLimit: 8, monsters: ['slime'], spread: 2, waves: [['slime', 'slime', 'slime']] },
+      ],
+    };
+    const state = stateWith([withHp(monster(1, 7, 5), 1)]);
+    const [plan] = lookaheadTurn(state, seedRng(1), withWaves);
+    expect(hitIds(state, plan.move, withWaves)).toEqual([1]);
+  });
+
+  // F11: quái nhiệm vụ còn thiếu chỉ tới cùng đợt sau, mà đợt sau chỉ ra khi sân còn ít quái — phải dọn
+  // quái khác để gọi đợt đó (lỗi gặp ở màn 5: bot chỉ nhắm Slime Pháo, Pháo thứ hai không bao giờ ra).
+  it('nhiệm vụ cần quái của đợt sau: dọn quái trên sân để đợt đó ra', () => {
+    const withGate: BattleConfig = {
+      ...CONFIG,
+      levels: [
+        {
+          turnLimit: 8,
+          monsters: ['slime', 'slime'],
+          spread: 2,
+          waves: [['slimeCannon']],
+          nextWaveAt: 1,
+          quest: { kind: 'slimeCannon', count: 1 },
+        },
+      ],
+    };
+    const state = stateWith([withHp(monster(1, 7, 5), 1), withHp(monster(2, 15, 5), 1)]);
+    const [plan] = lookaheadTurn(state, seedRng(1), withGate);
+    expect(hitIds(state, plan.move, withGate)).toHaveLength(1);
+  });
+
+  it('nhiệm vụ giết trùm: dồn đòn vào trùm thay vì chém trúng nhiều slime', () => {
+    const withQuest: BattleConfig = {
+      ...CONFIG,
+      levels: [
+        {
+          turnLimit: 8,
+          monsters: ['slime', 'slime', 'slimeKing'],
+          spread: 2,
+          quest: { kind: 'slimeKing', count: 1 },
+        },
+      ],
+    };
+    const king: Monster = { id: 3, kind: 'slimeKing', sector: 3, ring: 4, hp: 6 };
+    const state = stateWith([withHp(monster(1, 10, 3), 1), withHp(monster(2, 11, 3), 1), king]);
+    const [plan] = lookaheadTurn(state, seedRng(1), withQuest);
+    expect(hitIds(state, plan.move, withQuest)).toEqual([3]);
   });
 
   it('bấm skill khi skill hạ hết quái — thắng không tốn lượt', () => {

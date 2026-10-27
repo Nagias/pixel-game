@@ -25,6 +25,13 @@ Bổ sung khi chốt F02, ngày 22/10/2026 (nguyên văn):
 
 > đây là game mobile nên thiết kế giao diện và tính năng mobile là được.
 
+Bổ sung khi bắt đầu đợt 1 kế hoạch sau B6, ngày 27/10/2026 (nguyên văn):
+
+> tôi muốn mục đích là thiết lập các màn chơi theo chủ đề, ví dụ kiểu môi trường núi lửa, môi trường
+> băng, rừng rậm... 1 chủ đề môi trường nên có khoảng 20 cấp độ. nói sơ bộ để cho bạn biết là tôi muốn
+> làm game có tính scale up sau này, chứ không chỉ thiết lập 3 - 4 màn chơi mà có tất cả tính năng luôn.
+> Tính năng, cách chơi, đồ vật sẽ tiếp tục được mở rộng sau này
+
 Phân tích game tham chiếu: `docs/research/micro-rpg.md`. Phong cách hình: `docs/ART_STYLE.md`.
 
 ## 2. Nguyên tắc thiết kế kiểu Dune

@@ -84,6 +84,12 @@ export interface Difficulty {
   readonly spareTurns: number;
 }
 
+/** F11: nhiệm vụ chính của màn — giết đủ `count` con loại `kind` là thắng ngay. */
+export interface QuestConfig {
+  readonly kind: MonsterKind;
+  readonly count: number;
+}
+
 /** F06: một màn chơi. */
 export interface LevelConfig {
   /** Đợt 0: độ khó mục tiêu của màn (chủ dự án duyệt). */
@@ -96,9 +102,15 @@ export interface LevelConfig {
   readonly spread: number;
   /**
    * B2: quái tới từ hai phía — nửa đầu đội hình thành một cụm, nửa sau thành cụm ở lát đối diện
-   * (mỗi cụm ±spread lát). Mặc định một cụm.
+   * (mỗi cụm ±spread lát). Mặc định một cụm. F11: áp cho cả các đợt sau.
    */
   readonly splitOpposite?: boolean;
+  /** F11: nhiệm vụ của màn. Không có = diệt sạch mọi đợt quái. */
+  readonly quest?: QuestConfig;
+  /** F11: các đợt quái sau đợt mở màn, theo thứ tự ra; id nối tiếp đội hình mở màn. */
+  readonly waves?: readonly (readonly MonsterKind[])[];
+  /** F11: sân còn ≤ ngần này con thì đợt kế tràn vào vòng ngoài cùng. Mặc định 0 (sân sạch). */
+  readonly nextWaveAt?: number;
 }
 
 export interface BattleConfig {
@@ -191,4 +203,8 @@ export interface BattleState {
   readonly skillCharge: number;
   /** B6: lần bấm skill ngay trước — xóa khi chém nhát tiếp theo. */
   readonly lastSkill: SkillRecord | null;
+  /** F11: số quái đúng loại nhiệm vụ đã giết (0 nếu màn không có nhiệm vụ). */
+  readonly questProgress: number;
+  /** F11: đợt kế sẽ ra — chỉ số trong `waves` của màn (bằng số đợt đã ra sau đợt mở màn). */
+  readonly nextWave: number;
 }
