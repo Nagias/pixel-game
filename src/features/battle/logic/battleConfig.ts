@@ -1,6 +1,12 @@
 // Nơi DUY NHẤT chứa con số cân bằng của trận đấu. Đổi số ở đây, không viết cứng ở chỗ khác.
 // NỢ DEBT-009: các con số hiện là phỏng đoán ban đầu, chưa qua chơi thử.
-import type { BattleConfig, Difficulty, LootConfig, UpgradeConfig } from './battleTypes';
+import type {
+  BattleConfig,
+  Difficulty,
+  LootConfig,
+  ShopConfig,
+  UpgradeConfig,
+} from './battleTypes';
 import type { Chapter } from './chapters';
 
 /**
@@ -442,6 +448,13 @@ export const LOOT_CONFIG: LootConfig = {
     { name: 'Thần', critBonus: 0.2, widthBonus: 2, damageBonus: 1, dropRate: 0.01 },
   ],
 };
+
+/**
+ * Đợt 6 (chủ dự án duyệt 27/10/2026, lượt duyệt chung mục 1b): cửa hàng bán cố định Kiếm, Rìu, Giáo, Cung
+ * cấp Hiếm (chỉ số trong LOOT_CONFIG.tiers), 25 vàng mỗi món, dùng 5 trận (thắng hay thua đều trừ — agent
+ * chọn: chỉ trừ trận có mang món đó). Nút xem quảng cáo để giai đoạn D.
+ */
+export const SHOP_CONFIG: ShopConfig = { weapons: [0, 3, 1, 2], tier: 2, price: 25, battles: 5 };
 
 /**
  * Đợt 7 (chủ dự án duyệt 27/10/2026): các chương theo chủ đề môi trường, theo thứ tự màn. Chủ đề Băng, Núi

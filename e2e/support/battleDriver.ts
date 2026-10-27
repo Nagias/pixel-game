@@ -1,9 +1,14 @@
 // Phần điều khiển riêng của tính năng "battle" (F01–F06): đổi vũ khí, ngắm vùng xanh, chém.
 // B4: màn chuẩn bị trận — chọn món, chạm "VÀO TRẬN".
-import type { BattleSnapshot, LoadoutSnapshot, UpgradeSnapshot } from '../../src/features/battle';
+import type {
+  BattleSnapshot,
+  LoadoutSnapshot,
+  ShopSnapshot,
+  UpgradeSnapshot,
+} from '../../src/features/battle';
 import * as autoPlay from '../../src/features/battle/logic/autoPlay';
 import type { Move } from '../../src/features/battle/logic/autoPlay';
-import { BATTLE_CONFIG } from '../../src/features/battle/logic/battleConfig';
+import { BATTLE_CONFIG, SHOP_CONFIG } from '../../src/features/battle/logic/battleConfig';
 import {
   UPGRADE_KINDS,
   type SkillKind,
@@ -33,6 +38,7 @@ interface StoredProfile {
   readonly unlockedLevel: number;
   readonly weaponTiers: Record<string, number>;
   readonly lootPity: Record<string, number>;
+  readonly rentals: Record<string, number>;
 }
 
 export class BattleDriver extends GameDriver {
@@ -56,6 +62,7 @@ export class BattleDriver extends GameDriver {
     upgrades?: Record<string, number>;
     weaponTiers?: Record<string, number>;
     lootPity?: Record<string, number>;
+    rentals?: Record<string, number>;
   }): Promise<void> {
     const value = JSON.stringify({
       version: PROFILE_VERSION,
@@ -64,6 +71,7 @@ export class BattleDriver extends GameDriver {
       upgrades: {},
       weaponTiers: {},
       lootPity: {},
+      rentals: {},
       ...patch,
     });
     await this.page.addInitScript(
@@ -98,11 +106,35 @@ export class BattleDriver extends GameDriver {
     await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
   }
 
-  /** Đợt 4: màn Nâng cấp — chạm "XONG", chờ quay lại màn chuẩn bị. */
+  /** Đợt 4: màn Nâng cấp (đợt 6: cả màn Cửa hàng, cùng chỗ nút) — chạm "XONG", chờ quay lại màn chuẩn bị. */
   async closeUpgrade(): Promise<void> {
     const { back } = UPGRADE_LAYOUT;
     await this.tapAt(back.x + back.width / 2, back.y + back.height / 2);
     await this.waitSceneSwitch();
+  }
+
+  shopSnapshot(): Promise<ShopSnapshot> {
+    return this.snapshotOf<ShopSnapshot>('shop');
+  }
+
+  /** Đợt 6: màn chuẩn bị — chạm "CỬA HÀNG", chờ màn Cửa hàng mở và nhận chạm. */
+  async openShop(): Promise<ShopSnapshot> {
+    await this.waitLoadoutReady();
+    const { shop } = LOADOUT_LAYOUT;
+    await this.tapAt(shop.x + shop.width / 2, shop.y + shop.height / 2);
+    await this.waitSceneSwitch();
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const snapshot = await this.shopSnapshot();
+      if (snapshot.canTap) return snapshot;
+      await this.advance(SCENE_SWITCH_MS);
+    }
+    throw new Error('Màn Cửa hàng không nhận chạm sau 2 giây');
+  }
+
+  /** Đợt 6: màn Cửa hàng — chạm nút mua của vũ khí `weaponIndex` (chung bố cục hàng với màn Nâng cấp). */
+  async buyFromShop(weaponIndex: number): Promise<void> {
+    const rect = buyButtonRect(SHOP_CONFIG.weapons.indexOf(weaponIndex), UPGRADE_LAYOUT);
+    await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
   }
 
   /** Đợt 3: hồ sơ đang lưu trong trình duyệt (null nếu chưa có). */

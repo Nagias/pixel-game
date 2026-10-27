@@ -7,10 +7,17 @@ import { colorNumber, PALETTE } from '../../../shared/palette';
 import { parseLevelParam } from '../../../shared/levelParam';
 import { loadProfile, startLevel } from '../../profile';
 import { levelAt } from '../logic/battle';
-import { BATTLE_CONFIG, CHAPTERS, LOOT_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
+import {
+  BATTLE_CONFIG,
+  CHAPTERS,
+  LOOT_CONFIG,
+  SHOP_CONFIG,
+  UPGRADE_CONFIG,
+} from '../logic/battleConfig';
 import { chapterOf } from '../logic/chapters';
 import type { Loadout, SkillKind, WeaponSlot } from '../logic/battleTypes';
 import { withWeaponTiers } from '../logic/loot';
+import { effectiveTiers } from '../logic/shop';
 import { withUpgrades } from '../logic/upgrades';
 import {
   allWeapons,
@@ -88,6 +95,9 @@ export class LoadoutScene extends Scene {
   private level = 0;
   /** Đợt 3: tổng vàng trong hồ sơ, đọc mỗi lần mở màn. */
   private gold = 0;
+  /** Đợt 6: món thuê (số trận còn dùng) và cấp vĩnh viễn — để ghi "Hiếm · 3 trận" cho món đang thuê. */
+  private rentals: Readonly<Record<string, number>> = {};
+  private ownedTiers: Readonly<Record<string, number>> = {};
   private loadout!: Loadout;
   private rows: { slot: WeaponSlot; weapons: number[] }[] = [];
   private skills: SkillKind[] = [];
@@ -116,11 +126,14 @@ export class LoadoutScene extends Scene {
    */
   init(data: Partial<LoadoutSceneData>): void {
     const profile = loadProfile();
+    // Đợt 6: món thuê ở cửa hàng còn hạn thì dùng cấp của cửa hàng (không hạ món vĩnh viễn cao hơn).
     this.config = withWeaponTiers(
       withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
-      profile.weaponTiers,
+      effectiveTiers(profile.weaponTiers, profile.rentals, SHOP_CONFIG),
       LOOT_CONFIG,
     );
+    this.rentals = profile.rentals;
+    this.ownedTiers = profile.weaponTiers;
     // Sở hữu = mọi vũ khí trong cấu hình; đợt 5: đồ rơi nâng cấp màu của chính vũ khí đó (cấp cao nhất đã
     // có luôn mạnh nhất nên không cần chọn cấp).
     const owned = allWeapons(this.config);
@@ -191,6 +204,7 @@ export class LoadoutScene extends Scene {
     this.createSkillRow(this.rows.length);
     this.createStartButton();
     this.createUpgradeButton();
+    this.createShopButton();
 
     this.input.on('pointerdown', (pointer: Input.Pointer) => this.handleTap(pointer.x, pointer.y));
     const clearSnapshot = setSnapshotProvider(() => this.snapshot());
@@ -216,6 +230,11 @@ export class LoadoutScene extends Scene {
       this.starting = true;
       const data: LoadoutSceneData = { level: this.level, loadout: this.loadout };
       this.scene.start('upgrade', data);
+    } else if (tap?.kind === 'shop') {
+      // Đợt 6: sang màn Cửa hàng; "XONG" ở đó quay lại đúng màn và bộ đồ đang chọn.
+      this.starting = true;
+      const data: LoadoutSceneData = { level: this.level, loadout: this.loadout };
+      this.scene.start('shop', data);
     } else if (tap?.kind === 'start') {
       this.starting = true;
       const data: LoadoutSceneData = { level: this.level, loadout: this.loadout };
@@ -308,7 +327,7 @@ export class LoadoutScene extends Scene {
           {
             name: weapon.name,
             // Đợt 5: món có cấp màu thì dòng dưới ghi tên cấp (tầm đã có ở nhãn hàng bên trái).
-            sub: weapon.tier ? (LOOT_CONFIG.tiers[weapon.tier]?.name ?? '') : weapon.rangeLabel,
+            sub: this.weaponSubLabel(weaponIndex),
             tier: weapon.tier ?? 0,
             isSelected: (l: Loadout) => l.weapons.includes(weaponIndex),
           },
@@ -340,6 +359,35 @@ export class LoadoutScene extends Scene {
         isSelected: (l: Loadout) => l.skill === kind,
       })),
     );
+  }
+
+  /**
+   * Dòng dưới tên vũ khí: tên cấp màu nếu có (đợt 5) — món thuê còn hạn thì kèm số trận còn dùng (đợt 6);
+   * không có cấp thì tầm ("gần", "2 phía"…).
+   */
+  private weaponSubLabel(weaponIndex: number): string {
+    const weapon = this.config.weapons[weaponIndex];
+    if (!weapon) return '';
+    if (!weapon.tier) return weapon.rangeLabel;
+    const name = LOOT_CONFIG.tiers[weapon.tier]?.name ?? '';
+    const rented = (this.ownedTiers[weaponIndex] ?? 0) < weapon.tier;
+    return rented ? `${name} · ${this.rentals[weaponIndex] ?? 0} trận` : name;
+  }
+
+  /** Đợt 6: nút "CỬA HÀNG" cạnh nút "NÂNG CẤP", cùng kiểu. */
+  private createShopButton(): void {
+    const { shop } = LOADOUT_LAYOUT;
+    this.add
+      .rectangle(shop.x, shop.y, shop.width, shop.height, colorNumber('navy'))
+      .setOrigin(0)
+      .setStrokeStyle(2, colorNumber('sand'));
+    this.add
+      .text(shop.x + shop.width / 2, shop.y + shop.height / 2, 'CỬA HÀNG', {
+        ...TEXT,
+        fontSize: '18px',
+        color: PALETTE.sand,
+      })
+      .setOrigin(0.5);
   }
 
   /** Đợt 4: nút "NÂNG CẤP" dưới nút "VÀO TRẬN" — nền tối hơn để không lẫn với nút chính. */

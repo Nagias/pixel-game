@@ -11,6 +11,7 @@ import {
 import {
   BATTLE_CONFIG,
   LOOT_CONFIG,
+  SHOP_CONFIG,
   UPGRADE_CONFIG,
 } from '../src/features/battle/logic/battleConfig';
 import { lootAfterBattle } from '../src/features/battle/logic/loot';
@@ -747,4 +748,40 @@ test('Đợt 5: vũ khí có cấp màu — màn chuẩn bị và thanh vũ khí
   await game.startBattle();
   await game.advance(LEVEL_DRAWN_MS);
   await page.screenshot({ path: test.info().outputPath('31-thanh-vu-khi-cap.png') });
+});
+
+test('Đợt 6: cửa hàng — mua Giáo Hiếm 25 vàng (mua thêm thì cộng dồn), thiếu vàng không mua được; màn chuẩn bị ghi số trận còn dùng; mang vào trận thì trừ 1 trận', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.seedProfile({ gold: 60, unlockedLevel: 2 });
+  await game.openLoadout(SEED, 3);
+  expect(await game.openShop()).toMatchObject({ gold: 60, rentals: {} });
+
+  const spear = 1;
+  await game.buyFromShop(spear);
+  expect(await game.shopSnapshot()).toMatchObject({ gold: 35, rentals: { [spear]: 5 } });
+  await game.buyFromShop(spear);
+  expect(await game.shopSnapshot()).toMatchObject({ gold: 10, rentals: { [spear]: 10 } });
+  // Còn 10 vàng: mua Kiếm (25) không được, không trừ gì.
+  await game.buyFromShop(0);
+  expect(await game.shopSnapshot()).toMatchObject({ gold: 10, rentals: { [spear]: 10 } });
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('32-cua-hang.png') });
+  expect(await game.storedProfile()).toMatchObject({ gold: 10, rentals: { [spear]: 10 } });
+
+  // "XONG" về màn chuẩn bị: Giáo dùng cấp Hiếm.
+  await game.closeUpgrade();
+  const prep = await game.waitLoadoutReady();
+  expect(prep.tiers[spear]).toBe(SHOP_CONFIG.tier);
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('33-mon-thue.png') });
+
+  // Vào trận: Giáo cộng chỉ số cấp Hiếm; hết trận trừ 1 trận.
+  await game.startBattle();
+  const { config } = await game.snapshot();
+  expect(config.weapons[spear]?.tier).toBe(SHOP_CONFIG.tier);
+  await playBestUntilOver(game);
+  expect((await game.snapshot()).battle.phase).toBe('won');
+  expect((await game.storedProfile())?.rentals).toEqual({ [spear]: 9 });
 });

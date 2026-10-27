@@ -66,4 +66,18 @@ describe('B4 — bố cục màn chuẩn bị trận', () => {
     const u = center(upgrade);
     expect(loadoutTapAt(u.x, u.y, [2, 1, 1], L)).toEqual({ kind: 'upgrade' });
   });
+
+  // Đợt 6: nút "CỬA HÀNG" cạnh nút "NÂNG CẤP" (mỗi nút nửa hàng đáy).
+  it('nút "CỬA HÀNG" cùng hàng với "NÂNG CẤP", không chồng, đủ to, trong khung; chạm giữa là mở cửa hàng', () => {
+    const { start, upgrade, shop } = L;
+    expect(shop.y).toBe(upgrade.y);
+    expect(shop.x).toBeGreaterThanOrEqual(upgrade.x + upgrade.width + 8);
+    expect(shop.y).toBeGreaterThanOrEqual(start.y + start.height);
+    expect(shop.height).toBeGreaterThanOrEqual(44);
+    expect(shop.width).toBeGreaterThanOrEqual(120);
+    expect(shop.x + shop.width).toBeLessThanOrEqual(360);
+    expect(shop.y + shop.height).toBeLessThanOrEqual(640);
+    const s = center(shop);
+    expect(loadoutTapAt(s.x, s.y, [2, 1, 1], L)).toEqual({ kind: 'shop' });
+  });
 });

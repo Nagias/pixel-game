@@ -11,6 +11,8 @@ export interface Profile {
   readonly weaponTiers: Readonly<Record<string, number>>;
   /** Đợt 5 (phiên bản 3): bộ đếm bảo hiểm rơi đồ theo tên (tính năng battle đọc). */
   readonly lootPity: Readonly<Record<string, number>>;
+  /** Đợt 6 (phiên bản 4): món thuê ở cửa hàng — số trận còn dùng của từng vũ khí. */
+  readonly rentals: Readonly<Record<string, number>>;
 }
 
 /** Kết quả một trận cần cộng vào hồ sơ. */
@@ -22,6 +24,8 @@ export interface BattleResult {
   readonly gold: number;
   /** Đợt 5: trận có hạ quái hiếm — cấp vũ khí và bộ đếm bảo hiểm sau khi tung rơi đồ (thay cái cũ). */
   readonly loot?: Pick<Profile, 'weaponTiers' | 'lootPity'>;
+  /** Đợt 6: số trận còn lại của món thuê sau trận (thay cái cũ). */
+  readonly rentals?: Profile['rentals'];
 }
 
 /** Phần nhỏ của `Storage` (localStorage) mà hồ sơ cần — để logic test được không cần trình duyệt. */

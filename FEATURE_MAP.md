@@ -24,6 +24,7 @@
 | F14  | Nâng cấp nhân vật bằng vàng                        | ✅ Xong    | `battle/logic/upgrades.ts`, `battle/view/UpgradeScene.ts`      | `logic/upgrades.test.ts`, `view/upgradeLayout.test.ts`   |
 | F15  | Chủ đề Rừng rậm: 20 màn, 5 quái mới, bộ sinh màn   | ✅ Xong    | `logic/chapters.ts`, `battleConfig.ts`, `scripts/levelGen*.ts` | `logic/chapters.test.ts`, `scripts/levelGenCore.test.ts` |
 | F16  | Quái hiếm, may mắn, rơi vũ khí 6 cấp màu, túi đồ   | ✅ Xong    | `logic/loot.ts`, `logic/battle.ts`, `view/weaponTierStyle.ts`  | `logic/loot.test.ts`, `logic/rare.test.ts`               |
+| F17  | Cửa hàng: vũ khí cấp Hiếm dùng có hạn              | ✅ Xong    | `logic/shop.ts`, `view/ShopScene.ts`                           | `logic/shop.test.ts`                                     |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -911,10 +912,57 @@ không có tím sáng nên Sử thi dùng tím đậm + viền trắng.
 
 **Nợ liên quan:** DEBT-007 (hình tạm), DEBT-009 (số chưa qua chơi thử).
 
+## F17 — Cửa hàng: vũ khí cấp Hiếm dùng có hạn
+
+**Người chơi thấy và làm gì:** màn chuẩn bị có nút **CỬA HÀNG** cạnh **NÂNG CẤP** (hàng đáy chia đôi). Màn
+Cửa hàng: Kiếm, Rìu, Giáo, Cung — mỗi món cấp **Hiếm** (chữ xanh dương), tình trạng ("Dùng 5 trận" / "Còn
+3 trận · mua thêm 5" / "Đã có Sử thi (vĩnh viễn)"), nút "MUA / 25 vàng" (viền xanh khi đủ vàng, mờ khi thiếu,
+"ĐÃ CÓ" khi không cần mua). "XONG" quay lại màn chuẩn bị đúng màn và bộ đồ đang chọn; món đang thuê ghi
+"Hiếm · 5 trận" dưới tên.
+
+**Luật** (chủ dự án duyệt 27/10/2026 — lượt duyệt chung mục 1b; nguồn sự thật: `logic/shop.ts` +
+`logic/shop.test.ts`):
+
+1. Bán cố định 4 món cấp Hiếm, **25 vàng** mỗi món, **dùng 5 trận** — thắng hay thua đều trừ. Nút xem quảng
+   cáo để giai đoạn D.
+2. **Agent chọn** (chỗ bản duyệt chưa nói, theo phương án gần nhất): chỉ trừ **trận có mang món đó** vào
+   (món nằm im trong túi không mất hạn); mua thêm khi còn hạn thì **cộng dồn** số trận; vũ khí đã có vĩnh
+   viễn từ cấp Hiếm trở lên thì **không bán** (mua là phí).
+3. Món thuê còn hạn: vũ khí dùng cấp Hiếm, nhưng không bao giờ hạ món vĩnh viễn cao hơn (`effectiveTiers`
+   gộp hai thứ, rồi `withWeaponTiers` cộng chỉ số như F16). Đồ rơi vẫn ghi vào cấp vĩnh viễn.
+4. Chỉ trừ vàng khi đã lưu được hồ sơ ("Không lưu được — chưa mua"). Hồ sơ lên **phiên bản 4** (`rentals`);
+   hồ sơ bản 1–3 tự chuyển lên. Số trận lạ (âm, lẻ) coi như hết hạn.
+5. Bảng cửa hàng sai bị từ chối: giá âm, số trận < 1, cấp không có, vũ khí không có, bán trùng.
+
+**Con số:** `SHOP_CONFIG` trong `battleConfig.ts`.
+
+| File                    | Vai trò                                                |
+| ----------------------- | ------------------------------------------------------ |
+| `logic/shop.ts`         | Mua, cấp dùng trong trận, trừ hạn sau trận, kiểm bảng  |
+| `view/ShopScene.ts`     | Màn Cửa hàng (dùng chung bố cục hàng với màn Nâng cấp) |
+| `view/loadoutLayout.ts` | Nút "CỬA HÀNG" cạnh "NÂNG CẤP"                         |
+
+**Kiểm chứng tự động:**
+
+- Unit: `shop.test.ts` (14 test — bảng thật, mua trừ giá, cộng dồn, 3 kiểu không mua được, cấp dùng không hạ
+  món vĩnh viễn, trừ hạn chỉ món mang vào, dữ liệu lạ, 5 kiểu bảng sai); `profile.test.ts` (bản 3 → 4, món
+  thuê lạ, ghi hạn sau trận); `loadoutLayout.test.ts` (nút cửa hàng).
+- E2E: hồ sơ 60 vàng → mua Giáo (35, 5 trận) → mua thêm (10, 10 trận) → mua Kiếm không được → lưu đúng (ảnh
+  `32-cua-hang.png`) → "XONG" thì Giáo cấp Hiếm (ảnh `33-mon-thue.png`) → vào trận Giáo cộng chỉ số Hiếm, thắng
+  xong còn 9 trận.
+- Thử tay khung 375×760: hồ sơ bản 3 (Cung Sử thi) mở ra — cửa hàng ghi Cung "ĐÃ CÓ"; mua Kiếm, về màn chuẩn
+  bị thấy "Hiếm · 5 trận", chí mạng 20%, còn 15 vàng; console không lỗi.
+
+**Giới hạn đã biết:** chưa có nút xem quảng cáo (giai đoạn D). Trong khung xem trước của Claude Desktop, cú
+chạm đầu tiên sau khi tải trang có thể bị bỏ qua nếu khung đang ẩn (game chưa chạy đủ 0,5 giây chống chạm
+nhầm) — trên điện thoại thật không gặp.
+
+**Nợ liên quan:** DEBT-009 (giá và hạn chưa qua chơi thử).
+
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
-Trống. Việc tiếp theo nằm trong kế hoạch sau B6 (`docs/plans/2026-10-27-ke-hoach-sau-b6.md` mục 1b, chủ dự án
-duyệt 27/10/2026): đợt 6 — cửa hàng (4 món Hiếm, 25 vàng, dùng 5 trận).
+Trống — đã làm hết kế hoạch sau B6 (`docs/plans/2026-10-27-ke-hoach-sau-b6.md`). Việc kế tiếp chờ chủ dự án
+chốt: bảng rơi theo loài, chủ đề Băng / Núi lửa, quảng cáo (giai đoạn D).
 
 ## Mẫu cho tính năng mới (copy khối này)
 
