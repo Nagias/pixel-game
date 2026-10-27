@@ -5,6 +5,7 @@ import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
 import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE } from '../../../shared/palette';
 import { parseLevelParam } from '../../../shared/levelParam';
+import { loadProfile, startLevel } from '../../profile';
 import { levelAt } from '../logic/battle';
 import { BATTLE_CONFIG } from '../logic/battleConfig';
 import type { Loadout, SkillKind, WeaponSlot } from '../logic/battleTypes';
@@ -40,6 +41,8 @@ export interface LoadoutSnapshot {
   readonly skills: readonly SkillKind[];
   /** Màn đã hiện đủ lâu để nhận chạm (chống chạm nhầm nối từ màn kết quả). */
   readonly canTap: boolean;
+  /** Đợt 3: tổng vàng trong hồ sơ người chơi (hiện góc trên bên phải). */
+  readonly gold: number;
 }
 
 const GAME_WIDTH = 360;
@@ -71,6 +74,8 @@ interface OptionButton {
 export class LoadoutScene extends Scene {
   private readonly config = BATTLE_CONFIG;
   private level = 0;
+  /** Đợt 3: tổng vàng trong hồ sơ, đọc mỗi lần mở màn. */
+  private gold = 0;
   private loadout!: Loadout;
   private rows: { slot: WeaponSlot; weapons: number[] }[] = [];
   private skills: SkillKind[] = [];
@@ -85,7 +90,7 @@ export class LoadoutScene extends Scene {
   private starting = false;
   /**
    * B6: skill người chơi chọn gần nhất. Cố ý KHÔNG xóa khi mở lại scene (Phaser dùng lại cùng đối tượng
-   * scene): đó chính là trí nhớ qua các màn chưa mở skill. Tắt game là mất (lưu thật ở đợt lưu tiến trình).
+   * scene): đó chính là trí nhớ qua các màn chưa mở skill. Tắt game là mất (hồ sơ đợt 3 chỉ lưu vàng và màn đã mở khóa).
    */
   private lastSkill: SkillKind | undefined = undefined;
 
@@ -93,12 +98,20 @@ export class LoadoutScene extends Scene {
     super('loadout');
   }
 
-  /** Lần đầu mở game không có dữ liệu: màn theo `?level=` (mặc định màn 1), bộ đồ mặc định. */
+  /**
+   * Lần đầu mở game không có dữ liệu: đợt 3 — màn cao nhất đã mở khóa trong hồ sơ (hoặc màn `?level=` nếu
+   * đã mở khóa), bộ đồ mặc định.
+   */
   init(data: Partial<LoadoutSceneData>): void {
     // Chưa có túi đồ: sở hữu = mọi vũ khí trong cấu hình.
     const owned = allWeapons(this.config);
     this.rows = slotOptions(this.config, owned);
-    this.level = data.level ?? parseLevelParam(window.location.search, this.config.levels.length);
+    const levelCount = this.config.levels.length;
+    const profile = loadProfile();
+    this.gold = profile.gold;
+    this.level =
+      data.level ??
+      startLevel(profile, parseLevelParam(window.location.search, levelCount), levelCount);
     this.skills = isSkillUnlocked(this.level, this.config) ? skillOptions(this.config) : [];
     // B6: màn chưa mở skill thì bỏ skill; màn đã mở thì chọn sẵn skill người chơi chọn lần gần nhất
     // (nhớ qua cả các màn chưa có skill, vd. sau phá đảo), chưa từng chọn thì skill đầu.
@@ -126,6 +139,14 @@ export class LoadoutScene extends Scene {
         color: PALETTE.sand,
       })
       .setOrigin(0.5);
+    // Đợt 3: tổng vàng trong hồ sơ, góc trên bên phải (chữ nhỏ, không đè tiêu đề ở giữa).
+    this.add
+      .text(GAME_WIDTH - 12, 8, `Vàng: ${this.gold}`, {
+        ...TEXT,
+        fontSize: '14px',
+        color: PALETTE.sand,
+      })
+      .setOrigin(1, 0);
     // F11: báo nhiệm vụ trước trận để người chơi chọn đồ theo nó.
     const { quest } = levelAt(this.level, this.config);
     this.add
@@ -196,6 +217,7 @@ export class LoadoutScene extends Scene {
       rows: this.rows,
       skills: this.skills,
       canTap: this.canTap(),
+      gold: this.gold,
     };
   }
 

@@ -10,6 +10,14 @@ const PURE_CODE = ['src/shared/**/*.ts', 'src/features/*/logic/**/*.ts'];
 // Code hiển thị/khởi động chạy trong Phaser.
 const VIEW_CODE = ['src/app/**/*.ts', 'src/features/*/view/**/*.ts', 'src/main.ts'];
 
+// Đường cấm #10 (trả DEBT-005, đợt 3 — có tính năng thứ hai): một tính năng chỉ dùng tính năng khác qua
+// index.ts của nó, không import vào ruột (logic/, view/). Mẫu khớp chuỗi import tương đối từ file trong
+// src/features/<f>/ (index.ts) hoặc src/features/<f>/<logic|view>/.
+const NO_CROSS_FEATURE = {
+  group: ['../*/logic/**', '../*/view/**', '../../*/logic/**', '../../*/view/**'],
+  message: 'Chỉ dùng tính năng khác qua index.ts của nó (CLAUDE.md đường cấm #10).',
+};
+
 const NO_FOCUSED_TESTS = ['it', 'test', 'describe'].map((object) => ({
   object,
   property: 'only',
@@ -66,6 +74,7 @@ export default defineConfig(
               group: ['**/view/**', '**/app/**'],
               message: 'Code thuần không được phụ thuộc view/app.',
             },
+            NO_CROSS_FEATURE,
           ],
         },
       ],
@@ -90,6 +99,10 @@ export default defineConfig(
         },
       ],
     },
+  },
+  {
+    files: ['src/features/*/view/**/*.ts', 'src/features/*/index.ts'],
+    rules: { 'no-restricted-imports': ['error', { patterns: [NO_CROSS_FEATURE] }] },
   },
   {
     files: VIEW_CODE,

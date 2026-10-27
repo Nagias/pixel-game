@@ -65,9 +65,12 @@ export const BATTLE_CONFIG: BattleConfig = {
   ],
   // B6: quái mạnh lên cùng lúc nhân vật có máu 10, hồi máu, chí mạng, skill — máu slime 2 → 3, sức đánh
   // ×2 (agent chọn bằng mô phỏng 27/10/2026; trước đó Cầu lửa 2 sát thương dọn sạch slime 2 máu).
+  // Đợt 3 (chủ dự án duyệt 27/10/2026 — "agent đề xuất"): `gold` = vàng khi hạ một con, theo độ khó hạ nó
+  // (slime, Slime Con 1 · Lao, Ma 2 · Pháo 3 · Vua 5). Thua vẫn giữ vàng đã nhặt.
   monsterKinds: {
     slime: {
       name: 'Slime',
+      gold: 1,
       hp: 3,
       advanceChance: 0.6,
       // F04: quái áp sát (vòng 0) đánh mỗi lượt, mỗi con trừ máu nhân vật theo sức đánh.
@@ -77,6 +80,7 @@ export const BATTLE_CONFIG: BattleConfig = {
     // trùm, xong là thắng — 6 máu thì thắng 100%).
     slimeKing: {
       name: 'Slime Vua',
+      gold: 5,
       hp: 8,
       advanceChance: 0.6,
       attack: 4,
@@ -84,6 +88,7 @@ export const BATTLE_CONFIG: BattleConfig = {
     // B3 (chủ dự án duyệt 26/10/2026): quái bắn xa — tới vòng 4 thì đứng yên, hiện "!" và bắn.
     slimeCannon: {
       name: 'Slime Pháo',
+      gold: 3,
       hp: 3,
       advanceChance: 0.6,
       attack: 2,
@@ -93,6 +98,7 @@ export const BATTLE_CONFIG: BattleConfig = {
     // Slime Con: 1 máu, đánh nhẹ — "mồi" kéo dài combo: chém trúng nó cùng quái trâu thì quái trâu ăn ×2, ×3.
     slimeMini: {
       name: 'Slime Con',
+      gold: 1,
       hp: 1,
       advanceChance: 0.6,
       attack: 1,
@@ -100,6 +106,7 @@ export const BATTLE_CONFIG: BattleConfig = {
     // Slime Lao: mỗi lần tiến lao 2 vòng — phải hạ trước khi nó áp sát.
     slimeCharger: {
       name: 'Slime Lao',
+      gold: 2,
       hp: 3,
       advanceChance: 0.6,
       attack: 2,
@@ -109,6 +116,7 @@ export const BATTLE_CONFIG: BattleConfig = {
     // vỡ khi có "mồi" trong cùng nhát, hết mồi là màn kẹt; mô phỏng không bộ số nào đạt mục tiêu.
     slimeGhost: {
       name: 'Slime Ma',
+      gold: 2,
       hp: 2,
       advanceChance: 0.6,
       attack: 2,

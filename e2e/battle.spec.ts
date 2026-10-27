@@ -462,6 +462,39 @@ test('B4: ?level=4 mở thẳng màn chuẩn bị màn 4 (thử tay / E2E nhanh)
   expect(battle.monsters.map((m) => m.kind)).toEqual(levelAt(3, BATTLE_CONFIG).monsters);
 });
 
+test('Đợt 3: vàng và màn đã mở khóa được lưu — mở lại game vẫn còn; ?level= vượt màn đã mở thì bị chặn', async ({
+  page,
+  context,
+}) => {
+  const game = new BattleDriver(page);
+  // Người chơi mới: ?level=5 chưa mở khóa nên vẫn vào màn 1, chưa có vàng (DEBT-011 đã trả).
+  await game.open(`/?seed=${SEED}&level=5`);
+  expect(await game.loadoutSnapshot()).toMatchObject({ level: 0, gold: 0 });
+  await game.startBattle();
+
+  await playBestUntilOver(game);
+  const won = (await game.snapshot()).battle;
+  expect(won.phase).toBe('won');
+  expect(won.gold).toBeGreaterThan(0);
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('21-thang-co-vang.png') });
+  expect(await game.storedProfile()).toMatchObject({ gold: won.gold, unlockedLevel: 1 });
+
+  // Chạm đi tiếp: màn chuẩn bị màn 2 hiện đúng tổng vàng.
+  await game.advance(RESULT_SCREEN_WAIT_MS);
+  await game.tap();
+  await game.waitSceneSwitch();
+  expect(await game.loadoutSnapshot()).toMatchObject({ level: 1, gold: won.gold });
+
+  // Mở lại game (trang mới, cùng trình duyệt): vào thẳng màn 2 với đúng số vàng.
+  const page2 = await context.newPage();
+  const reopened = new BattleDriver(page2);
+  await reopened.open(`/?seed=${SEED}`);
+  expect(await reopened.loadoutSnapshot()).toMatchObject({ level: 1, gold: won.gold });
+  await reopened.advance(50);
+  await page2.screenshot({ path: test.info().outputPath('22-mo-lai-con-tien-trinh.png') });
+});
+
 test('B6: màn chuẩn bị từ màn 3 có hàng skill (Mưa băng chọn sẵn), chọn Cầu lửa thì mang Cầu lửa vào trận', async ({
   page,
 }) => {

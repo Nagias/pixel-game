@@ -146,6 +146,9 @@ liệu hỏng, phiên bản cũ.
 
 **Chủ dự án quyết:** mỗi loại quái cho bao nhiêu vàng; thua có được giữ vàng đã nhặt không.
 
+**Đã quyết (27/10/2026):** "agent đề xuất" — slime, Slime Con 1 · Lao, Ma 2 · Pháo 3 · Vua 5 vàng; thua vẫn
+giữ vàng đã nhặt; mở game vào màn cao nhất đã mở khóa. Làm ở F13.
+
 ## 7. Đợt 4 — Nâng cấp nhân vật / vũ khí
 
 **Mục tiêu:** có thứ để tiêu vàng và cảm giác mạnh lên.

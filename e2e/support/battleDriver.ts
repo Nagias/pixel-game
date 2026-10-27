@@ -12,6 +12,7 @@ import {
   weaponButtonRects,
 } from '../../src/features/battle/view/battleLayout';
 import { LOADOUT_LAYOUT, optionRects } from '../../src/features/battle/view/loadoutLayout';
+import { PROFILE_KEY, PROFILE_VERSION } from '../../src/features/profile/logic/profileConfig';
 import type { RngState } from '../../src/shared/random';
 import { GameDriver } from './gameDriver';
 
@@ -24,10 +25,32 @@ export type { Move };
 export class BattleDriver extends GameDriver {
   /**
    * Mở game ở màn chuẩn bị với seed cố định để ván chơi lặp lại y hệt; `level` (đếm từ 1) mở thẳng
-   * màn đó qua `?level=`.
+   * màn đó qua `?level=` — đợt 3: nạp sẵn hồ sơ đã mở khóa tới màn đó (như người chơi đã qua các màn
+   * trước), vì `?level=` chỉ mở được màn đã mở khóa.
    */
   async openLoadout(seed: number, level?: number): Promise<void> {
+    if (level !== undefined) await this.seedProfile({ unlockedLevel: level - 1 });
     await this.open(`/?seed=${seed}${level === undefined ? '' : `&level=${level}`}`);
+  }
+
+  /**
+   * Đợt 3: đặt hồ sơ người chơi trước khi game chạy — chỉ khi trình duyệt chưa có hồ sơ, để mở lại game
+   * (trang mới cùng trình duyệt) vẫn thấy đúng tiến trình đã lưu.
+   */
+  async seedProfile(patch: { gold?: number; unlockedLevel?: number }): Promise<void> {
+    const value = JSON.stringify({ version: PROFILE_VERSION, gold: 0, unlockedLevel: 0, ...patch });
+    await this.page.addInitScript(
+      ([key, raw]) => {
+        if (window.localStorage.getItem(key) === null) window.localStorage.setItem(key, raw);
+      },
+      [PROFILE_KEY, value] as const,
+    );
+  }
+
+  /** Đợt 3: hồ sơ đang lưu trong trình duyệt (null nếu chưa có). */
+  async storedProfile(): Promise<{ gold: number; unlockedLevel: number } | null> {
+    const raw = await this.page.evaluate((key) => window.localStorage.getItem(key), PROFILE_KEY);
+    return raw === null ? null : (JSON.parse(raw) as { gold: number; unlockedLevel: number });
   }
 
   /** Mở game rồi vào trận ngay với bộ đồ mặc định. */

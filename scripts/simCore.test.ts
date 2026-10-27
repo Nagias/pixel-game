@@ -61,6 +61,7 @@ const state = (turnsLeft: number, field: Monster[] = monsters): BattleState => (
   lastSkill: null,
   questProgress: 0,
   nextWave: 0,
+  gold: 0,
 });
 
 describe('bot Ngắm chuẩn — giữ skill tới lượt Slime Ma hiện hình', () => {

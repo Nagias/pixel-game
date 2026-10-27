@@ -20,6 +20,7 @@
 | F10  | Tự động cân bằng (mục tiêu, bot nhìn trước, dò số) | ✅ Xong    | `scripts/`, `logic/autoPlay.ts`, `logic/battleConfig.ts` | `scripts/tuneCore.test.ts`, `logic/balance.test.ts`      |
 | F11  | Thắng bằng nhiệm vụ + quái ra theo đợt             | ✅ Xong    | `src/features/battle/` (mở rộng F01)                     | `logic/quest.test.ts`, như F01                           |
 | F12  | Thêm Slime Con, Slime Lao, Slime Ma + màn 6–7      | ✅ Xong    | `src/features/battle/` (mở rộng F01)                     | `logic/monsters.test.ts`, như F01                        |
+| F13  | Lưu tiến trình + vàng                              | ✅ Xong    | `src/features/profile/`, `battle/logic/battle.ts`        | `profile/logic/profile.test.ts`, `logic/gold.test.ts`    |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -640,10 +641,61 @@ với Mưa băng, sát mép trên (1,5). Hình 3 quái vẽ tạm bằng lưới
 
 **Nợ liên quan:** DEBT-007, DEBT-009.
 
+## F13 — Lưu tiến trình + vàng
+
+**Người chơi thấy và làm gì:** hạ quái thì được vàng; màn kết quả ghi "+6 vàng · tổng 6"; màn chuẩn bị hiện
+"Vàng: n" góc trên bên phải. Tắt game mở lại vẫn còn vàng và vào thẳng màn cao nhất đã mở khóa.
+
+**Luật** (đợt 3 kế hoạch sau B6, chủ dự án duyệt 27/10/2026 — "agent đề xuất"):
+
+1. Vàng (`logic/battle.ts` + `logic/gold.test.ts`): mỗi con bị hạ (chém hay skill) cho vàng theo loại
+   (`gold` trong cấu hình loại quái): slime, Slime Con **1** · Slime Lao, Slime Ma **2** · Slime Pháo **3** ·
+   Slime Vua **5** — theo độ khó hạ nó. Vàng của trận nằm trong `BattleState.gold`.
+2. **Thua vẫn giữ vàng đã nhặt** (game mobile chơi nhanh: thua mà mất trắng dễ làm người chơi bỏ; cày màn dễ
+   bị giới hạn bởi số quái mỗi màn — đợt 4 chỉnh qua giá nâng cấp).
+3. Hồ sơ (`src/features/profile/`, tính năng thứ hai): `{ version, gold, unlockedLevel }` lưu localStorage.
+   Hết trận (lúc hiện màn kết quả): cộng vàng; thắng thì mở khóa màn kế (không vượt màn cuối, không tụt).
+4. Mở game: vào màn cao nhất đã mở khóa. `?level=N` chỉ mở được màn đã mở khóa (trả DEBT-011).
+5. **An toàn dữ liệu:** có số phiên bản (đổi cấu trúc thì viết bước chuyển). Dữ liệu lạ (hỏng, sai kiểu,
+   phiên bản mới hơn game) → cất nguyên văn vào khóa dự phòng `pixelGame.profile.backup` (chỉ khi chưa có bản
+   sao) rồi chơi bằng hồ sơ trống — không bao giờ sập game hay lặng lẽ mất dữ liệu. Bộ nhớ bị chặn (chế độ
+   riêng tư) → chơi được, màn kết quả ghi "(không lưu được)".
+6. Kiến trúc: logic hồ sơ là hàm thuần nhận kho lưu truyền vào (`KeyValueStore`), `view/profileStore.ts` gắn
+   localStorage. Một tính năng chỉ dùng tính năng khác qua `index.ts` — ESLint chặn import vào ruột (trả
+   DEBT-005).
+
+**Con số:** vàng ở `monsterKinds[…].gold` trong `battleConfig.ts`; khóa lưu và phiên bản ở
+`src/features/profile/logic/profileConfig.ts`.
+
+| File                                          | Vai trò                                             |
+| --------------------------------------------- | --------------------------------------------------- |
+| `profile/logic/profile.ts`                    | Đọc/ghi an toàn, cộng kết quả trận, chọn màn mở đầu |
+| `profile/logic/profileTypes.ts`, `…Config.ts` | Kiểu hồ sơ, kho lưu; khóa lưu, số phiên bản         |
+| `profile/view/profileStore.ts`                | Gắn localStorage (bọc lỗi trình duyệt chặn bộ nhớ)  |
+| `profile/index.ts`                            | Cổng công khai                                      |
+
+**Kiểm chứng tự động:**
+
+- Unit: `gold.test.ts` (7 test — vàng theo loại, con chỉ bị thương thì không, thắng/thua đều giữ, skill ra
+  vàng, cấu hình vàng sai bị từ chối); `profile.test.ts` (19 test — hồ sơ trống, ghi rồi đọc lại, 7 kiểu dữ
+  liệu lạ đều cất bản sao, không đè bản sao cũ, bộ nhớ bị chặn, thắng mở khóa / thua không, không tụt, không
+  vượt màn cuối, `?level=` trong / ngoài màn đã mở khóa, hồ sơ nhiều màn hơn game); `levelParam.test.ts`
+  (không có / sai → null). ESLint chặn import `../../profile/logic/…` từ `battle/` (thử bằng file tạm).
+- E2E: người chơi mới mở `?level=5` vẫn vào màn 1, 0 vàng; thắng màn 1 → lưu đúng vàng + mở khóa màn 2;
+  màn chuẩn bị màn 2 hiện đúng tổng vàng; mở trang mới cùng trình duyệt → vào thẳng màn 2 với đúng số vàng
+  (ảnh `21-thang-co-vang.png`, `22-mo-lai-con-tien-trinh.png`). Các test mở thẳng màn sau nạp sẵn hồ sơ đã
+  mở khóa tới màn đó (`BattleDriver.seedProfile`).
+
+**Giới hạn đã biết:** chưa có chỗ tiêu vàng (đợt 4). Skill chọn gần nhất chưa lưu qua lần tắt game. Chưa có
+nút xóa tiến trình / chơi lại từ đầu.
+
+**Nợ liên quan:** DEBT-005, DEBT-011 (đã trả); DEBT-002 (cầu nối test bật cả bản phát hành).
+
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
 Trống. Việc tiếp theo nằm trong kế hoạch sau B6 (`docs/plans/2026-10-27-ke-hoach-sau-b6.md`, chủ dự án
-duyệt 27/10/2026): đợt 3 — lưu tiến trình + vàng, chờ chủ dự án trả lời các câu "Chủ dự án quyết".
+duyệt 27/10/2026): đợt 4 — nâng cấp nhân vật / vũ khí bằng vàng, chờ chủ dự án trả lời các câu "Chủ dự án
+quyết".
 
 ## Mẫu cho tính năng mới (copy khối này)
 

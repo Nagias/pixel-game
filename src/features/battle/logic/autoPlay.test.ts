@@ -74,6 +74,7 @@ function stateWith(monsters: Monster[], weaponIndex = 0, weapons = [0, 1, 2]): B
     lastSkill: null,
     questProgress: 0,
     nextWave: 0,
+    gold: 0,
   };
 }
 
