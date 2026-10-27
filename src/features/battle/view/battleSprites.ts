@@ -109,6 +109,82 @@ const slimeGhost: PixelSprite = [
   '00.00..00.00',
 ];
 
+/** Rừng rậm: Yêu tinh — da xanh lá, tai nhọn, mắt đỏ, áo tối. 12×11. */
+const goblin: PixelSprite = [
+  '..00000000..',
+  '.0555555550.',
+  '005525525500',
+  '056555555650',
+  '.0554444550.',
+  '..05555550..',
+  '.0FFFFFFFF0.',
+  '05FFFFFFFF50',
+  '.0FF0000FF0.',
+  '.0660..0660.',
+  '.000....000.',
+];
+
+/** Rừng rậm: Sói rừng — lông xám, mõm trắng, nanh, mắt đỏ. 12×10. */
+const wolf: PixelSprite = [
+  '.00......00.',
+  '0DD0....0DD0',
+  '0DDD0000DDD0',
+  '0DDDDDDDDDD0',
+  '0D20DDDD02D0',
+  '0DDDDDDDDDD0',
+  '.0DDCCCCDD0.',
+  '..0DC00CD0..',
+  '...0EEEE0...',
+  '....0000....',
+];
+
+/** Rừng rậm: Yêu tinh cung thủ — mũ trùm cam, cầm cung vàng cát. 12×10. */
+const goblinArcher: PixelSprite = [
+  '..00000000..',
+  '.0333333330.',
+  '003523325300',
+  '.0355555530.',
+  '..05544550..',
+  '.0333333304.',
+  '053333333040',
+  '.0333333304.',
+  '.0FF00FF0.4.',
+  '.000..000...',
+];
+
+/** Rừng rậm: Dơi đêm — cánh tím, mắt trắng; lượt chẵn vô hình (view vẽ mờ). 14×9. */
+const bat: PixelSprite = [
+  '0............0',
+  '01..........10',
+  '011..0000..110',
+  '01110111101110',
+  '01111C11C11110',
+  '01111111111110',
+  '.0110C11C0110.',
+  '..00.0110.00..',
+  '.....0000.....',
+];
+
+/** Rừng rậm: Người Cây — trùm màn 10 và 20: tán lá xanh, thân tối, mắt vàng sáng. 16×16. */
+const treant: PixelSprite = [
+  '....00000000....',
+  '..006655566600..',
+  '.06655566655660.',
+  '0665566555665660',
+  '0666666666666660',
+  '.00FFFFFFFFFF00.',
+  '..0FFFFFFFFFF0..',
+  '..0F44FFFF44F0..',
+  '..0FFFFFFFFFF0..',
+  '..0FF0FFFF0FF0..',
+  '..0FFF0000FFF0..',
+  '.0EFFFFFFFFFFE0.',
+  '0E0FFFFFFFFFF0E0',
+  '..0FFF0000FFF0..',
+  '.0FFF0....0FFF0.',
+  '.00000....00000.',
+];
+
 /** Tên hình quái trùng tên loại quái (MonsterKind) để view lấy hình theo `monster.kind`. */
 export const BATTLE_SPRITES = {
   hero,
@@ -118,6 +194,11 @@ export const BATTLE_SPRITES = {
   slimeMini,
   slimeCharger,
   slimeGhost,
+  goblin,
+  wolf,
+  goblinArcher,
+  bat,
+  treant,
 } as const;
 
 /** Phóng to nguyên lần để giữ nét pixel. */
@@ -129,4 +210,9 @@ export const SPRITE_SCALE = {
   slimeMini: 2,
   slimeCharger: 2,
   slimeGhost: 2,
+  goblin: 2,
+  wolf: 2,
+  goblinArcher: 2,
+  bat: 2,
+  treant: 2,
 } as const;

@@ -1,12 +1,19 @@
 // Nơi DUY NHẤT chứa con số cân bằng của trận đấu. Đổi số ở đây, không viết cứng ở chỗ khác.
 // NỢ DEBT-009: các con số hiện là phỏng đoán ban đầu, chưa qua chơi thử.
 import type { BattleConfig, Difficulty, UpgradeConfig } from './battleTypes';
+import type { Chapter } from './chapters';
 
 /**
  * Đợt 0 (chủ dự án duyệt 27/10/2026): dung sai của mục tiêu độ khó (`target` của mỗi màn) — kết quả mô
  * phỏng lệch trong khoảng này thì coi là đạt (balance.test.ts, `npm run sim`, `npm run tune`).
  */
 export const BALANCE_TOLERANCE: Difficulty = { winRate: 0.05, spareTurns: 0.5 };
+
+/**
+ * Chủ dự án duyệt 27/10/2026 (lượt duyệt chung, mục 10): dung sai của TỪNG bộ đồ (từng skill) — rộng hơn
+ * `BALANCE_TOLERANCE` (giờ là dung sai của trung bình các bộ đồ), vì mỗi loại quái hợp một skill khác nhau.
+ */
+export const LOADOUT_TOLERANCE: Difficulty = { winRate: 0.08, spareTurns: 0.8 };
 
 export const BATTLE_CONFIG: BattleConfig = {
   sectorCount: 24,
@@ -122,6 +129,18 @@ export const BATTLE_CONFIG: BattleConfig = {
       attack: 2,
       ghost: true,
     },
+    // Chủ đề Rừng rậm (chủ dự án duyệt 27/10/2026): 5 loài không phải slime, dùng lại đặc tính có sẵn. Vàng
+    // theo độ khó hạ (agent đề xuất, cùng nguyên tắc đợt 3).
+    // Yêu tinh: lính thường của rừng, cứng hơn slime.
+    goblin: { name: 'Yêu tinh', gold: 2, hp: 4, advanceChance: 0.6, attack: 2 },
+    // Sói rừng: lao 2 vòng mỗi lần tiến — phải hạ trước khi nó áp sát.
+    wolf: { name: 'Sói rừng', gold: 3, hp: 4, advanceChance: 0.6, attack: 3, step: 2 },
+    // Yêu tinh cung thủ: tới vòng 4 thì đứng bắn — ưu tiên dùng Cung.
+    goblinArcher: { name: 'Cung thủ', gold: 3, hp: 3, advanceChance: 0.6, attack: 2, shootRing: 4 },
+    // Dơi đêm: lượt chẵn bay lẩn (vô hình) — canh đúng lượt.
+    bat: { name: 'Dơi đêm', gold: 3, hp: 3, advanceChance: 0.6, attack: 2, ghost: true },
+    // Người Cây: trùm màn 10 và 20 — rất trâu, đánh đau, tiến chậm.
+    treant: { name: 'Người Cây', gold: 10, hp: 14, advanceChance: 0.4, attack: 5 },
   },
   // B6 (chủ dự án duyệt 27/10/2026): máu 10, nhát trúng ≥ 3 con hồi 1 máu, chí mạng ×2, hai skill
   // đánh cả sân mở từ màn 3. Con số cụ thể agent chọn bằng mô phỏng (giữ độ khó như trước B6).
@@ -138,118 +157,227 @@ export const BATTLE_CONFIG: BattleConfig = {
     fireball: { name: 'Cầu lửa', damage: 2, freezeTurns: 0, chargeTurns: 6 },
   },
   skillUnlockLevel: 2,
-  // F06: các màn nối tiếp. Màn 2 có 6 con trong một cụm nên cụm rộng ±3 lát (cụm ±2 chỉ có 5 chỗ).
-  // Đợt 0 (chủ dự án duyệt 27/10/2026): mục tiêu độ khó theo gợi ý của agent — màn đầu ≥ 98%, tụt dần
-  // ~5% mỗi màn, màn cuối chương ~78%; lượt dư tụt dần theo. Đo bằng người chơi trung bình (bot "Ngắm
-  // chuẩn", chủ dự án chốt 27/10/2026).
-  // F11 (đợt 1, chủ dự án duyệt luật 27/10/2026): mỗi màn một nhiệm vụ, xong là thắng; đợt sau tràn vào
-  // khi sân còn ≤ nextWaveAt con. Nhiệm vụ, đợt quái, số lượt do agent đề xuất + `npm run tune` 27/10/2026
-  // (số lượt màn 1–5: 10/11/8/9/8 → 14/13/6/8/9).
-  // Đợt 4: `assumedUpgrades` = nâng cấp người chơi lần đầu có khi tới màn (mua ngay khi đủ vàng; mô phỏng
-  // 27/10/2026: vào màn 3 ~14 vàng, màn 4 ~20, màn 6 ~39) — mục tiêu độ khó đo với mức nâng cấp này.
+  // Đợt 7 — chủ đề Rừng rậm, 20 màn (chủ dự án duyệt 27/10/2026): độ khó răng cưa — màn 1 ~98% giảm dần tới
+  // màn 10 (trùm Người Cây) ~78%, màn 11 nhẹ lại ~92% rồi giảm tới màn 20 (trùm cuối) ~72%; đo bằng bot
+  // "Ngắm chuẩn" với nâng cấp dự kiến (`assumedUpgrades`). Đội hình, nhiệm vụ, đợt quái, số lượt do bộ sinh
+  // màn chọn (`npm run levelgen`, bản mô tả ở scripts/levelGen.ts) — chỉ khớp % thắng; lượt dư mục tiêu ghi
+  // bằng số đo. Màn 1–7 giữ đội hình đã duyệt (F06–F14), chỉ dò lại số. Lịch sử từng màn: FEATURE_MAP.md.
   levels: [
-    // Màn 1 dạy đợt quái: hạ 6 mà mở màn chỉ 4 con, đợt 2 (2 con) ra khi sân còn ≤ 2.
+    // Màn 1: slime — dạy đợt quái (hạ nhiều hơn số quái mở màn).
     {
-      turnLimit: 14,
       monsters: ['slime', 'slime', 'slime', 'slime'],
       spread: 2,
       waves: [['slime', 'slime']],
-      nextWaveAt: 2,
-      quest: { kind: 'slime', count: 6 },
-      target: { winRate: 0.98, spareTurns: 3 },
-    },
-    {
+      nextWaveAt: 1,
+      quest: { kind: 'slime', count: 5 },
       turnLimit: 13,
+      target: { winRate: 0.98, spareTurns: 3.5 },
+    },
+    // Màn 2: slime đông hơn.
+    {
       monsters: ['slime', 'slime', 'slime', 'slime', 'slime', 'slime'],
       spread: 3,
-      waves: [['slime', 'slime', 'slime', 'slime']],
-      nextWaveAt: 3,
+      waves: [['slime', 'slime', 'slime']],
+      nextWaveAt: 2,
       quest: { kind: 'slime', count: 8 },
-      target: { winRate: 0.93, spareTurns: 2.5 },
+      turnLimit: 15,
+      target: { winRate: 0.96, spareTurns: 3.25 },
     },
-    // Màn trùm (chủ dự án duyệt 26/10/2026). F11: nhiệm vụ hạ Slime Vua, slime chỉ là hộ vệ nên không cần
-    // đợt sau (dò thử: đợt sau không đổi kết quả). Hộ vệ 3 → 4 con, cụm ±2 → ±4 (script dò tạm 27/10/2026:
-    // với cụm hẹp, Mưa băng dễ hơn Cầu lửa ~5%, vượt dung sai).
+    // Màn 3: trùm nhỏ Slime Vua (B1) — nhiệm vụ hạ trùm.
     {
-      turnLimit: 6,
       monsters: ['slimeKing', 'slime', 'slime', 'slime', 'slime'],
-      spread: 4,
+      spread: 3,
       quest: { kind: 'slimeKing', count: 1 },
-      target: { winRate: 0.88, spareTurns: 1.25 },
+      turnLimit: 6,
+      target: { winRate: 0.94, spareTurns: 1.25 },
       assumedUpgrades: { hp: 1 },
     },
-    // B2 (chủ dự án duyệt 26/10/2026): quái tới từ hai phía — 2 cụm đối diện (5 + 5), đất của Rìu. F11:
-    // hạ 9 trong 10 con; không cần đợt sau (nó chỉ ra khi đã hạ 9 — lúc nhiệm vụ đã xong).
+    // Màn 4: slime tới từ hai phía (B2) — đất của Rìu. Script dò tạm (27/10/2026) chọn trong bản mô tả bộ số
+    // nằm giữa màn 3 và màn 5 theo luật thứ tự đã duyệt (ít lượt dư / thắng ít hơn màn 3, hơn màn 5).
     {
-      turnLimit: 8,
-      monsters: [
-        'slime',
-        'slime',
-        'slime',
-        'slime',
-        'slime',
-        'slime',
-        'slime',
-        'slime',
-        'slime',
-        'slime',
-      ],
-      spread: 3,
+      monsters: ['slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slime'],
+      spread: 4,
       splitOpposite: true,
-      quest: { kind: 'slime', count: 9 },
-      target: { winRate: 0.83, spareTurns: 0.75 },
+      quest: { kind: 'slime', count: 8 },
+      turnLimit: 9,
+      target: { winRate: 0.91, spareTurns: 1 },
       assumedUpgrades: { hp: 1, crit: 1 },
     },
-    // B3 (chủ dự án duyệt 26/10/2026): slime + Slime Pháo trong một cụm. F11: nhiệm vụ hạ 2 Slime Pháo — con
-    // thứ hai tới cùng đợt sau khi sân còn ≤ 2. Đợt 4 (script dò tạm, với nâng cấp dự kiến): mở màn 7 → 8
-    // slime, cụm ±5 → ±4, đợt sau 3 → 1 slime — bộ số duy nhất vừa đạt mục tiêu vừa khó hơn màn 4 (luật B3).
+    // Màn 5: Slime Pháo bắn xa (B3) — hạ 2 Pháo.
     {
-      turnLimit: 9,
-      monsters: [
-        'slime',
-        'slime',
-        'slime',
-        'slime',
-        'slime',
-        'slime',
-        'slime',
-        'slime',
-        'slimeCannon',
-      ],
+      monsters: ['slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slimeCannon'],
       spread: 4,
       waves: [['slime', 'slimeCannon']],
       nextWaveAt: 2,
       quest: { kind: 'slimeCannon', count: 2 },
-      target: { winRate: 0.78, spareTurns: 0.5 },
+      turnLimit: 9,
+      target: { winRate: 0.89, spareTurns: 1 },
       assumedUpgrades: { hp: 1, crit: 1 },
     },
-    // F12: màn giới thiệu Slime Lao — hạ 2 Slime Lao, con thứ hai tới cùng đợt sau. Màn giới thiệu quái mới
-    // nên mục tiêu dễ hơn màn 5 (cuối chương) — agent đề xuất, chủ dự án duyệt qua PR. Đội hình do script
-    // dò tạm chọn: 2–3 Slime Lao mở màn, hoặc đợt sau ra sớm, thì Mưa băng (đóng băng, chặn cú lao) dễ hơn Cầu
-    // lửa ~10%.
+    // Màn 6: giới thiệu Slime Lao (F12).
     {
-      turnLimit: 9,
-      monsters: ['slimeCharger', 'slime', 'slime', 'slime', 'slime'],
+      monsters: ['slimeCharger', 'slime', 'slime', 'slime', 'slime', 'slime'],
       spread: 4,
-      waves: [['slimeCharger', 'slime', 'slime']],
+      waves: [['slimeCharger', 'slime', 'slime', 'slime']],
       nextWaveAt: 1,
       quest: { kind: 'slimeCharger', count: 2 },
-      target: { winRate: 0.9, spareTurns: 1.5 },
+      turnLimit: 9,
+      target: { winRate: 0.87, spareTurns: 0.75 },
       assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
     },
-    // F12: màn giới thiệu Slime Ma — hạ 2 Slime Ma, con thứ hai tới cùng đợt sau (kèm 3 Slime Con làm mồi
-    // combo). Đội hình do script dò tạm chọn: nhiều Ma hơn thì skill nào hợp (Cầu lửa 2 sát thương hạ Ma
-    // nhanh, Mưa băng đóng băng) chênh nhau 10–15%.
+    // Màn 7: giới thiệu Slime Ma (F12), Slime Con làm mồi.
     {
-      turnLimit: 9,
       monsters: ['slimeGhost', 'slime', 'slime', 'slime', 'slime', 'slime'],
       spread: 4,
-      // Đợt 4 (`npm run tune` với nâng cấp dự kiến): Slime Con ra trước Slime Ma trong đợt sau.
       waves: [['slimeMini', 'slimeMini', 'slimeMini', 'slimeGhost']],
       nextWaveAt: 1,
       quest: { kind: 'slimeGhost', count: 2 },
-      target: { winRate: 0.85, spareTurns: 1 },
+      turnLimit: 9,
+      target: { winRate: 0.85, spareTurns: 1.25 },
       assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
+    },
+    // Màn 8: giới thiệu Yêu tinh — lính rừng, cứng hơn slime.
+    {
+      monsters: ['goblin', 'goblin', 'slime', 'slime', 'slime'],
+      spread: 3,
+      waves: [['goblin', 'goblin', 'slime', 'slime']],
+      nextWaveAt: 2,
+      quest: { kind: 'goblin', count: 4 },
+      turnLimit: 10,
+      target: { winRate: 0.82, spareTurns: 1.25 },
+      assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
+    },
+    // Màn 9: giới thiệu Sói rừng — lao 2 vòng.
+    {
+      monsters: ['wolf', 'wolf', 'goblin', 'goblin'],
+      spread: 4,
+      waves: [['wolf', 'goblin', 'goblin']],
+      nextWaveAt: 2,
+      quest: { kind: 'wolf', count: 3 },
+      turnLimit: 8,
+      target: { winRate: 0.8, spareTurns: 0.75 },
+      assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
+    },
+    // Màn 10: TRÙM Người Cây.
+    {
+      monsters: ['treant', 'goblin', 'goblin'],
+      spread: 3,
+      quest: { kind: 'treant', count: 1 },
+      turnLimit: 9,
+      target: { winRate: 0.78, spareTurns: 1.5 },
+      assumedUpgrades: { hp: 2, crit: 1, heal: 1 },
+    },
+    // Màn 11: giới thiệu Yêu tinh cung thủ — bắn từ vòng 4.
+    {
+      monsters: ['goblinArcher', 'goblinArcher', 'goblin', 'goblin', 'goblin'],
+      spread: 4,
+      waves: [['goblinArcher', 'goblin', 'goblin']],
+      nextWaveAt: 2,
+      quest: { kind: 'goblinArcher', count: 3 },
+      turnLimit: 9,
+      target: { winRate: 0.92, spareTurns: 1.75 },
+      assumedUpgrades: { hp: 2, crit: 1, heal: 1 },
+    },
+    // Màn 12: giới thiệu Dơi đêm — lượt chẵn vô hình.
+    {
+      monsters: ['bat', 'goblin', 'goblin', 'goblin', 'goblin'],
+      spread: 3,
+      waves: [['bat', 'slime', 'slime']],
+      nextWaveAt: 1,
+      quest: { kind: 'bat', count: 2 },
+      turnLimit: 11,
+      target: { winRate: 0.9, spareTurns: 1.5 },
+      assumedUpgrades: { hp: 2, crit: 1, heal: 1 },
+    },
+    // Màn 13: Yêu tinh + Sói tới từ hai phía.
+    {
+      monsters: ['goblin', 'goblin', 'goblin', 'goblin', 'wolf'],
+      spread: 3,
+      waves: [['wolf', 'goblin', 'goblin']],
+      nextWaveAt: 3,
+      quest: { kind: 'goblin', count: 4 },
+      turnLimit: 9,
+      target: { winRate: 0.88, spareTurns: 1.75 },
+      assumedUpgrades: { hp: 2, crit: 2, heal: 1 },
+      splitOpposite: true,
+    },
+    // Màn 14: Cung thủ được Yêu tinh che chắn.
+    {
+      monsters: ['goblinArcher', 'goblinArcher', 'goblin', 'goblin', 'goblin', 'goblin'],
+      spread: 4,
+      waves: [['goblinArcher', 'goblin']],
+      nextWaveAt: 2,
+      quest: { kind: 'goblinArcher', count: 3 },
+      turnLimit: 9,
+      target: { winRate: 0.85, spareTurns: 1 },
+      assumedUpgrades: { hp: 2, crit: 2, heal: 1 },
+    },
+    // Màn 15: Dơi + Sói.
+    {
+      monsters: ['bat', 'bat', 'wolf', 'wolf', 'goblin', 'goblin'],
+      spread: 5,
+      waves: [['wolf', 'bat']],
+      nextWaveAt: 1,
+      quest: { kind: 'wolf', count: 3 },
+      turnLimit: 12,
+      target: { winRate: 0.83, spareTurns: 1.25 },
+      assumedUpgrades: { hp: 2, crit: 2, heal: 1 },
+    },
+    // Màn 16: trộn Yêu tinh, Cung thủ, Dơi.
+    {
+      monsters: ['goblin', 'goblin', 'goblin', 'goblinArcher', 'bat'],
+      spread: 5,
+      waves: [['goblin', 'goblin', 'goblinArcher', 'bat']],
+      nextWaveAt: 2,
+      quest: { kind: 'goblin', count: 5 },
+      turnLimit: 13,
+      target: { winRate: 0.81, spareTurns: 1.25 },
+      assumedUpgrades: { hp: 2, crit: 2, heal: 2 },
+    },
+    // Màn 17: bầy Sói hai phía.
+    {
+      monsters: ['wolf', 'wolf', 'goblin', 'goblin', 'goblin', 'goblin'],
+      spread: 3,
+      waves: [['wolf', 'wolf', 'wolf']],
+      nextWaveAt: 1,
+      quest: { kind: 'wolf', count: 4 },
+      turnLimit: 13,
+      target: { winRate: 0.79, spareTurns: 1 },
+      assumedUpgrades: { hp: 2, crit: 2, heal: 2 },
+      splitOpposite: true,
+    },
+    // Màn 18: Cung thủ + Dơi.
+    {
+      monsters: ['goblinArcher', 'goblinArcher', 'bat', 'bat', 'goblin', 'goblin'],
+      spread: 4,
+      waves: [['goblinArcher', 'bat']],
+      nextWaveAt: 2,
+      quest: { kind: 'goblinArcher', count: 3 },
+      turnLimit: 9,
+      target: { winRate: 0.76, spareTurns: 0.75 },
+      assumedUpgrades: { hp: 2, crit: 2, heal: 2 },
+    },
+    // Màn 19: mọi loài rừng.
+    {
+      monsters: ['goblin', 'goblin', 'wolf', 'wolf', 'goblinArcher', 'goblinArcher', 'bat'],
+      spread: 4,
+      waves: [['wolf', 'goblinArcher', 'bat', 'bat']],
+      nextWaveAt: 2,
+      quest: { kind: 'wolf', count: 2 },
+      turnLimit: 8,
+      target: { winRate: 0.74, spareTurns: 1 },
+      assumedUpgrades: { hp: 3, crit: 2, heal: 2 },
+    },
+    // Màn 20: TRÙM CUỐI Người Cây cùng Sói, Cung thủ.
+    {
+      monsters: ['treant', 'wolf'],
+      spread: 3,
+      waves: [['goblin', 'goblin', 'goblin']],
+      nextWaveAt: 2,
+      quest: { kind: 'treant', count: 1 },
+      turnLimit: 9,
+      target: { winRate: 0.72, spareTurns: 1.5 },
+      assumedUpgrades: { hp: 3, crit: 2, heal: 2 },
     },
   ],
 };
@@ -264,3 +392,9 @@ export const UPGRADE_CONFIG: UpgradeConfig = {
   crit: { name: 'Chí mạng', perLevel: 0.05, costs: [10, 20, 40] },
   heal: { name: 'Hồi máu', perLevel: 1, costs: [10, 20, 40] },
 };
+
+/**
+ * Đợt 7 (chủ dự án duyệt 27/10/2026): các chương theo chủ đề môi trường, theo thứ tự màn. Chủ đề Băng, Núi
+ * lửa… để sau — thêm chương = thêm màn vào `levels` + một dòng ở đây.
+ */
+export const CHAPTERS: readonly Chapter[] = [{ name: 'Rừng rậm', levelCount: 20 }];

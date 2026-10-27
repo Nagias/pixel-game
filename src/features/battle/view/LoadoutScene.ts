@@ -7,7 +7,8 @@ import { colorNumber, PALETTE } from '../../../shared/palette';
 import { parseLevelParam } from '../../../shared/levelParam';
 import { loadProfile, startLevel } from '../../profile';
 import { levelAt } from '../logic/battle';
-import { BATTLE_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
+import { BATTLE_CONFIG, CHAPTERS, UPGRADE_CONFIG } from '../logic/battleConfig';
+import { chapterOf } from '../logic/chapters';
 import type { Loadout, SkillKind, WeaponSlot } from '../logic/battleTypes';
 import { withUpgrades } from '../logic/upgrades';
 import {
@@ -134,9 +135,11 @@ export class LoadoutScene extends Scene {
     this.openElapsedMs = 0;
     this.starting = false;
 
+    // Đợt 7: số màn đếm trong chương (chủ đề), kèm tên chương.
+    const chapter = chapterOf(this.level, CHAPTERS);
     this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, colorNumber('teal')).setOrigin(0);
     this.add
-      .text(GAME_WIDTH / 2, 30, `MÀN ${this.level + 1}/${this.config.levels.length}`, {
+      .text(GAME_WIDTH / 2, 30, `MÀN ${chapter.number}/${chapter.levelCount}`, {
         ...TEXT,
         fontSize: '32px',
         color: PALETTE.sand,
@@ -163,7 +166,7 @@ export class LoadoutScene extends Scene {
       )
       .setOrigin(0.5);
     this.add
-      .text(GAME_WIDTH / 2, 86, 'Chọn đồ mang vào trận', {
+      .text(GAME_WIDTH / 2, 86, `${chapter.name} · chọn đồ mang vào trận`, {
         ...TEXT,
         fontSize: '14px',
         color: PALETTE.mist,

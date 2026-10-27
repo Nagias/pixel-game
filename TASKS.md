@@ -135,4 +135,17 @@ Phạm vi chủ dự án chốt: "agent đề xuất" chỉ số được nâng,
 - [x] Màn Nâng cấp + nút từ màn chuẩn bị (test bố cục trước)
 - [x] Đo độ khó với nâng cấp dự kiến (`assumedUpgrades`), chỉnh màn 5 và 7
 - [x] E2E mua nâng cấp → vào trận máu tăng; thử tay khung 375×760
-- [ ] FEATURE_MAP (F14), `npm run check`, mở PR, chủ dự án duyệt
+- [x] FEATURE_MAP (F14), `npm run check`, mở PR, chủ dự án duyệt (PR #26 gộp 27/10/2026)
+
+## Kế hoạch sau B6, bước 1 lượt duyệt chung — F15 Chủ đề Rừng rậm (27/10/2026)
+
+Phạm vi chủ dự án chốt (duyệt A–E): 5 loại quái rừng, 20 màn răng cưa 98→78 / 92→72, dung sai trung bình ±5%
+và mỗi skill ±8%, bộ sinh màn, không cơ chế sân mới.
+
+- [x] 5 loại quái (số trong cấu hình) + hình lưới ký tự
+- [x] Chương (`chapters.ts`, test trước); màn chuẩn bị / thanh trên ghi "Màn n/20 · Rừng rậm"
+- [x] Dung sai hai lớp (test trước) cho `tune`, `sim`, `balance.test.ts`
+- [x] Bộ sinh màn `npm run levelgen` (test trước) + bản mô tả 20 màn; áp số, chỉnh tay màn 4
+- [x] E2E chơi liền 20 màn (seed 1, hồ sơ nâng cấp), ảnh quái rừng và trùm; sửa test Mưa băng
+- [x] Thử tay khung 375×760 → sửa màu băng không thấy trên quái xanh lá
+- [x] FEATURE_MAP (F15), `npm run check`, mở PR, gộp khi CI xanh

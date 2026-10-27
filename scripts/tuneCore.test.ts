@@ -4,6 +4,7 @@ import { PLAYERS, type Player } from './simCore';
 import {
   betterPick,
   deviation,
+  levelWithinTolerance,
   pickTurns,
   tune,
   withinTolerance,
@@ -37,6 +38,11 @@ const CONFIG: BattleConfig = {
     slimeMini: { name: 'Con thử', hp: 1, advanceChance: 0.6, attack: 1 },
     slimeCharger: { name: 'Lao thử', hp: 2, advanceChance: 0.6, attack: 1, step: 2 },
     slimeGhost: { name: 'Ma thử', hp: 2, advanceChance: 0.6, attack: 1, ghost: true },
+    goblin: { name: 'Yêu tinh thử', hp: 4, advanceChance: 0.6, attack: 2 },
+    wolf: { name: 'Sói thử', hp: 4, advanceChance: 0.6, attack: 3, step: 2 },
+    goblinArcher: { name: 'Cung thủ thử', hp: 3, advanceChance: 0.6, attack: 2, shootRing: 4 },
+    bat: { name: 'Dơi thử', hp: 3, advanceChance: 0.6, attack: 1, ghost: true },
+    treant: { name: 'Cây thử', hp: 14, advanceChance: 0.6, attack: 5 },
   },
   hero: { hp: 5, healMinHits: 3, healAmount: 0 },
   critMultiplier: 2,
@@ -57,7 +63,7 @@ const setup = (spareTurns: number, knobs: TuneSetup['knobs'] = []): TuneSetup =>
   knobs,
   loadouts: () => [{ weapons: [0, 1, 2] }],
   targets: [{ winRate: 1, spareTurns }],
-  tolerance: TOLERANCE,
+  tolerance: { mean: TOLERANCE, perLoadout: TOLERANCE },
 });
 
 const slimeHp = {
@@ -152,6 +158,20 @@ describe('bộ dò số cân bằng (đợt 0)', () => {
     const [proposal] = tune(CONFIG, setup(4, [quest([2, 1])]));
     expect(proposal?.levels[0]?.knobs).toEqual({ 'nhiệm vụ': 1 });
     expect(() => tune(CONFIG, setup(4, [quest([2, 3])]))).toThrow('Màn 1: không có tổ hợp');
+  });
+
+  // Chủ dự án duyệt 27/10/2026 (lượt duyệt chung, mục 10): mỗi loại quái hợp một skill khác nhau, nên
+  // trung bình các bộ đồ trong ±5% / ±0,5 lượt, còn từng bộ đồ riêng được lệch ±8% / ±0,8 lượt.
+  it('dung sai của màn: trung bình các bộ đồ trong dung sai chung, từng bộ đồ trong dung sai rộng hơn', () => {
+    const target = { winRate: 0.85, spareTurns: 1 };
+    const tol = { mean: TOLERANCE, perLoadout: { winRate: 0.08, spareTurns: 0.8 } };
+    const d = (winRate: number, spareTurns = 1) => ({ winRate, spareTurns });
+    expect(levelWithinTolerance([d(0.92), d(0.8)], target, tol)).toBe(true);
+    expect(levelWithinTolerance([d(0.94), d(0.8)], target, tol)).toBe(false); // một bộ đồ lệch 9%
+    expect(levelWithinTolerance([d(0.91), d(0.91)], target, tol)).toBe(false); // trung bình lệch 6%
+    expect(levelWithinTolerance([d(0.85, 1.7), d(0.85, 0.9)], target, tol)).toBe(true);
+    expect(levelWithinTolerance([d(0.85, 1.9), d(0.85, 1)], target, tol)).toBe(false); // lượt dư lệch 0,9
+    expect(levelWithinTolerance([d(0.85, 1.6), d(0.85, 1.6)], target, tol)).toBe(false); // trung bình 0,6
   });
 
   it('màn không có mục tiêu thì báo lỗi rõ ràng', () => {

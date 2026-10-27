@@ -1,7 +1,11 @@
 // Mô phỏng cân bằng: chơi tự động mọi màn với mọi bộ đồ mang được (B4 vũ khí × B6 skill), in tỉ lệ
 // thắng và số lượt dư. Chạy: `npm run sim` (thêm `-- --games N` để đổi số ván). Bảng đầu so với mục
 // tiêu độ khó trong battleConfig.ts (đợt 0); CI in cả hai bảng vào tóm tắt job. Lõi: scripts/simCore.ts.
-import { BALANCE_TOLERANCE, BATTLE_CONFIG } from '../src/features/battle/logic/battleConfig';
+import {
+  BALANCE_TOLERANCE,
+  BATTLE_CONFIG,
+  LOADOUT_TOLERANCE,
+} from '../src/features/battle/logic/battleConfig';
 import type { Difficulty } from '../src/features/battle/logic/battleTypes';
 import {
   averageSpare,
@@ -15,7 +19,7 @@ import {
   winRate,
   type Player,
 } from './simCore';
-import { measured, withinTolerance } from './tuneCore';
+import { meanDifficulty, measured, withinTolerance } from './tuneCore';
 
 /** Số ván mỗi màn mỗi kiểu chơi; seed chạy từ 1 tới số ván. Mặc định bằng balance.test.ts. */
 const GAMES = gamesArg(process.argv.slice(2), 500);
@@ -24,20 +28,27 @@ const show = (d: Difficulty) => `${(100 * d.winRate).toFixed(1)}% / ${d.spareTur
 
 console.log(`## Mô phỏng cân bằng — ${GAMES} ván mỗi màn (seed 1…${GAMES})\n`);
 console.log(
-  `### So với mục tiêu (bot "${TARGET_PLAYER}", dung sai ±${100 * BALANCE_TOLERANCE.winRate}% thắng, ` +
-    `±${BALANCE_TOLERANCE.spareTurns} lượt dư)\n`,
+  `### So với mục tiêu (bot "${TARGET_PLAYER}"; dung sai từng bộ đồ ±${100 * LOADOUT_TOLERANCE.winRate}% ` +
+    `thắng, ±${LOADOUT_TOLERANCE.spareTurns} lượt dư; trung bình ±${100 * BALANCE_TOLERANCE.winRate}%, ` +
+    `±${BALANCE_TOLERANCE.spareTurns})\n`,
 );
 console.log('| Màn | Bộ đồ | Mục tiêu (thắng / dư) | Đo được | Đạt |');
 console.log('| --- | --- | --- | --- | --- |');
 BATTLE_CONFIG.levels.forEach((level, index) => {
-  for (const loadout of targetLoadouts(index, BATTLE_CONFIG)) {
-    const actual = measured(simulateLevel(index, loadout, targetPlayer, BATTLE_CONFIG, GAMES));
-    const target = level.target;
-    const ok = target ? (withinTolerance(actual, target, BALANCE_TOLERANCE) ? '✅' : '❌') : '—';
+  const { target } = level;
+  const row = (name: string, actual: Difficulty, tolerance: Difficulty) => {
+    const ok = target ? (withinTolerance(actual, target, tolerance) ? '✅' : '❌') : '—';
     console.log(
-      `| ${index + 1} | ${loadoutName(loadout, BATTLE_CONFIG)} | ${target ? show(target) : 'chưa có'} | ${show(actual)} | ${ok} |`,
+      `| ${index + 1} | ${name} | ${target ? show(target) : 'chưa có'} | ${show(actual)} | ${ok} |`,
     );
-  }
+  };
+  const results = targetLoadouts(index, BATTLE_CONFIG).map((loadout) => {
+    const actual = measured(simulateLevel(index, loadout, targetPlayer, BATTLE_CONFIG, GAMES));
+    row(loadoutName(loadout, BATTLE_CONFIG), actual, LOADOUT_TOLERANCE);
+    return actual;
+  });
+  // Màn nhiều bộ đồ (từng skill): thêm dòng trung bình, xét theo dung sai chung.
+  if (results.length > 1) row('trung bình', meanDifficulty(results), BALANCE_TOLERANCE);
 });
 
 console.log('\n### Mọi kiểu chơi × mọi bộ đồ\n');

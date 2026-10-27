@@ -26,7 +26,16 @@ export interface TuneSetup {
   readonly loadouts: (level: number, config: BattleConfig) => Loadout[];
   /** Mục tiêu từng màn, theo thứ tự màn. */
   readonly targets: readonly Difficulty[];
-  readonly tolerance: Difficulty;
+  readonly tolerance: Tolerances;
+}
+
+/**
+ * Dung sai của một màn (chủ dự án duyệt 27/10/2026): trung bình các bộ đồ trong `mean`, từng bộ đồ riêng trong
+ * `perLoadout` (rộng hơn — mỗi loại quái hợp một skill khác nhau).
+ */
+export interface Tolerances {
+  readonly mean: Difficulty;
+  readonly perLoadout: Difficulty;
 }
 
 export interface LevelPick {
@@ -57,6 +66,28 @@ export function deviation(actual: Difficulty, target: Difficulty, tolerance: Dif
   return (
     Math.abs(actual.winRate - target.winRate) / tolerance.winRate +
     Math.abs(actual.spareTurns - target.spareTurns) / tolerance.spareTurns
+  );
+}
+
+/** Trung bình kết quả của các bộ đồ. */
+export function meanDifficulty(results: readonly Difficulty[]): Difficulty {
+  const n = results.length;
+  return {
+    winRate: results.reduce((sum, r) => sum + r.winRate, 0) / n,
+    spareTurns: results.reduce((sum, r) => sum + r.spareTurns, 0) / n,
+  };
+}
+
+/** Màn đạt: trung bình các bộ đồ trong dung sai chung, và từng bộ đồ trong dung sai từng bộ đồ. */
+export function levelWithinTolerance(
+  results: readonly Difficulty[],
+  target: Difficulty,
+  tolerance: Tolerances,
+): boolean {
+  return (
+    results.length > 0 &&
+    withinTolerance(meanDifficulty(results), target, tolerance.mean) &&
+    results.every((r) => withinTolerance(r, target, tolerance.perLoadout))
   );
 }
 
@@ -95,10 +126,10 @@ export function measureLevel(
     .loadouts(level, config)
     .map((loadout) => simulateLevel(level, loadout, setup.player, config, setup.games));
   const score = results.reduce(
-    (sum, r) => sum + deviation(measured(r), target, setup.tolerance),
+    (sum, r) => sum + deviation(measured(r), target, setup.tolerance.mean),
     0,
   );
-  const ok = results.every((r) => withinTolerance(measured(r), target, setup.tolerance));
+  const ok = levelWithinTolerance(results.map(measured), target, setup.tolerance);
   return { score, ok, results };
 }
 

@@ -50,7 +50,17 @@ export interface SkillConfig {
 
 /** F06: các loại quái. Thêm loại mới = thêm tên ở đây + con số trong battleConfig.ts + hình. */
 export type MonsterKind =
-  'slime' | 'slimeKing' | 'slimeCannon' | 'slimeMini' | 'slimeCharger' | 'slimeGhost';
+  | 'slime'
+  | 'slimeKing'
+  | 'slimeCannon'
+  | 'slimeMini'
+  | 'slimeCharger'
+  | 'slimeGhost'
+  | 'goblin'
+  | 'wolf'
+  | 'goblinArcher'
+  | 'bat'
+  | 'treant';
 
 export interface MonsterConfig {
   readonly name: string;

@@ -2,7 +2,11 @@
 // TARGET_PLAYER (simCore.ts) so với mục tiêu độ khó trong battleConfig.ts, in bảng đề xuất gần mục tiêu
 // nhất kèm số trước/sau — KHÔNG ghi vào cấu hình: chủ dự án duyệt rồi agent mới áp tay vào battleConfig.ts.
 // Đổi luật hay thêm quái: sửa danh sách KNOBS bên dưới cho đúng việc đang làm (núm vặn = con số được đổi).
-import { BALANCE_TOLERANCE, BATTLE_CONFIG } from '../src/features/battle/logic/battleConfig';
+import {
+  BALANCE_TOLERANCE,
+  BATTLE_CONFIG,
+  LOADOUT_TOLERANCE,
+} from '../src/features/battle/logic/battleConfig';
 import type {
   BattleConfig,
   Difficulty,
@@ -113,7 +117,7 @@ const setup: TuneSetup = {
   knobs: KNOBS,
   loadouts: targetLoadouts,
   targets,
-  tolerance: BALANCE_TOLERANCE,
+  tolerance: { mean: BALANCE_TOLERANCE, perLoadout: LOADOUT_TOLERANCE },
 };
 
 const show = (d: Difficulty) => `${(100 * d.winRate).toFixed(0)}% / ${d.spareTurns.toFixed(2)}`;
@@ -127,7 +131,8 @@ const current = BATTLE_CONFIG.levels.map((_, level) => measureLevel(BATTLE_CONFI
 
 console.log(`# Dò số cân bằng — ${setup.games} ván mỗi màn mỗi bộ đồ\n`);
 console.log(
-  `Dung sai: ±${100 * setup.tolerance.winRate}% thắng, ±${setup.tolerance.spareTurns} lượt dư. ` +
+  `Dung sai: trung bình ±${100 * setup.tolerance.mean.winRate}% thắng, ±${setup.tolerance.mean.spareTurns} lượt dư; ` +
+    `từng bộ đồ ±${100 * setup.tolerance.perLoadout.winRate}%, ±${setup.tolerance.perLoadout.spareTurns}. ` +
     'Mỗi ô đo: thắng / lượt dư TB, mỗi bộ đồ một ô (bộ mặc định, từng skill nếu màn có skill).\n',
 );
 proposals.slice(0, SHOWN).forEach((p, rank) => {
