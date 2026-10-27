@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { BattleConfig, WeaponConfig } from '../src/features/battle/logic/battleTypes';
 import { PLAYERS, type Player } from './simCore';
-import { deviation, pickTurns, tune, withinTolerance, type TuneSetup } from './tuneCore';
+import {
+  betterPick,
+  deviation,
+  pickTurns,
+  tune,
+  withinTolerance,
+  type LevelPick,
+  type TuneSetup,
+} from './tuneCore';
 
 // Cấu hình riêng cho test: một slime ở vòng ngoài, Cung với tới, không chí mạng, không đẩy — bot nhìn
 // trước luôn hạ nó sau đúng `máu` nhát, nên lượt dư = số lượt − máu slime, thắng 100%.
@@ -108,6 +116,22 @@ describe('bộ dò số cân bằng (đợt 0)', () => {
     expect(proposals[0]?.levels[0]).toMatchObject({ turnLimit: 6, knobs: { 'máu slime': 2 } });
     expect(proposals[0]?.config.monsterKinds.slime.hp).toBe(2);
     expect(proposals[0]?.config.levels[0]?.turnLimit).toBe(6);
+  });
+
+  it('đạt dung sai ở mọi bộ đồ thắng lệch ít hơn mà có bộ đồ không đạt', () => {
+    // Tổng độ lệch nhỏ chưa chắc đạt: một bộ đồ lệch xa, bộ kia trúng mục tiêu vẫn có tổng nhỏ.
+    const pick = (ok: boolean, score: number, turnLimit = 7): LevelPick => ({
+      turnLimit,
+      knobs: {},
+      score,
+      ok,
+      results: [],
+    });
+    expect(betterPick(pick(true, 3), pick(false, 2), 7)).toBe(true);
+    expect(betterPick(pick(false, 2), pick(true, 3), 7)).toBe(false);
+    expect(betterPick(pick(true, 1), pick(true, 2), 7)).toBe(true);
+    expect(betterPick(pick(true, 1, 6), pick(true, 1, 9), 7)).toBe(true);
+    expect(betterPick(pick(false, 9), null, 7)).toBe(true);
   });
 
   it('màn không có mục tiêu thì báo lỗi rõ ràng', () => {

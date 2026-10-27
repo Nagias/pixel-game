@@ -1,22 +1,16 @@
-// Dò số cân bằng (đợt 0): `npm run tune` (thêm `-- --games N` để đổi số ván). Đo bằng bot giỏi nhất so
-// với mục tiêu độ khó trong battleConfig.ts, in bảng đề xuất gần mục tiêu nhất kèm số trước/sau — KHÔNG
-// ghi vào cấu hình: chủ dự án duyệt rồi agent mới áp tay vào battleConfig.ts.
+// Dò số cân bằng (đợt 0): `npm run tune` (thêm `-- --games N` để đổi số ván). Đo bằng kiểu chơi
+// TARGET_PLAYER (simCore.ts) so với mục tiêu độ khó trong battleConfig.ts, in bảng đề xuất gần mục tiêu
+// nhất kèm số trước/sau — KHÔNG ghi vào cấu hình: chủ dự án duyệt rồi agent mới áp tay vào battleConfig.ts.
 // Đổi luật hay thêm quái: sửa danh sách KNOBS bên dưới cho đúng việc đang làm (núm vặn = con số được đổi).
 import { BALANCE_TOLERANCE, BATTLE_CONFIG } from '../src/features/battle/logic/battleConfig';
 import type {
   BattleConfig,
   Difficulty,
   MonsterKind,
+  SkillKind,
 } from '../src/features/battle/logic/battleTypes';
-import { gamesArg, PLAYERS, targetLoadouts, type Player } from './simCore';
-import {
-  measured,
-  measureLevel,
-  tune,
-  withinTolerance,
-  type Knob,
-  type TuneSetup,
-} from './tuneCore';
+import { gamesArg, PLAYERS, TARGET_PLAYER, targetLoadouts, type Player } from './simCore';
+import { measured, measureLevel, tune, type Knob, type TuneSetup } from './tuneCore';
 
 /** `level`: chỉ khai báo khi các loại quái này chỉ có ở đúng màn đó. */
 const monsterStat = (
@@ -51,6 +45,16 @@ const levelSpread = (level: number, values: readonly number[]): Knob => ({
   }),
 });
 
+/** Số nhát chém trúng để nạp đầy một skill (núm vặn chung: skill dùng ở mọi màn từ màn mở khóa). */
+const skillCharge = (skill: SkillKind, values: readonly number[]): Knob => ({
+  name: `nạp ${BATTLE_CONFIG.skills[skill].name}`,
+  values,
+  apply: (config, chargeTurns) => ({
+    ...config,
+    skills: { ...config.skills, [skill]: { ...config.skills[skill], chargeTurns } },
+  }),
+});
+
 /** Số quái loại `kind` trong đội hình một màn (thêm/bớt ở cuối đội hình). */
 const levelCount = (level: number, kind: MonsterKind, values: readonly number[]): Knob => ({
   name: `số ${BATTLE_CONFIG.monsterKinds[kind].name} màn ${level + 1}`,
@@ -68,12 +72,18 @@ const levelCount = (level: number, kind: MonsterKind, values: readonly number[])
 
 // Số lượt đổi 1 là tỉ lệ thắng nhảy 10–30%, nên có thêm núm vặn mịn hơn chỉ ảnh hưởng một màn: cụm quái,
 // số quái của màn, Slime Vua (chỉ ở màn 3), Slime Pháo (chỉ ở màn 5). Giá trị thử gồm cả giá trị hiện tại.
+// Nạp skill là núm vặn chung: với người chơi trung bình, Cầu lửa thắng màn 4 hơn Mưa băng 6–9% nên chỉnh
+// riêng quái của màn không đưa được cả hai skill vào dung sai.
 const KNOBS: readonly Knob[] = [
+  skillCharge('fireball', [5, 6]),
   levelSpread(2, [2, 3]),
-  monsterStat('máu Slime Vua', ['slimeKing'], 'hp', [6, 7, 8], 2),
-  levelCount(3, 'slime', [6, 7, 8]),
-  levelSpread(3, [2, 3]),
+  monsterStat('máu Slime Vua', ['slimeKing'], 'hp', [5, 6, 7], 2),
+  levelCount(3, 'slime', [6, 7, 8, 9, 10]),
+  levelSpread(3, [2, 3, 4]),
   levelSpread(4, [4, 5, 6]),
+  // Khai báo số slime trước số Slime Pháo: đội hình giữ thứ tự slime rồi tới Pháo như battleConfig.ts.
+  levelCount(4, 'slime', [6, 7]),
+  levelCount(4, 'slimeCannon', [1, 2]),
   monsterStat('máu Slime Pháo', ['slimeCannon'], 'hp', [3, 4, 5], 4),
   monsterStat('sức đánh Slime Pháo', ['slimeCannon'], 'attack', [2, 3], 4),
 ];
@@ -85,7 +95,7 @@ const targets = BATTLE_CONFIG.levels.map((level, i) => {
   return level.target;
 });
 const setup: TuneSetup = {
-  player: PLAYERS['Nhìn trước'] as Player,
+  player: PLAYERS[TARGET_PLAYER] as Player,
   // Mặc định 500 ván như balance.test.ts (ít hơn có thể đề xuất bộ số mà test lại thấy lệch).
   games: gamesArg(process.argv.slice(2), 500),
   turnRange: TURN_RANGE,
@@ -120,12 +130,11 @@ proposals.slice(0, SHOWN).forEach((p, rank) => {
   console.log('| --- | --- | --- | --- | --- | --- | --- |');
   p.levels.forEach((pick, level) => {
     const target = targets[level] as Difficulty;
-    const ok = pick.results.every((r) => withinTolerance(measured(r), target, setup.tolerance));
     const now = current[level]?.results.map((r) => show(measured(r))).join(' · ');
     const after = pick.results.map((r) => show(measured(r))).join(' · ');
     const before = BATTLE_CONFIG.levels[level]?.turnLimit;
     console.log(
-      `| ${level + 1} | ${show(target)} | ${before} → ${pick.turnLimit} | ${named(pick.knobs) || '—'} | ${now} | ${after} | ${ok ? '✅' : '❌'} |`,
+      `| ${level + 1} | ${show(target)} | ${before} → ${pick.turnLimit} | ${named(pick.knobs) || '—'} | ${now} | ${after} | ${pick.ok ? '✅' : '❌'} |`,
     );
   });
   console.log('');

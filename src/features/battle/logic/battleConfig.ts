@@ -85,8 +85,7 @@ export const BATTLE_CONFIG: BattleConfig = {
       name: 'Slime Pháo',
       hp: 3,
       advanceChance: 0.6,
-      // Đợt 0: bắn 2 → 3 máu (`npm run tune` 27/10/2026 — Slime Pháo chỉ có ở màn 5).
-      attack: 3,
+      attack: 2,
       shootRing: 4,
     },
   },
@@ -100,15 +99,17 @@ export const BATTLE_CONFIG: BattleConfig = {
   critMultiplier: 2,
   skills: {
     iceRain: { name: 'Mưa băng', damage: 1, freezeTurns: 1, chargeTurns: 3 },
-    fireball: { name: 'Cầu lửa', damage: 2, freezeTurns: 0, chargeTurns: 5 },
+    // Đợt 0: nạp 5 → 6 nhát (`npm run tune` 27/10/2026): với người chơi trung bình, Cầu lửa nạp 5 thắng
+    // màn 4 hơn Mưa băng 6–9% — chỉnh quái của màn không đưa được cả hai skill vào dung sai.
+    fireball: { name: 'Cầu lửa', damage: 2, freezeTurns: 0, chargeTurns: 6 },
   },
   skillUnlockLevel: 2,
   // F06: các màn nối tiếp. Màn 2 có 6 con trong một cụm nên cụm rộng ±3 lát (cụm ±2 chỉ có 5 chỗ).
   // B6: số lượt chỉnh lại theo máu quái mới và skill (màn 1–5: 8/10/10/10/10 → 10/12/9/8/8).
   // Đợt 0 (chủ dự án duyệt 27/10/2026): mục tiêu độ khó theo gợi ý của agent — màn đầu ≥ 98%, tụt dần
   // ~5% mỗi màn, màn cuối chương ~78%; lượt dư tụt dần theo (chọn khớp với tỉ lệ thắng: hai số cùng
-  // đi theo số lượt). Đo bằng bot "Nhìn trước". Số lượt và cụm quái do `npm run tune` đề xuất
-  // 27/10/2026 (màn 1–5: 10/12/9/8/8 → 10/11/7/7/8; cụm màn 3 ±2 → ±3, màn 5 ±4 → ±5).
+  // đi theo số lượt). Đo bằng người chơi trung bình (bot "Ngắm chuẩn", chủ dự án chốt 27/10/2026).
+  // Số lượt và đội hình do `npm run tune` đề xuất 27/10/2026 (màn 1–5: 10/12/9/8/8 → 10/11/8/9/8).
   levels: [
     {
       turnLimit: 10,
@@ -124,24 +125,15 @@ export const BATTLE_CONFIG: BattleConfig = {
     },
     // Màn trùm: chủ dự án duyệt 26/10/2026 (trước đó 2 slime, 12 lượt — dễ hơn màn 2).
     {
-      turnLimit: 7,
+      turnLimit: 8,
       monsters: ['slimeKing', 'slime', 'slime', 'slime'],
-      spread: 3,
+      spread: 2,
       target: { winRate: 0.88, spareTurns: 1.25 },
     },
-    // B2 (chủ dự án duyệt 26/10/2026): quái tới từ hai phía — 2 cụm đối diện, đất của Rìu. Đợt 0: 8 → 7
-    // slime (cụm 4 + 3), cụm ±2 → ±3 lát (`npm run tune`: 8 con 7 lượt khó quá, 8 lượt dễ quá).
+    // B2 (chủ dự án duyệt 26/10/2026): quái tới từ hai phía — 2 cụm đối diện, đất của Rìu. Đợt 0: 8 → 10
+    // slime (cụm 5 + 5), cụm ±2 → ±3 lát (`npm run tune`).
     {
-      turnLimit: 7,
-      monsters: ['slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slime'],
-      spread: 3,
-      splitOpposite: true,
-      target: { winRate: 0.83, spareTurns: 0.75 },
-    },
-    // B3 (chủ dự án duyệt 26/10/2026): 6 slime + 2 Slime Pháo trong một cụm (đợt 0: ±4 → ±5 lát).
-    {
-      turnLimit: 8,
-      target: { winRate: 0.78, spareTurns: 0.5 },
+      turnLimit: 9,
       monsters: [
         'slime',
         'slime',
@@ -149,9 +141,21 @@ export const BATTLE_CONFIG: BattleConfig = {
         'slime',
         'slime',
         'slime',
-        'slimeCannon',
-        'slimeCannon',
+        'slime',
+        'slime',
+        'slime',
+        'slime',
       ],
+      spread: 3,
+      splitOpposite: true,
+      target: { winRate: 0.83, spareTurns: 0.75 },
+    },
+    // B3 (chủ dự án duyệt 26/10/2026): slime + Slime Pháo trong một cụm. Đợt 0 (`npm run tune`): 6 slime +
+    // 2 Pháo → 7 slime + 1 Pháo, cụm ±4 → ±5 lát.
+    {
+      turnLimit: 8,
+      target: { winRate: 0.78, spareTurns: 0.5 },
+      monsters: ['slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slimeCannon'],
       spread: 5,
     },
   ],

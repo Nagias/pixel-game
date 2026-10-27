@@ -44,12 +44,18 @@ const castWhenReady =
     return [{ cast, move }, next];
   };
 
-/** Bot giỏi nhất đứng đầu — mục tiêu độ khó (`target` của màn) đo bằng bot này. */
+/** Bot giỏi nhất đứng đầu. */
 export const PLAYERS: Record<string, Player> = {
   'Nhìn trước': (state, rng, config) => lookaheadTurn(state, rng, config),
   'Ngắm chuẩn': castWhenReady((state, rng, config) => [bestMove(state, config), rng]),
   'Chém bừa': castWhenReady((state, rng, config) => randomMove(state, rng, config)),
 };
+
+/**
+ * Kiểu chơi đo mục tiêu độ khó (`target` của màn): người chơi trung bình, không phải bot giỏi nhất —
+ * chủ dự án chốt 27/10/2026, vì đo bằng bot "Nhìn trước" thì số bị siết tới mức người thường thua nhiều.
+ */
+export const TARGET_PLAYER = 'Ngắm chuẩn';
 
 export interface LevelResult {
   readonly games: number;

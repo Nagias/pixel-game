@@ -218,7 +218,7 @@ trâu và đánh đau hơn. Hạ hết màn cuối là "PHÁ ĐẢO!", chạm đ
 test mục F06; chủ dự án duyệt ngày 23/10/2026):
 
 1. Màn 1: 4 slime · Màn 2: 6 slime · Màn 3: Slime Vua + 3 slime (chủ dự án duyệt 26/10/2026 — trước
-   đó 2 slime, dễ hơn màn 2) · Màn 4: xem F07a · Màn 5: xem F09. Số lượt màn 1–5: 10/11/7/7/8 (F10 —
+   đó 2 slime, dễ hơn màn 2) · Màn 4: xem F07a · Màn 5: xem F09. Số lượt màn 1–5: 10/11/8/9/8 (F10 —
    trước đó 10/12/9/8/8; F08 — trước đó 8/10/10/10/10).
 2. Slime Vua: 6 máu, áp sát thì mỗi lượt đánh mất 4 máu (F08; trước đó 2); còn lại y như slime (đi lung tung, combo, bị
    đẩy, dấu "!"). Không có luật trùm riêng.
@@ -226,7 +226,7 @@ test mục F06; chủ dự án duyệt ngày 23/10/2026):
 4. Màn nào cũng bắt đầu đầy máu, cầm món tầm gần đã mang (F07), đủ lượt của màn, skill nạp 0 (F08).
 5. Thắng màn chưa phải cuối → sang màn kế; thắng màn cuối → phá đảo, chơi lại từ màn 1; thua → chơi
    lại đúng màn đó.
-6. Màn 2 có 6 con nên cụm quái rộng ±3 lát (cụm ±2 chỉ có 5 chỗ); màn 1 giữ ±2; màn 3 ±3 (F10, trước đó ±2).
+6. Màn 2 có 6 con nên cụm quái rộng ±3 lát (cụm ±2 chỉ có 5 chỗ); màn 1 và màn 3 giữ ±2.
 7. Cấu hình sai (không có màn, màn không có quái hoặc 0 lượt, loại quái không tồn tại hoặc 0 máu/0 sức
    đánh) bị từ chối lúc mở màn — kiểm cả những màn chưa chơi tới.
 
@@ -245,7 +245,7 @@ thêm một dòng; thêm loại quái = thêm tên vào `MonsterKind` + con số
   loại (2 + 1); mỗi loại đi theo xác suất của loại đó; chém không làm đổi màn; màn kế khi thắng / thua /
   phá đảo; màn chưa xong thì chưa có màn kế; phá đảo chỉ khi thắng màn cuối; chặn cấu hình sai của
   loại quái và của màn; hình Slime Vua không lệch hàng; với con số thật, màn trùm ít lượt dư hơn và
-  thắng không nhiều hơn màn 2 (`logic/balance.test.ts`, 500 ván mỗi màn; F10: đo bằng bot nhìn trước).
+  thắng không nhiều hơn màn 2 (`logic/balance.test.ts`, 500 ván mỗi màn; F10: đo bằng bot ngắm chuẩn).
 - E2E: bot chơi giỏi (F10: nhìn trước) đi liền mọi màn — màn nào cũng đầy máu, cầm Kiếm, đúng đội hình; thắng màn cuối là phá
   đảo, chạm thì về màn 1 (ảnh `3-thang.png` "Chạm để sang màn 2", `6-man-trum.png`, `7-pha-dao.png`);
   qua màn 1 rồi chém trượt ở màn 2 → thua → chạm thì chơi lại đúng màn 2 (ảnh `4-thua.png`).
@@ -268,8 +268,8 @@ xuất hiện thành **hai cụm ở hai phía đối diện**; quái áp sát t
 
 1. Rìu: mỗi nêm rộng 3 lát, vòng 0–1, 1 sát thương, đẩy lùi. Nêm sau lưng ở lát đối diện (lệch nửa vòng).
 2. Một nhát Rìu đếm quái của cả hai nêm cho combo; đẩy áp dụng cho quái ở cả hai nêm.
-3. Màn 4: 7 slime, 7 lượt (F10 — trước đó 8 slime, cụm ±2). Nửa đầu đội hình (id 1–4) thành một cụm ±3
-   lát quanh một lát ngẫu nhiên, nửa sau (id 5–7) thành cụm ±3 lát quanh lát đối diện.
+3. Màn 4: 10 slime, 9 lượt (F10 — trước đó 8 slime, cụm ±2, 8 lượt). Nửa đầu đội hình (id 1–5) thành một
+   cụm ±3 lát quanh một lát ngẫu nhiên, nửa sau (id 6–10) thành cụm ±3 lát quanh lát đối diện.
 4. Cấu hình sai bị từ chối: vũ khí hai phía trên sân lẻ lát hoặc hai nêm chồng nhau; màn hai phía trên
    sân lẻ lát, cụm không đủ chỗ, hoặc hai cụm chồng nhau.
 
@@ -396,7 +396,7 @@ màn 4–5 thắng 100%.
 98,6% (dư 3,04 / 3,43); màn 3 / 4 / 5 với Mưa băng = 97,8% / 81,6% / 78,2% (dư 2,40 / 0,65 / 0,50), với
 Cầu lửa = 98,6% / 91,4% / 82,4% (dư 2,65 / 0,88 / 0,48). Trước B6: 100% / 99,8% / 94,6% / 86,2% / 84,4%.
 Cầu lửa vẫn nhỉnh hơn Mưa băng ở màn 4 (bot bấm ngay khi đầy, chưa biết để dành Mưa băng lúc quái áp
-sát). Lõi mô phỏng dùng chung: `scripts/simCore.ts`. Số hiện tại (bot nhìn trước, bộ số F10): xem F10.
+sát). Lõi mô phỏng dùng chung: `scripts/simCore.ts`. Số hiện tại (bộ số F10, Cầu lửa nạp 6): xem F10.
 
 **Nợ liên quan:** DEBT-007 (chưa có hình hiệu ứng skill thật), DEBT-009.
 
@@ -415,9 +415,9 @@ ngày 26/10/2026):
 2. Vừa tới vòng bắn trong lượt này thì lượt sau mới bắn (như quái áp sát F04).
 3. **Choáng:** bị chém trúng lúc đang có "!" mà còn sống → lượt đó không bắn. Bị Kiếm đẩy ra ngoài vòng
    bắn thì hết "!", phải tiến vào lại. Quái cận chiến (slime, Slime Vua) không bị choáng.
-4. Slime Pháo: 3 máu, vòng bắn 4, mỗi phát bắn mất 3 máu (F10; F08: 2; trước đó 2 máu, bắn mất 1), 60%
+4. Slime Pháo: 3 máu, vòng bắn 4, mỗi phát bắn mất 2 máu (F08; trước đó 2 máu, bắn mất 1), 60%
    tiến vào.
-5. Màn 5: 6 slime + 2 Slime Pháo trong một cụm ±5 lát (F10; trước đó ±4), 8 lượt.
+5. Màn 5: 7 slime + 1 Slime Pháo trong một cụm ±5 lát (F10; trước đó 6 slime + 2 Pháo, cụm ±4), 8 lượt.
 6. Cấu hình sai bị từ chối: vòng bắn không nguyên, nhỏ hơn 1, hoặc từ vòng xuất hiện trở ra.
 
 **Hành vi giao diện:** dấu "!" dùng chung với quái áp sát (đỏ, trên đầu quái). Không thêm hiệu ứng bắn.
@@ -442,31 +442,35 @@ lúc đề xuất bằng bot không ưu tiên) — đúng là một câu đố.
 ## F10 — Tự động cân bằng: mục tiêu độ khó, bot nhìn trước, `npm run tune`
 
 **Người chơi thấy và làm gì:** không thấy gì mới — đây là công cụ (đợt 0 của kế hoạch sau B6). Thứ người
-chơi cảm nhận được là **con số mới** do công cụ đề xuất (mục Con số bên dưới): màn 2–5 chặt hơn.
+chơi cảm nhận được là **con số mới** do công cụ đề xuất (mục Con số bên dưới).
 
 **Luật / cách làm** (nguồn sự thật: `logic/autoPlay.ts` `lookaheadTurn`, `scripts/tuneCore.ts`,
 `scripts/simCore.ts`; chủ dự án duyệt kế hoạch và mục tiêu ngày 27/10/2026):
 
 1. **Mục tiêu độ khó** nằm trong cấu hình: mỗi màn có `target: { winRate, spareTurns }`; dung sai chung
    `BALANCE_TOLERANCE` = ±5% thắng, ±0,5 lượt dư (`battleConfig.ts`). Mục tiêu theo gợi ý của agent: màn
-   1–5 thắng 98 / 93 / 88 / 83 / 78%, dư 3 / 2,5 / 1,25 / 0,75 / 0,5 lượt — lượt dư chọn cho khớp với tỉ lệ
-   thắng (hai số cùng đi theo số lượt; đặt lệch nhau thì không bộ số nào đạt cả hai).
-2. **Đo bằng bot "Nhìn trước"** với bộ mặc định (Kiếm + Giáo + Cung) và **từng skill** nếu màn có skill:
-   mỗi lượt bot thử mọi nước khác nhau (vũ khí đã mang × nhóm quái trúng, có/không bấm skill) trên 3
-   tương lai giả lập sinh từ ngẫu nhiên **riêng của bot** — không nhìn trộm ngẫu nhiên của trận — rồi chọn
-   nước điểm trung bình cao nhất (thắng > mọi thứ; còn lại: máu nhân vật − quái sắp đánh − máu quái, trừ
-   phần skill đang nạp). Trọng số agent dò bằng mô phỏng; bot cũ "Ngắm chuẩn" giữ làm người chơi trung bình.
-3. **`npm run tune`**: thử mọi tổ hợp "núm vặn" khai báo trong `scripts/tune.ts` + số lượt từng màn, in
-   3 đề xuất gần mục tiêu nhất kèm số trước/sau. Núm vặn chỉ ảnh hưởng một màn (cụm quái của màn, loại quái
-   chỉ có ở màn đó) dò riêng màn đó — nhanh hơn nhiều so với nhân chéo cả game. **Không tự ghi cấu hình**:
-   agent áp tay sau khi chủ dự án duyệt. Kiểm bộ dò (27/10/2026, một lần, script tạm): chạy trên đúng
-   cấu hình lúc dò B6 với mục tiêu của B6 thì ra lại bộ số agent dò tay hồi đó.
-4. **CI**: sau `npm run check`, job in bảng `npm run sim` (200 ván) vào tóm tắt job — bảng đầu so với mục tiêu
+   1–5 thắng 98 / 93 / 88 / 83 / 78%, dư 3 / 2,5 / 1,25 / 0,75 / 0,5 lượt.
+2. **Đo bằng người chơi trung bình** — bot "Ngắm chuẩn" (`TARGET_PLAYER` trong `scripts/simCore.ts`, chủ
+   dự án chốt 27/10/2026) — với bộ mặc định (Kiếm + Giáo + Cung) và **từng skill** nếu màn có skill. Lúc
+   đầu đo bằng bot "Nhìn trước" thì bộ dò siết số tới mức người chơi trung bình chỉ thắng màn 4 45–60%.
+3. **Bot "Nhìn trước"** (người chơi giỏi, dùng cho E2E và để so): mỗi lượt thử mọi nước khác nhau (vũ khí
+   đã mang × nhóm quái trúng, có/không bấm skill) trên 3 tương lai giả lập sinh từ ngẫu nhiên **riêng của
+   bot** — không nhìn trộm ngẫu nhiên của trận — rồi chọn nước điểm trung bình cao nhất (thắng > mọi thứ;
+   còn lại: máu nhân vật − quái sắp đánh − máu quái, trừ phần skill đang nạp).
+4. **`npm run tune`**: thử mọi tổ hợp "núm vặn" khai báo trong `scripts/tune.ts` + số lượt từng màn, in
+   3 đề xuất kèm số trước/sau. Đề xuất đạt dung sai ở mọi bộ đồ đứng trước đề xuất lệch ít hơn mà không
+   đạt (tổng độ lệch nhỏ chưa chắc đạt). Núm vặn chỉ ảnh hưởng một màn (cụm quái, số quái của màn, loại
+   quái chỉ có ở màn đó) dò riêng màn đó — nhanh hơn nhiều so với nhân chéo cả game. **Không tự ghi cấu
+   hình**: agent áp tay sau khi chủ dự án duyệt. Kiểm bộ dò (27/10/2026, một lần, script tạm): chạy trên
+   đúng cấu hình lúc dò B6 với mục tiêu của B6 thì ra lại bộ số agent dò tay hồi đó.
+5. **CI**: sau `npm run check`, job in bảng `npm run sim` (200 ván) vào tóm tắt job — bảng đầu so với mục tiêu
    (✅/❌), bảng sau mọi kiểu chơi × mọi bộ đồ.
 
-**Con số** (`battleConfig.ts`, `npm run tune` đề xuất 27/10/2026, 500 ván): số lượt màn 1–5 10/12/9/8/8 →
-**10/11/7/7/8**; màn 3 cụm ±2 → ±3; màn 4: 8 → **7 slime** (cụm 4 + 3), cụm ±2 → ±3; màn 5 cụm ±4 → ±5;
-Slime Pháo bắn 2 → **3 máu** (chỉ có ở màn 5).
+**Con số** (`battleConfig.ts`, `npm run tune` đề xuất 27/10/2026, 500 ván, bot ngắm chuẩn): số lượt màn
+1–5 10/12/9/8/8 → **10/11/8/9/8**; Cầu lửa nạp 5 → **6** nhát (với nạp 5, Cầu lửa thắng màn 4 hơn Mưa
+băng 6–9% — chỉnh quái của màn không đưa được cả hai skill vào dung sai); màn 3 giữ cụm ±2, Slime Vua
+6 máu; màn 4: 8 → **10 slime** (cụm 5 + 5), cụm ±2 → ±3; màn 5: 6 slime + 2 Slime Pháo → **7 slime + 1
+Slime Pháo**, cụm ±4 → ±5; Slime Pháo giữ 3 máu, bắn mất 2.
 
 **Kiểm chứng tự động:**
 
@@ -474,22 +478,23 @@ Slime Pháo bắn 2 → **3 máu** (chỉ có ở màn 5).
   chém trúng nhiều con (bot ngắm chuẩn thì thua); bấm skill khi skill thắng ngay; chưa đầy / không mang
   thì không bấm; đổi rng của trận không đổi nước đi (không nhìn trộm); cùng rng người chơi cùng nước, chỉ
   dùng vũ khí đã mang. `scripts/tuneCore.test.ts`: độ lệch, dung sai, chọn số lượt, bằng điểm giữ số gần
-  số cũ, núm vặn chung nhân chéo / núm vặn riêng dò trong màn, không sửa cấu hình gốc, màn thiếu mục tiêu
-  báo lỗi. `battle.test.ts`: mục tiêu sai (thắng ngoài [0, 1], dư âm) bị từ chối. `balance.test.ts`: mỗi
-  màn × mỗi skill nằm trong dung sai (500 ván) + ba quan hệ độ khó cũ giữa các màn.
-- E2E: các ván "chơi giỏi" (đi đủ 5 màn, phá đảo bằng Cầu lửa…) dùng bot nhìn trước thay bot ngắm chuẩn —
-  cùng bot với mô phỏng; seed 42 thắng đủ 5 màn với cả hai skill.
+  số cũ, đạt dung sai thắng lệch ít mà không đạt, núm vặn chung nhân chéo / núm vặn riêng dò trong màn,
+  không sửa cấu hình gốc, màn thiếu mục tiêu báo lỗi. `battle.test.ts`: mục tiêu sai (thắng ngoài [0, 1],
+  dư âm) bị từ chối. `balance.test.ts`: mỗi màn × mỗi skill nằm trong dung sai (500 ván, bot ngắm chuẩn)
+  - ba quan hệ độ khó cũ giữa các màn.
+- E2E: các ván "chơi giỏi" (đi đủ 5 màn, phá đảo bằng Cầu lửa…) dùng bot nhìn trước; seed 42 thắng đủ 5
+  màn với cả hai skill.
 
-**Cân bằng (`npm run sim`, 500 ván):** bot nhìn trước, bộ mặc định — màn 1 / 2 = 99,4% / 93,2% (dư 3,15 /
-2,55); màn 3 / 4 / 5 với Mưa băng = 89,4% / 85,8% / 75,8% (dư 0,97 / 0,53 / 0,48), với Cầu lửa = 89,2% /
-84,0% / 76,2% (dư 1,33 / 0,58 / 0,49) — mọi ô đạt. Bot ngắm chuẩn (người chơi trung bình) với bộ số mới:
-98,2% / 93,6% / 71–76% / **45–60%** / 68–77% — màn 4 khó hẳn với người không tính trước. Trên bộ số cũ, bot
-nhìn trước thắng màn 4 ~97% (bot cũ ~82%) và màn 5 ~85% (bot cũ ~78%); hai skill giờ gần ngang nhau.
-Bot nhìn trước chỉ giữ skill khi đã đầy ở ~1–10% số lượt (gần như vẫn bấm ngay).
+**Cân bằng (`npm run sim`, 500 ván, bộ Kiếm + Giáo + Cung):** bot ngắm chuẩn — màn 1 / 2 = 98,2% / 93,6%
+(dư 3,04 / 2,62); màn 3 / 4 / 5 với Mưa băng = 88,0% / 83,8% / 81,2% (dư 1,67 / 0,83 / 0,65), với Cầu lửa
+= 89,6% / 83,8% / 81,6% (dư 1,55 / 0,68 / 0,50) — mọi ô đạt. Bot nhìn trước (người chơi giỏi): 99,4% /
+93,2% / 98–100% / ~95% / 92–95%. Bot nhìn trước chỉ giữ skill khi đã đầy ở ~1–10% số lượt (gần như vẫn
+bấm ngay).
 
-**Giới hạn đã biết:** Rìu vẫn không hơn Kiếm ở màn 4 (cả hai bot): quái hầu như bị hạ trước khi tới vòng
-0–1, bot nhìn trước chỉ dùng vũ khí tầm gần ~52 nhát / 200 ván — chuyện thiết kế màn (đợt 7), không phải
+**Giới hạn đã biết:** Rìu vẫn không hơn Kiếm ở màn 4 (ngắm chuẩn 84,2–84,4% so với 83,8%; nhìn trước
+94,6% so với ~95%): quái hầu như bị hạ trước khi tới vòng 0–1 — chuyện thiết kế màn (đợt 7), không phải
 bot. Số lượt là núm vặn thô (đổi 1 lượt thì tỉ lệ thắng nhảy 10–30%), nên cần núm vặn mịn riêng từng màn.
+Màn 3 dư 1,67 lượt, sát mép trên dung sai (1,75).
 
 **Nợ liên quan:** DEBT-009 (số chưa qua chơi thử).
 

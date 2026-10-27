@@ -10,6 +10,7 @@ import {
   loadoutsForLevel,
   PLAYERS,
   simulateLevel,
+  TARGET_PLAYER,
   targetLoadouts,
   winRate,
   type Player,
@@ -18,19 +19,19 @@ import { measured, withinTolerance } from './tuneCore';
 
 /** Số ván mỗi màn mỗi kiểu chơi; seed chạy từ 1 tới số ván. Mặc định bằng balance.test.ts. */
 const GAMES = gamesArg(process.argv.slice(2), 500);
-const [bestName, best] = Object.entries(PLAYERS)[0] as [string, Player];
+const targetPlayer = PLAYERS[TARGET_PLAYER] as Player;
 const show = (d: Difficulty) => `${(100 * d.winRate).toFixed(1)}% / ${d.spareTurns.toFixed(2)}`;
 
 console.log(`## Mô phỏng cân bằng — ${GAMES} ván mỗi màn (seed 1…${GAMES})\n`);
 console.log(
-  `### So với mục tiêu (bot "${bestName}", dung sai ±${100 * BALANCE_TOLERANCE.winRate}% thắng, ` +
+  `### So với mục tiêu (bot "${TARGET_PLAYER}", dung sai ±${100 * BALANCE_TOLERANCE.winRate}% thắng, ` +
     `±${BALANCE_TOLERANCE.spareTurns} lượt dư)\n`,
 );
 console.log('| Màn | Bộ đồ | Mục tiêu (thắng / dư) | Đo được | Đạt |');
 console.log('| --- | --- | --- | --- | --- |');
 BATTLE_CONFIG.levels.forEach((level, index) => {
   for (const loadout of targetLoadouts(index, BATTLE_CONFIG)) {
-    const actual = measured(simulateLevel(index, loadout, best, BATTLE_CONFIG, GAMES));
+    const actual = measured(simulateLevel(index, loadout, targetPlayer, BATTLE_CONFIG, GAMES));
     const target = level.target;
     const ok = target ? (withinTolerance(actual, target, BALANCE_TOLERANCE) ? '✅' : '❌') : '—';
     console.log(

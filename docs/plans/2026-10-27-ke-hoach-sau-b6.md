@@ -68,11 +68,13 @@ duyệt — thay vì agent dò tay mỗi lần (B6 mất ~2 lượt dò, ~10 ph�
 **Chủ dự án quyết:** (đã trả lời 27/10/2026: "Mục tiêu độ khó và dung sai theo gợi ý của bạn")
 
 1. Mục tiêu độ khó từng màn (agent gợi ý: màn đầu ≥ 98%, tụt dần ~4–5% mỗi màn, màn trùm thấp nhất
-   chương ~75–80% với bot giỏi). → Chốt 98 / 93 / 88 / 83 / 78%, đo bằng bot "Nhìn trước".
+   chương ~75–80% với bot giỏi). → Chốt 98 / 93 / 88 / 83 / 78%. Lúc đầu đo bằng bot "Nhìn trước";
+   chủ dự án đổi sang đo bằng bot "Ngắm chuẩn" (người chơi trung bình) ngày 27/10/2026, vì đo bằng bot
+   giỏi thì người chơi trung bình chỉ thắng màn 4 45–60%.
 2. Dung sai chấp nhận (gợi ý ±5% tỉ lệ thắng, ±0,5 lượt dư). → Chốt như gợi ý.
 
 **Kết quả đợt 0** (chi tiết F10): 0.1 ✅ (chạy bộ dò trên cấu hình lúc làm B6), 0.2 ✅, 0.3 một nửa — bot nhìn trước
-thắng màn 4–5 nhiều hơn rõ, nhưng Rìu vẫn không hơn Kiếm ở màn 4 (thiết kế màn, đợt 7), 0.4 ✅.
+thắng màn 4–5 nhiều hơn rõ (~95% so với ~81–84% của bot ngắm chuẩn), nhưng Rìu vẫn không hơn Kiếm ở màn 4 (thiết kế màn, đợt 7), 0.4 ✅.
 
 ## 4. Đợt 1 — Thắng bằng nhiệm vụ + quái ra theo đợt
 

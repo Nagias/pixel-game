@@ -27,9 +27,10 @@ const LEVEL_2 = levelAt(1, BATTLE_CONFIG);
 const LAST_LEVEL = BATTLE_CONFIG.levels.length - 1;
 
 /**
- * Chơi giỏi nhất tới khi màn kết thúc — bot "Nhìn trước" (đợt 0), cùng bot đo mục tiêu độ khó của
- * `npm run sim`: tự quyết bấm hay giữ skill (B6, không tốn lượt). F03: mỗi nhát, sát thương phải tăng
- * dần 1×, 2×, 3×… sát thương vũ khí (combo gom cụm). Trả về số quái nhiều nhất trúng trong một nhát.
+ * Chơi giỏi nhất tới khi màn kết thúc — bot "Nhìn trước" (đợt 0; mục tiêu độ khó đo bằng bot thường
+ * "Ngắm chuẩn", bot này giỏi hơn nên dư sức thắng): tự quyết bấm hay giữ skill (B6, không tốn lượt).
+ * F03: mỗi nhát, sát thương phải tăng dần 1×, 2×, 3×… sát thương vũ khí (combo gom cụm). Trả về số quái
+ * nhiều nhất trúng trong một nhát.
  */
 async function playBestUntilOver(
   game: BattleDriver,

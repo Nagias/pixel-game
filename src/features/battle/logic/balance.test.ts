@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   PLAYERS,
   simulateLevel,
+  TARGET_PLAYER,
   targetLoadouts,
   type LevelResult,
   type Player,
@@ -10,11 +11,11 @@ import { measured, withinTolerance } from '../../../../scripts/tuneCore';
 import { BALANCE_TOLERANCE, BATTLE_CONFIG } from './battleConfig';
 
 // Kiểm độ khó chủ dự án đã duyệt trên con số THẬT của game (khác các test luật dùng cấu hình riêng).
-// Mục tiêu nằm ở `target` của từng màn trong battleConfig.ts (đợt 0), đo bằng bot "Nhìn trước" như
-// `npm run sim` / `npm run tune`. Cùng 500 ván (seed 1…500) với `npm run sim`: mẫu nhỏ hơn có thể đảo
-// kết quả khi hai màn chênh nhau ít.
+// Mục tiêu nằm ở `target` của từng màn trong battleConfig.ts (đợt 0), đo bằng kiểu chơi TARGET_PLAYER
+// (người chơi trung bình) như `npm run sim` / `npm run tune`. Cùng 500 ván (seed 1…500) với
+// `npm run sim`: mẫu nhỏ hơn có thể đảo kết quả khi hai màn chênh nhau ít.
 const GAMES = 500;
-const player = PLAYERS['Nhìn trước'] as Player;
+const player = PLAYERS[TARGET_PLAYER] as Player;
 
 const cache = new Map<string, LevelResult>();
 /** Kết quả của từng bộ đồ phải đạt mục tiêu ở màn (bộ mặc định, từng skill nếu màn có skill). */

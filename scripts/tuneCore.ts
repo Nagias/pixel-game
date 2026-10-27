@@ -34,6 +34,8 @@ export interface LevelPick {
   /** Giá trị đã chọn của các núm vặn riêng của màn, theo tên. */
   readonly knobs: Readonly<Record<string, number>>;
   readonly score: number;
+  /** Mọi bộ đồ đều nằm trong dung sai. */
+  readonly ok: boolean;
   readonly results: readonly LevelResult[];
 }
 
@@ -86,7 +88,7 @@ export function measureLevel(
   config: BattleConfig,
   level: number,
   setup: TuneSetup,
-): { score: number; results: LevelResult[] } {
+): { score: number; ok: boolean; results: LevelResult[] } {
   const target = setup.targets[level];
   if (!target) throw new Error(`Màn ${level + 1} chưa có mục tiêu độ khó`);
   const results = setup
@@ -96,7 +98,8 @@ export function measureLevel(
     (sum, r) => sum + deviation(measured(r), target, setup.tolerance),
     0,
   );
-  return { score, results };
+  const ok = results.every((r) => withinTolerance(measured(r), target, setup.tolerance));
+  return { score, ok, results };
 }
 
 /** Mọi tổ hợp giá trị của các núm vặn (theo thứ tự khai báo), kèm cấu hình đã áp. */
@@ -117,8 +120,19 @@ function combinations(
 }
 
 /**
- * Số lượt (và giá trị các núm vặn riêng của màn) gần mục tiêu nhất cho một màn; bằng điểm thì giữ số
- * lượt gần số hiện tại hơn, rồi tổ hợp khai báo trước.
+ * `a` tốt hơn `b` không: đạt dung sai ở mọi bộ đồ trước (tổng độ lệch nhỏ chưa chắc đạt — một bộ đồ lệch
+ * xa, bộ kia trúng mục tiêu), rồi lệch ít hơn, rồi số lượt gần số hiện tại hơn.
+ */
+export function betterPick(a: LevelPick, b: LevelPick | null, currentTurns: number): boolean {
+  if (b === null) return true;
+  if (a.ok !== b.ok) return a.ok;
+  if (a.score !== b.score) return a.score < b.score;
+  return Math.abs(a.turnLimit - currentTurns) < Math.abs(b.turnLimit - currentTurns);
+}
+
+/**
+ * Số lượt (và giá trị các núm vặn riêng của màn) tốt nhất cho một màn theo `betterPick`; ngang nhau thì
+ * giữ tổ hợp khai báo trước.
  */
 export function pickTurns(config: BattleConfig, level: number, setup: TuneSetup): LevelPick {
   const current = config.levels[level]?.turnLimit ?? 0;
@@ -128,21 +142,18 @@ export function pickTurns(config: BattleConfig, level: number, setup: TuneSetup)
   for (const combo of combinations(config, local)) {
     for (let turnLimit = min; turnLimit <= max; turnLimit++) {
       const tried = withTurnLimit(combo.config, level, turnLimit);
-      const { score, results } = measureLevel(tried, level, setup);
-      const closer =
-        best !== null &&
-        score === best.score &&
-        Math.abs(turnLimit - current) < Math.abs(best.turnLimit - current);
-      if (best === null || score < best.score || closer) {
-        best = { turnLimit, knobs: combo.knobs, score, results };
-      }
+      const candidate = { turnLimit, knobs: combo.knobs, ...measureLevel(tried, level, setup) };
+      if (betterPick(candidate, best, current)) best = candidate;
     }
   }
   if (best === null) throw new Error(`Khoảng số lượt rỗng: ${min}…${max}`);
   return best;
 }
 
-/** Mọi tổ hợp núm vặn chung, mỗi tổ hợp kèm lựa chọn tốt nhất từng màn; tốt nhất đứng đầu. */
+/**
+ * Mọi tổ hợp núm vặn chung, mỗi tổ hợp kèm lựa chọn tốt nhất từng màn; tốt nhất (ít màn không đạt
+ * nhất, rồi lệch ít nhất) đứng đầu.
+ */
 export function tune(config: BattleConfig, setup: TuneSetup): Proposal[] {
   const global = setup.knobs.filter((knob) => knob.level === undefined);
   const proposals = combinations(config, global).map((combo) => {
@@ -160,5 +171,6 @@ export function tune(config: BattleConfig, setup: TuneSetup): Proposal[] {
     const score = levels.reduce((sum, pick) => sum + pick.score, 0);
     return { knobs: combo.knobs, levels, score, config: tuned };
   });
-  return proposals.sort((a, b) => a.score - b.score);
+  const failing = (p: Proposal) => p.levels.filter((pick) => !pick.ok).length;
+  return proposals.sort((a, b) => failing(a) - failing(b) || a.score - b.score);
 }
