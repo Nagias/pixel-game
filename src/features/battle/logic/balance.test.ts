@@ -4,10 +4,12 @@ import {
   simulateLevel,
   TARGET_PLAYER,
   targetLoadouts,
+  targetPlayerFor,
+  targetPlayerName,
   type LevelResult,
   type Player,
 } from '../../../../scripts/simCore';
-import { levelWithinTolerance, measured } from '../../../../scripts/tuneCore';
+import { levelWithinTolerance, measured, tolerancesFor } from '../../../../scripts/tuneCore';
 import { BALANCE_TOLERANCE, BATTLE_CONFIG, LOADOUT_TOLERANCE } from './battleConfig';
 
 // Kiểm độ khó chủ dự án đã duyệt trên con số THẬT của game (khác các test luật dùng cấu hình riêng).
@@ -15,23 +17,29 @@ import { BALANCE_TOLERANCE, BATTLE_CONFIG, LOADOUT_TOLERANCE } from './battleCon
 // (người chơi trung bình) như `npm run sim` / `npm run tune`. Cùng 500 ván (seed 1…500) với
 // `npm run sim`: mẫu nhỏ hơn có thể đảo kết quả khi hai màn chênh nhau ít.
 const GAMES = 500;
-const player = PLAYERS[TARGET_PLAYER] as Player;
+/** Bot so độ khó giữa các màn (ba quan hệ dưới) — giữ bot chuẩn như lúc chủ dự án duyệt các quan hệ. */
+const relationPlayer = PLAYERS[TARGET_PLAYER] as Player;
 
-const cache = new Map<string, LevelResult>();
-/** Kết quả của từng bộ đồ phải đạt mục tiêu ở màn (bộ mặc định, từng skill nếu màn có skill). */
-function playLevel(level: number): LevelResult[] {
+const cache = new Map<Player, Map<string, LevelResult>>();
+/**
+ * Kết quả của từng bộ đồ ở màn (bộ mặc định, từng skill nếu màn có skill), chơi bằng `player` — mặc định
+ * bot đo mục tiêu của màn (`targetPlayer`; chủ dự án duyệt 28/10/2026: màn đầu đo bằng "Người mới").
+ */
+function playLevel(level: number, player = targetPlayerFor(level, BATTLE_CONFIG)): LevelResult[] {
+  const byPlayer = cache.get(player) ?? new Map<string, LevelResult>();
+  cache.set(player, byPlayer);
   return targetLoadouts(level, BATTLE_CONFIG).map((loadout) => {
     const key = `${level}:${loadout.skill ?? ''}`;
-    const hit = cache.get(key);
+    const hit = byPlayer.get(key);
     if (hit) return hit;
     const result = simulateLevel(level, loadout, player, BATTLE_CONFIG, GAMES);
-    cache.set(key, result);
+    byPlayer.set(key, result);
     return result;
   });
 }
 
 /** Bộ mặc định với skill đầu (như game chọn sẵn) — để so độ khó giữa các màn. */
-const main = (level: number) => measured(playLevel(level)[0] as LevelResult);
+const main = (level: number) => measured(playLevel(level, relationPlayer)[0] as LevelResult);
 
 describe('cân bằng đã duyệt', () => {
   // Đợt 0 (chủ dự án duyệt 27/10/2026): mục tiêu độ khó và dung sai theo gợi ý của agent.
@@ -43,7 +51,11 @@ describe('cân bằng đã duyệt', () => {
       if (!target) return;
       // Trung bình các skill ±5% / ±0,5 lượt; từng skill ±8% / ±0,8 (chủ dự án duyệt 27/10/2026).
       const actual = playLevel(level).map(measured);
-      const tolerance = { mean: BALANCE_TOLERANCE, perLoadout: LOADOUT_TOLERANCE };
+      // Màn đo bằng bot "Người mới" chỉ xét trung bình (chủ dự án duyệt 28/10/2026, DEBT-012).
+      const tolerance = tolerancesFor(targetPlayerName(level, BATTLE_CONFIG), {
+        mean: BALANCE_TOLERANCE,
+        perLoadout: LOADOUT_TOLERANCE,
+      });
       expect(levelWithinTolerance(actual, target, tolerance), JSON.stringify(actual)).toBe(true);
     },
   );

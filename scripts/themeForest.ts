@@ -1,15 +1,24 @@
 // Bản mô tả chủ đề Rừng rậm (đợt 7, chủ dự án duyệt 27/10/2026) cho bộ sinh màn — 20 màn. Thêm chủ đề mới
 // = thêm một file như thế này (themeIce.ts, themeVolcano.ts…) và nối vào scripts/levelGen.ts.
-// NỢ DEBT-012: màn 1–16 ở đây còn mục tiêu cũ — đừng sinh lại các màn này trước khi trả nợ.
-import type { Difficulty, UpgradeLevels } from '../src/features/battle/logic/battleTypes';
+import type {
+  Difficulty,
+  TargetPlayer,
+  UpgradeLevels,
+} from '../src/features/battle/logic/battleTypes';
 import type { LevelSpec } from './levelGenCore';
 
 /**
- * Mục tiêu răng cưa (chủ dự án duyệt 27/10/2026): màn 1 ~98% giảm dần tới màn 10 (trùm) ~78%; màn 11 nhẹ
- * lại ~92% rồi giảm tới màn 20 (trùm) ~72%. Bộ sinh chỉ khớp % thắng (matchWinOnly); lượt dư mục tiêu ghi
- * bằng số đo của màn sinh ra — lượt dư suy từ công thức mâu thuẫn với cách màn chạy (màn trùm ngắn).
+ * Màn 1–16 đo bằng bot "Người mới" (chủ dự án duyệt 28/10/2026 — màn đầu dễ hơn, trả DEBT-012): mục tiêu là
+ * số đo của các màn hiện có sau khi thêm lượt (500 ván, trung bình các skill). Màn 17–20 giữ răng cưa cũ
+ * đo bằng "Ngắm chuẩn" (chủ dự án duyệt 27/10/2026). Bộ sinh chỉ khớp % thắng (matchWinOnly); lượt dư mục
+ * tiêu ghi bằng số đo của màn sinh ra — lượt dư suy từ công thức mâu thuẫn với cách màn chạy (màn trùm ngắn).
  */
-const WINS = [98, 96, 94, 91, 89, 87, 85, 82, 80, 78, 92, 90, 88, 85, 83, 81, 79, 76, 74, 72];
+const NOVICE_LEVELS = 16;
+const WINS = [87, 54, 95, 92, 69, 95, 95, 81, 81, 45, 33, 28, 65, 25, 35, 21, 79, 76, 74, 72];
+/** Màn 1–16 thêm lượt (28/10/2026): số lượt thử tối đa phải bao được số lượt hiện có (+4 để còn chỗ dò). */
+const NOVICE_TURN_MAX = [27, 29, 20, 23, 23, 21, 20, 20, 17, 17, 16, 16, 15, 15, 17, 18];
+const playerOf = (level: number): TargetPlayer =>
+  level < NOVICE_LEVELS ? 'Người mới' : 'Ngắm chuẩn';
 const target = (level: number): Difficulty => {
   const win = WINS[level] as number;
   return { winRate: win / 100, spareTurns: 0 };
@@ -309,6 +318,8 @@ const THEME: Shape[] = [
 
 export const FOREST_SPECS: LevelSpec[] = THEME.map((shape, level) => ({
   ...shape,
+  turns: [shape.turns[0], Math.max(shape.turns[1], NOVICE_TURN_MAX[level] ?? 0)],
   target: target(level),
+  ...(playerOf(level) === 'Người mới' ? { targetPlayer: 'Người mới' as const } : {}),
   ...(UPGRADES[level] ? { assumedUpgrades: UPGRADES[level] } : {}),
 }));

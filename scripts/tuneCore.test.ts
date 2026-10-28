@@ -10,6 +10,7 @@ import {
   withinTolerance,
   type LevelPick,
   type TuneSetup,
+  tolerancesFor,
 } from './tuneCore';
 
 // Cấu hình riêng cho test: một slime ở vòng ngoài, Cung với tới, không chí mạng, không đẩy — bot nhìn
@@ -57,7 +58,7 @@ const CONFIG: BattleConfig = {
 const TOLERANCE = { winRate: 0.05, spareTurns: 0.5 };
 
 const setup = (spareTurns: number, knobs: TuneSetup['knobs'] = []): TuneSetup => ({
-  player: PLAYERS['Nhìn trước'] as Player,
+  playerFor: () => PLAYERS['Nhìn trước'] as Player,
   games: 20,
   turnRange: [2, 8],
   knobs,
@@ -178,5 +179,29 @@ describe('bộ dò số cân bằng (đợt 0)', () => {
     expect(() => pickTurns(CONFIG, 0, { ...setup(3), targets: [] })).toThrow(
       'Màn 1 chưa có mục tiêu',
     );
+  });
+});
+
+// Chủ dự án duyệt 28/10/2026 (DEBT-012): màn đo bằng bot "Người mới" chỉ xét dung sai trung bình các skill —
+// bot chém bừa nửa phần nên chênh giữa hai skill rất lớn (vd. Cầu lửa nạp lâu), mức riêng chưa được duyệt.
+describe('dung sai theo bot đo', () => {
+  const base = {
+    mean: { winRate: 0.05, spareTurns: 0.5 },
+    perLoadout: { winRate: 0.08, spareTurns: 0.8 },
+  };
+
+  it('bot chuẩn: giữ cả dung sai trung bình lẫn từng bộ đồ', () => {
+    expect(tolerancesFor('Ngắm chuẩn', base)).toEqual(base);
+  });
+
+  it('bot Người mới: chỉ dung sai trung bình, từng bộ đồ không xét', () => {
+    const tol = tolerancesFor('Người mới', base);
+    expect(tol.mean).toEqual(base.mean);
+    const results = [
+      { winRate: 0.95, spareTurns: 8 },
+      { winRate: 0.45, spareTurns: 8 },
+    ];
+    expect(levelWithinTolerance(results, { winRate: 0.7, spareTurns: 8 }, tol)).toBe(true);
+    expect(levelWithinTolerance(results, { winRate: 0.8, spareTurns: 8 }, tol)).toBe(false);
   });
 });

@@ -1,8 +1,20 @@
 // Lõi bộ dò số cân bằng (`npm run tune`, đợt 0): thử mọi tổ hợp "núm vặn" chung (máu quái, số nhát
 // nạp skill…), mỗi tổ hợp chọn số lượt riêng từng màn cho gần mục tiêu nhất — các màn độc lập với nhau
 // khi núm vặn chung đã cố định. Chỉ đề xuất, không ghi vào cấu hình: chủ dự án duyệt rồi mới áp.
-import type { BattleConfig, Difficulty, Loadout } from '../src/features/battle/logic/battleTypes';
-import { averageSpare, simulateLevel, winRate, type LevelResult, type Player } from './simCore';
+import type {
+  BattleConfig,
+  Difficulty,
+  Loadout,
+  TargetPlayer,
+} from '../src/features/battle/logic/battleTypes';
+import {
+  averageSpare,
+  simulateLevel,
+  targetPlayerName,
+  winRate,
+  type LevelResult,
+  type Player,
+} from './simCore';
 
 /** Một con số được phép đổi: tên hiện trong bảng, các giá trị thử, cách áp vào cấu hình. */
 export interface Knob {
@@ -17,7 +29,8 @@ export interface Knob {
 }
 
 export interface TuneSetup {
-  readonly player: Player;
+  /** Bot đo màn `level` (mục tiêu mỗi màn có thể đo bằng bot riêng — `targetPlayer`). */
+  readonly playerFor: (level: number, config: BattleConfig) => Player;
   readonly games: number;
   /** Số lượt thử cho mỗi màn, từ…tới (gồm cả hai đầu). */
   readonly turnRange: readonly [min: number, max: number];
@@ -79,6 +92,15 @@ export function meanDifficulty(results: readonly Difficulty[]): Difficulty {
 }
 
 /** Màn đạt: trung bình các bộ đồ trong dung sai chung, và từng bộ đồ trong dung sai từng bộ đồ. */
+/**
+ * Dung sai của màn theo bot đo mục tiêu. Bot "Người mới" (chủ dự án duyệt 28/10/2026) chỉ xét trung bình các
+ * bộ đồ: nó chém bừa nửa phần nên chênh giữa các skill rất lớn — mức dung sai riêng chưa được duyệt.
+ */
+export function tolerancesFor(player: TargetPlayer, base: Tolerances): Tolerances {
+  if (player !== 'Người mới') return base;
+  return { mean: base.mean, perLoadout: { winRate: Infinity, spareTurns: Infinity } };
+}
+
 export function levelWithinTolerance(
   results: readonly Difficulty[],
   target: Difficulty,
@@ -124,12 +146,15 @@ export function measureLevel(
   if (!target) throw new Error(`Màn ${level + 1} chưa có mục tiêu độ khó`);
   const results = setup
     .loadouts(level, config)
-    .map((loadout) => simulateLevel(level, loadout, setup.player, config, setup.games));
+    .map((loadout) =>
+      simulateLevel(level, loadout, setup.playerFor(level, config), config, setup.games),
+    );
   const score = results.reduce(
     (sum, r) => sum + deviation(measured(r), target, setup.tolerance.mean),
     0,
   );
-  const ok = levelWithinTolerance(results.map(measured), target, setup.tolerance);
+  const tolerance = tolerancesFor(targetPlayerName(level, config), setup.tolerance);
+  const ok = levelWithinTolerance(results.map(measured), target, tolerance);
   return { score, ok, results };
 }
 
