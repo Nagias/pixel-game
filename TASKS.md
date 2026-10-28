@@ -187,3 +187,9 @@ Chủ dự án chốt: màn 1–5 +10 lượt, màn 6–16 giảm dần +8 → +
 - [x] Dung sai bot "Người mới": chỉ trung bình các skill (test trước)
 - [x] Mục tiêu màn 1–16 đo lại bằng "Người mới"; bản mô tả bộ sinh màn cập nhật; sinh thử màn 1–3 ra màn dễ
 - [x] FEATURE_MAP, DEBT-012 đã trả, `npm run check`, PR, gộp khi CI xanh
+
+## Việc lẻ — màn 2 dễ hơn cho người mới (28/10/2026)
+
+- [x] Đo: người mới thua màn 2 vì hết máu, thêm lượt không giúp; giảm nhiệm vụ mới giúp
+- [x] Nhiệm vụ 8 → 5 slime (người mới ~80%), cập nhật mục tiêu + bản mô tả bộ sinh màn
+- [x] `npm run check`, thử tay màn chuẩn bị "hạ 5 Slime", FEATURE_MAP, PR, gộp khi CI xanh
