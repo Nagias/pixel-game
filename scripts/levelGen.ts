@@ -1,5 +1,5 @@
 // Bộ sinh màn (đợt 7): `npm run levelgen -- --levels 8-12 --games 200`. Mỗi màn của chủ đề được mô tả bằng
-// một bản mô tả (THEME bên dưới); máy thử mọi tổ hợp bằng bot TARGET_PLAYER và in màn đạt mục tiêu, lệch ít
+// một bản mô tả (THEME bên dưới); máy thử mọi tổ hợp bằng bot của màn (`targetPlayer`) và in màn đạt mục tiêu, lệch ít
 // nhất — KHÔNG tự ghi cấu hình: agent chép vào battleConfig.ts. Thêm chủ đề mới = viết thêm bản mô tả.
 import {
   BALANCE_TOLERANCE,
@@ -14,6 +14,7 @@ import type {
 import { generateLevel } from './levelGenCore';
 import { FOREST_SPECS } from './themeForest';
 import { gamesArg, PLAYERS, TARGET_PLAYER, type Player } from './simCore';
+
 import { measured } from './tuneCore';
 
 const THEME_SPECS = FOREST_SPECS;
@@ -48,7 +49,9 @@ for (let level = from; level <= to; level++) {
   const started = Date.now();
   const spec = THEME_SPECS[level - 1];
   if (!spec) throw new RangeError(`Chủ đề không có màn ${level}`);
-  const picked = generateLevel(config, level - 1, spec, setup);
+  // Mỗi màn đo bằng bot của bản mô tả (`targetPlayer`, không có thì bot mặc định).
+  const player = PLAYERS[spec.targetPlayer ?? TARGET_PLAYER] as Player;
+  const picked = generateLevel(config, level - 1, spec, { ...setup, player });
   const measuredText = picked.results.map((r) => show(measured(r))).join(' · ');
   console.log(
     `// Màn ${level} — mục tiêu ${(100 * spec.target.winRate).toFixed(0)}% thắng, đo ${measuredText} ${picked.ok ? '✅' : '❌'} ` +

@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { seedRng } from '../src/shared/random';
+import { nextFloat, seedRng } from '../src/shared/random';
+import { bestMove, randomMove } from '../src/features/battle/logic/autoPlay';
 import type { BattleConfig, BattleState, Monster } from '../src/features/battle/logic/battleTypes';
-import { PLAYERS, simConfig, type Player } from './simCore';
+import {
+  PLAYERS,
+  simConfig,
+  simulateLevel,
+  targetPlayerFor,
+  TARGET_PLAYER,
+  type Player,
+} from './simCore';
 
 // F12: người chơi trung bình (bot Ngắm chuẩn — đo mục tiêu độ khó) biết câu đố Slime Ma: skill bấm lúc
 // Ma vô hình thì đi xuyên qua, nên giữ skill tới lượt Ma hiện hình. Không biết điều này thì Mưa băng (đầy
@@ -98,5 +106,53 @@ describe('simConfig — cấu hình mô phỏng của màn cộng nâng cấp d�
     };
     expect(simConfig(withAssumed, 0)).toBe(withAssumed);
     expect(simConfig(withAssumed, 1).hero).toMatchObject({ hp: 7, healAmount: 2 });
+  });
+});
+
+// Chủ dự án duyệt 28/10/2026 (trả DEBT-012): người thật không chém chuẩn mọi nhát như bot "Ngắm chuẩn". Bot
+// "Người mới" — nửa nhát chém chuẩn, nửa chém bừa (hụt nhịp, chọn sai lát) — đo mục tiêu độ khó màn đầu.
+describe('bot Người mới — nửa chém chuẩn, nửa chém bừa', () => {
+  const novice = PLAYERS['Người mới'] as Player;
+  const noGhost = monsters.filter((m) => m.kind !== 'slimeGhost');
+  const fresh = { ...state(6, noGhost), skillCharge: 0 };
+
+  it('mỗi nhát tung một số: dưới 50% thì chém như bot chuẩn, còn lại chém bừa', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const rng = seedRng(seed);
+      const [roll, next] = nextFloat(rng);
+      const [{ move }] = novice(fresh, rng, CONFIG);
+      const expected = roll < 0.5 ? bestMove(fresh, CONFIG) : randomMove(fresh, next, CONFIG)[0];
+      expect(move).toEqual(expected);
+    }
+  });
+
+  it('skill đầy thì bấm ngay (không biết canh Slime Ma)', () => {
+    expect(novice(state(5), seedRng(1), CONFIG)[0].cast).toBe(true);
+  });
+
+  it('giỏi hơn chém bừa, kém hơn ngắm chuẩn (100 ván)', () => {
+    const level = CONFIG.levels[0];
+    if (!level) throw new Error('thiếu màn thử');
+    const config: BattleConfig = {
+      ...CONFIG,
+      levels: [{ turnLimit: 9, monsters: ['slime', 'slime', 'slime', 'slime'], spread: 3 }],
+    };
+    const won = (name: string) =>
+      simulateLevel(0, { weapons: [0] }, PLAYERS[name] as Player, config, 100).won;
+    expect(won('Người mới')).toBeGreaterThan(won('Chém bừa'));
+    expect(won('Người mới')).toBeLessThan(won('Ngắm chuẩn'));
+  });
+});
+
+describe('bot đo mục tiêu của từng màn', () => {
+  it('màn ghi `targetPlayer` thì đo bằng bot đó; không ghi thì bot mặc định', () => {
+    const [plain] = CONFIG.levels;
+    if (!plain) throw new Error('thiếu màn thử');
+    const config: BattleConfig = {
+      ...CONFIG,
+      levels: [plain, { ...plain, targetPlayer: 'Người mới' }],
+    };
+    expect(targetPlayerFor(0, config)).toBe(PLAYERS[TARGET_PLAYER]);
+    expect(targetPlayerFor(1, config)).toBe(PLAYERS['Người mới']);
   });
 });

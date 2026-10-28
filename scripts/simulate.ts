@@ -14,37 +14,42 @@ import {
   loadoutsForLevel,
   PLAYERS,
   simulateLevel,
-  TARGET_PLAYER,
   targetLoadouts,
+  targetPlayerFor,
+  targetPlayerName,
   winRate,
-  type Player,
 } from './simCore';
-import { meanDifficulty, measured, withinTolerance } from './tuneCore';
+import { meanDifficulty, measured, tolerancesFor, withinTolerance } from './tuneCore';
 
 /** Số ván mỗi màn mỗi kiểu chơi; seed chạy từ 1 tới số ván. Mặc định bằng balance.test.ts. */
 const GAMES = gamesArg(process.argv.slice(2), 500);
-const targetPlayer = PLAYERS[TARGET_PLAYER] as Player;
 const show = (d: Difficulty) => `${(100 * d.winRate).toFixed(1)}% / ${d.spareTurns.toFixed(2)}`;
 
 console.log(`## Mô phỏng cân bằng — ${GAMES} ván mỗi màn (seed 1…${GAMES})\n`);
 console.log(
-  `### So với mục tiêu (bot "${TARGET_PLAYER}"; dung sai từng bộ đồ ±${100 * LOADOUT_TOLERANCE.winRate}% ` +
+  `### So với mục tiêu (mỗi màn đo bằng bot ghi ở cột Bot; dung sai từng bộ đồ ±${100 * LOADOUT_TOLERANCE.winRate}% ` +
     `thắng, ±${LOADOUT_TOLERANCE.spareTurns} lượt dư; trung bình ±${100 * BALANCE_TOLERANCE.winRate}%, ` +
     `±${BALANCE_TOLERANCE.spareTurns})\n`,
 );
-console.log('| Màn | Bộ đồ | Mục tiêu (thắng / dư) | Đo được | Đạt |');
-console.log('| --- | --- | --- | --- | --- |');
+console.log('| Màn | Bot | Bộ đồ | Mục tiêu (thắng / dư) | Đo được | Đạt |');
+console.log('| --- | --- | --- | --- | --- | --- |');
 BATTLE_CONFIG.levels.forEach((level, index) => {
   const { target } = level;
   const row = (name: string, actual: Difficulty, tolerance: Difficulty) => {
     const ok = target ? (withinTolerance(actual, target, tolerance) ? '✅' : '❌') : '—';
     console.log(
-      `| ${index + 1} | ${name} | ${target ? show(target) : 'chưa có'} | ${show(actual)} | ${ok} |`,
+      `| ${index + 1} | ${targetPlayerName(index, BATTLE_CONFIG)} | ${name} | ${target ? show(target) : 'chưa có'} | ${show(actual)} | ${ok} |`,
     );
   };
   const results = targetLoadouts(index, BATTLE_CONFIG).map((loadout) => {
-    const actual = measured(simulateLevel(index, loadout, targetPlayer, BATTLE_CONFIG, GAMES));
-    row(loadoutName(loadout, BATTLE_CONFIG), actual, LOADOUT_TOLERANCE);
+    const player = targetPlayerFor(index, BATTLE_CONFIG);
+    const actual = measured(simulateLevel(index, loadout, player, BATTLE_CONFIG, GAMES));
+    // Màn đo bằng "Người mới": từng bộ đồ chỉ để xem, không xét (tolerancesFor).
+    const { perLoadout } = tolerancesFor(targetPlayerName(index, BATTLE_CONFIG), {
+      mean: BALANCE_TOLERANCE,
+      perLoadout: LOADOUT_TOLERANCE,
+    });
+    row(loadoutName(loadout, BATTLE_CONFIG), actual, perLoadout);
     return actual;
   });
   // Màn nhiều bộ đồ (từng skill): thêm dòng trung bình, xét theo dung sai chung.

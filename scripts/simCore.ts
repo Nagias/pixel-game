@@ -1,6 +1,6 @@
 // Lõi mô phỏng cân bằng — dùng chung cho `npm run sim` và các script dò số tạm (vd. .cache/*.ts thử
 // nhiều bộ con số rồi chọn bộ gần mục tiêu nhất). Chỉ gọi luật thuần trong logic/: cùng seed cùng kết quả.
-import { seedRng, type RngState } from '../src/shared/random';
+import { nextFloat, seedRng, type RngState } from '../src/shared/random';
 import {
   bestMove,
   lookaheadTurn,
@@ -21,6 +21,7 @@ import type {
   BattleState,
   Loadout,
   SkillKind,
+  TargetPlayer,
 } from '../src/features/battle/logic/battleTypes';
 import { allLoadouts, allWeapons, defaultLoadout } from '../src/features/battle/logic/loadout';
 import { UPGRADE_CONFIG } from '../src/features/battle/logic/battleConfig';
@@ -58,6 +59,12 @@ const castWhenReady =
 export const PLAYERS: Record<string, Player> = {
   'Nhìn trước': (state, rng, config) => lookaheadTurn(state, rng, config),
   'Ngắm chuẩn': castWhenReady((state, rng, config) => [bestMove(state, config), rng], true),
+  // Chủ dự án duyệt 28/10/2026: người mới — mỗi nhát nửa phần chém chuẩn, nửa phần chém bừa (hụt nhịp, chọn
+  // sai lát); skill đầy là bấm (chưa biết canh Slime Ma). Đo mục tiêu màn đầu (`targetPlayer`).
+  'Người mới': castWhenReady((state, rng, config) => {
+    const [roll, next] = nextFloat(rng);
+    return roll < 0.5 ? [bestMove(state, config), next] : randomMove(state, next, config);
+  }, false),
   'Chém bừa': castWhenReady((state, rng, config) => randomMove(state, rng, config), false),
 };
 
@@ -65,7 +72,17 @@ export const PLAYERS: Record<string, Player> = {
  * Kiểu chơi đo mục tiêu độ khó (`target` của màn): người chơi trung bình, không phải bot giỏi nhất —
  * chủ dự án chốt 27/10/2026, vì đo bằng bot "Nhìn trước" thì số bị siết tới mức người thường thua nhiều.
  */
-export const TARGET_PLAYER = 'Ngắm chuẩn';
+export const TARGET_PLAYER: TargetPlayer = 'Ngắm chuẩn';
+
+/** Tên bot đo mục tiêu của màn `level`: `targetPlayer` của màn, không có thì TARGET_PLAYER. */
+export function targetPlayerName(level: number, config: BattleConfig): TargetPlayer {
+  return config.levels[level]?.targetPlayer ?? TARGET_PLAYER;
+}
+
+/** Bot đo mục tiêu của màn `level`. */
+export function targetPlayerFor(level: number, config: BattleConfig): Player {
+  return PLAYERS[targetPlayerName(level, config)] as Player;
+}
 
 export interface LevelResult {
   readonly games: number;

@@ -818,6 +818,23 @@ bot "Ngắm chuẩn" (luôn chém chỗ tốt nhất, không trượt nhịp), c
 khoảng 56–98%, trùm màn 10 ~50%, rồi khó dần. Bảng trên đã ghi số lượt và mục tiêu mới (bot "Ngắm chuẩn" gần
 như luôn thắng màn 1–16 — độ khó của các màn này thể hiện ở số lượt dư). Quan hệ "màn 4 khó hơn màn 3" giờ chỉ
 đòi tỉ lệ thắng không nhiều hơn (cả hai 100%) và lượt dư ít hơn, như hai quan hệ còn lại.
+
+**Bot "Người mới" đo màn đầu (chủ dự án duyệt 28/10/2026, trả DEBT-012):** bộ mô phỏng có thêm bot **"Người
+mới"** (`scripts/simCore.ts`) — mỗi nhát tung một số: nửa phần chém như bot chuẩn, nửa phần chém bừa; skill đầy
+là bấm. Mỗi màn ghi bot đo mục tiêu (`targetPlayer`, game không đọc): **màn 1–16 đo bằng "Người mới"**, màn
+17–20 vẫn "Ngắm chuẩn". `npm run sim`, `npm run tune`, `npm run levelgen` và `balance.test.ts` đều đo mỗi màn
+bằng bot của nó; bản mô tả bộ sinh màn (`scripts/themeForest.ts`) ghi mục tiêu "Người mới" cho màn 1–16 — sinh
+lại màn 1–3 ra màn dễ như hiện tại (màn 1: 23 lượt, người mới thắng 87%).
+
+| Màn                        | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10  | 11  | 12  | 13  | 14  | 15  | 16  |
+| -------------------------- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Người mới thắng (mục tiêu) | 87% | 54% | 95% | 92% | 69% | 95% | 95% | 81% | 81% | 45% | 33% | 28% | 65% | 25% | 35% | 21% |
+
+Mục tiêu "Người mới" chỉ xét **trung bình các skill** (±5% thắng, ±0,5 lượt dư): bot chém bừa nửa phần nên chênh
+giữa hai skill rất lớn — vd. màn 5 Mưa băng 95% / Cầu lửa 43%, màn 11 55% / 12%, màn 14 42% / 9% (Cầu lửa nạp 6
+nhát, người mới bấm sớm và phí). Bảng F15 phía trên (cột mục tiêu) là số đo bằng "Ngắm chuẩn" trước lần đổi
+này; số hiện hành ở `battleConfig.ts`. Ba quan hệ độ khó (trùm màn 3, màn 4, màn 5) vẫn so bằng "Ngắm chuẩn" —
+đo bằng "Người mới" thì màn 2 (54%) khó hơn màn trùm 3 (95%).
 Màn 4 chọn tay (8 slime, ±4, 9 lượt) vì bộ sinh màn không ra tổ hợp nào vừa đạt mục tiêu vừa giữ được quan hệ
 "màn 5 khó hơn màn 4" — đã dò mọi tổ hợp màn 4 nằm giữa màn 3 và 5 (script tạm).
 

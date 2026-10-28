@@ -85,15 +85,20 @@ describe('bộ sinh màn', () => {
     expect(picked.level.target).toEqual(SPEC.target);
   });
 
-  it('giữ mục tiêu, nâng cấp dự kiến và hai phía của bản mô tả trong màn sinh ra', () => {
+  it('giữ mục tiêu, bot đo, nâng cấp dự kiến và hai phía của bản mô tả trong màn sinh ra', () => {
     const spec: LevelSpec = {
       ...SPEC,
       assumedUpgrades: { hp: 1 },
       splitOpposite: true,
       spread: [2],
+      targetPlayer: 'Người mới',
     };
     const picked = generateLevel(CONFIG, 0, spec, setup);
-    expect(picked.level).toMatchObject({ assumedUpgrades: { hp: 1 }, splitOpposite: true });
+    expect(picked.level).toMatchObject({
+      assumedUpgrades: { hp: 1 },
+      splitOpposite: true,
+      targetPlayer: 'Người mới',
+    });
   });
 
   // Chủ dự án duyệt % thắng theo răng cưa; lượt dư mục tiêu suy từ công thức thì mâu thuẫn với cách màn

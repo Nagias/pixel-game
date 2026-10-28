@@ -179,3 +179,11 @@ Chủ dự án chốt: màn 1–5 +10 lượt, màn 6–16 giảm dần +8 → +
 - [x] Thêm lượt theo bảng, ghi mục tiêu mới màn 1–16, quan hệ màn 4 / màn 3 theo tỉ lệ thắng không nhiều hơn
 - [x] `npm run check`, E2E 20 test, thử tay màn 1 (23 lượt)
 - [x] FEATURE_MAP (F15), DEBT-012, mở PR, gộp khi CI xanh
+
+## Việc lẻ — trả DEBT-012: bot "Người mới" đo màn đầu (28/10/2026)
+
+- [x] Bot "Người mới" (nửa chuẩn nửa chém bừa) trong bộ mô phỏng — test trước
+- [x] Mỗi màn ghi bot đo (`targetPlayer`); sim / tune / levelgen / balance.test đo theo bot của màn
+- [x] Dung sai bot "Người mới": chỉ trung bình các skill (test trước)
+- [x] Mục tiêu màn 1–16 đo lại bằng "Người mới"; bản mô tả bộ sinh màn cập nhật; sinh thử màn 1–3 ra màn dễ
+- [x] FEATURE_MAP, DEBT-012 đã trả, `npm run check`, PR, gộp khi CI xanh

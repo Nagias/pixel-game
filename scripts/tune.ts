@@ -12,7 +12,7 @@ import type {
   Difficulty,
   MonsterKind,
 } from '../src/features/battle/logic/battleTypes';
-import { gamesArg, PLAYERS, TARGET_PLAYER, targetLoadouts, type Player } from './simCore';
+import { gamesArg, targetLoadouts, targetPlayerFor } from './simCore';
 import { measured, measureLevel, tune, type Knob, type TuneSetup } from './tuneCore';
 
 /** `level`: chỉ khai báo khi các loại quái này chỉ có ở đúng màn đó. */
@@ -110,7 +110,7 @@ const targets = BATTLE_CONFIG.levels.map((level, i) => {
   return level.target;
 });
 const setup: TuneSetup = {
-  player: PLAYERS[TARGET_PLAYER] as Player,
+  playerFor: targetPlayerFor,
   // Mặc định 500 ván như balance.test.ts (ít hơn có thể đề xuất bộ số mà test lại thấy lệch).
   games: gamesArg(process.argv.slice(2), 500),
   turnRange: TURN_RANGE,

@@ -7,11 +7,19 @@ import type {
   LevelConfig,
   MonsterKind,
   UpgradeLevels,
+  TargetPlayer,
 } from '../src/features/battle/logic/battleTypes';
-import { simulateLevel, targetLoadouts, type LevelResult, type Player } from './simCore';
+import {
+  simulateLevel,
+  targetLoadouts,
+  type LevelResult,
+  type Player,
+  TARGET_PLAYER,
+} from './simCore';
 import {
   deviation,
   levelWithinTolerance,
+  tolerancesFor,
   meanDifficulty,
   measured,
   type Tolerances,
@@ -25,6 +33,8 @@ export interface KindRange {
 
 export interface LevelSpec {
   readonly target: Difficulty;
+  /** Bot đo `target` (chép vào màn sinh ra). Không có = bot mặc định ("Ngắm chuẩn"). */
+  readonly targetPlayer?: TargetPlayer;
   readonly assumedUpgrades?: UpgradeLevels;
   readonly splitOpposite?: boolean;
   /** Đội hình mở màn: các loài theo thứ tự id. */
@@ -106,18 +116,17 @@ export function generateLevel(
   let best: GeneratedLevel | null = null;
   const [min, max] = spec.turns;
   const ignoreSpare = (d: Difficulty): Difficulty => ({ ...d, spareTurns: Infinity });
+  const base = tolerancesFor(spec.targetPlayer ?? TARGET_PLAYER, setup.tolerance);
   const tolerance = setup.matchWinOnly
-    ? {
-        mean: ignoreSpare(setup.tolerance.mean),
-        perLoadout: ignoreSpare(setup.tolerance.perLoadout),
-      }
-    : setup.tolerance;
+    ? { mean: ignoreSpare(base.mean), perLoadout: ignoreSpare(base.perLoadout) }
+    : base;
   for (const shape of specCombinations(spec)) {
     for (let turnLimit = min; turnLimit <= max; turnLimit++) {
       const level: LevelConfig = {
         ...shape,
         turnLimit,
         target: spec.target,
+        ...(spec.targetPlayer ? { targetPlayer: spec.targetPlayer } : {}),
         ...(spec.assumedUpgrades ? { assumedUpgrades: spec.assumedUpgrades } : {}),
         ...(spec.splitOpposite ? { splitOpposite: true } : {}),
       };

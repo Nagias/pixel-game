@@ -186,6 +186,12 @@ export type UpgradeConfig = Readonly<Record<UpgradeKind, UpgradeStat>>;
 /** Đợt 4: cấp đã nâng theo tên chỉ số — dữ liệu hồ sơ, có thể có tên lạ hoặc cấp vượt giới hạn. */
 export type UpgradeLevels = Readonly<Record<string, number>>;
 
+/**
+ * Bot đo mục tiêu độ khó của màn (tên kiểu chơi trong scripts/simCore.ts). "Ngắm chuẩn" chém đúng chỗ tốt
+ * nhất mọi nhát; "Người mới" (chủ dự án duyệt 28/10/2026) nửa chuẩn nửa chém bừa — gần người thật hơn.
+ */
+export type TargetPlayer = 'Ngắm chuẩn' | 'Người mới';
+
 /** F11: nhiệm vụ chính của màn — giết đủ `count` con loại `kind` là thắng ngay. */
 export interface QuestConfig {
   readonly kind: MonsterKind;
@@ -196,6 +202,8 @@ export interface QuestConfig {
 export interface LevelConfig {
   /** Đợt 0: độ khó mục tiêu của màn (chủ dự án duyệt). */
   readonly target?: Difficulty;
+  /** Bot đo `target` (game không đọc). Không có = bot mặc định của bộ mô phỏng ("Ngắm chuẩn"). */
+  readonly targetPlayer?: TargetPlayer;
   /**
    * Đợt 4: mức nâng cấp người chơi lần đầu có được khi tới màn này (mua ngay khi đủ vàng) — mục tiêu độ khó
    * đo với mức này. Game không đọc: chỉ mô phỏng / bộ dò số / balance.test.
