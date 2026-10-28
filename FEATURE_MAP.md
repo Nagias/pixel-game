@@ -789,7 +789,7 @@ nhất — **không tự ghi** cấu hình, agent chép vào `battleConfig.ts`. 
 | Màn | Lượt | Mở màn (cụm)                                 | Đợt sau                         | Nhiệm vụ        | Mục tiêu (thắng / dư) |
 | --- | ---- | -------------------------------------------- | ------------------------------- | --------------- | --------------------- |
 | 1   | 23   | 4 Slime (±2)                                 | 2 Slime                         | hạ 5 Slime      | 100% / 13,25          |
-| 2   | 25   | 6 Slime (±3)                                 | 3 Slime                         | hạ 8 Slime      | 100% / 13             |
+| 2   | 25   | 6 Slime (±3)                                 | 3 Slime                         | hạ 5 Slime      | 100% / 13             |
 | 3   | 16   | 1 Slime Vua + 4 Slime (±3)                   | —                               | hạ Slime Vua    | 100% / 11             |
 | 4   | 19   | 8 Slime (±4, hai phía)                       | —                               | hạ 8 Slime      | 100% / 11             |
 | 5   | 19   | 7 Slime + 1 Slime Pháo (±4)                  | 1 Slime + 1 Pháo                | hạ 2 Slime Pháo | 100% / 10,75          |
@@ -828,13 +828,18 @@ lại màn 1–3 ra màn dễ như hiện tại (màn 1: 23 lượt, người m�
 
 | Màn                        | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10  | 11  | 12  | 13  | 14  | 15  | 16  |
 | -------------------------- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Người mới thắng (mục tiêu) | 87% | 54% | 95% | 92% | 69% | 95% | 95% | 81% | 81% | 45% | 33% | 28% | 65% | 25% | 35% | 21% |
+| Người mới thắng (mục tiêu) | 87% | 80% | 95% | 92% | 69% | 95% | 95% | 81% | 81% | 45% | 33% | 28% | 65% | 25% | 35% | 21% |
 
 Mục tiêu "Người mới" chỉ xét **trung bình các skill** (±5% thắng, ±0,5 lượt dư): bot chém bừa nửa phần nên chênh
 giữa hai skill rất lớn — vd. màn 5 Mưa băng 95% / Cầu lửa 43%, màn 11 55% / 12%, màn 14 42% / 9% (Cầu lửa nạp 6
 nhát, người mới bấm sớm và phí). Bảng F15 phía trên (cột mục tiêu) là số đo bằng "Ngắm chuẩn" trước lần đổi
 này; số hiện hành ở `battleConfig.ts`. Ba quan hệ độ khó (trùm màn 3, màn 4, màn 5) vẫn so bằng "Ngắm chuẩn" —
-đo bằng "Người mới" thì màn 2 (54%) khó hơn màn trùm 3 (95%).
+đo bằng "Người mới" thì màn 2 từng (54%) khó hơn màn trùm 3 (95%).
+
+**Màn 2 dễ hơn cho người mới (chủ dự án duyệt 28/10/2026):** người mới thua màn 2 gần như toàn vì **hết máu**
+(226 ván hết máu, 2 ván hết lượt trên 500) — thêm lượt không giúp (25 → 34 lượt vẫn 55%). Đổi nhiệm vụ **hạ 8 →
+hạ 5 Slime** (giữ 6 slime mở màn + đợt 3, 25 lượt): người mới thắng **80%**, bot chuẩn vẫn 100%; màn trùm 3 vẫn
+khó hơn. Bản mô tả bộ sinh màn: mục tiêu màn 2 = 80%, nhiệm vụ thử thêm 5–6 — sinh thử ra đúng nhiệm vụ 5.
 Màn 4 chọn tay (8 slime, ±4, 9 lượt) vì bộ sinh màn không ra tổ hợp nào vừa đạt mục tiêu vừa giữ được quan hệ
 "màn 5 khó hơn màn 4" — đã dò mọi tổ hợp màn 4 nằm giữa màn 3 và 5 (script tạm).
 

@@ -14,7 +14,7 @@ import type { LevelSpec } from './levelGenCore';
  * tiêu ghi bằng số đo của màn sinh ra — lượt dư suy từ công thức mâu thuẫn với cách màn chạy (màn trùm ngắn).
  */
 const NOVICE_LEVELS = 16;
-const WINS = [87, 54, 95, 92, 69, 95, 95, 81, 81, 45, 33, 28, 65, 25, 35, 21, 79, 76, 74, 72];
+const WINS = [87, 80, 95, 92, 69, 95, 95, 81, 81, 45, 33, 28, 65, 25, 35, 21, 79, 76, 74, 72];
 /** Màn 1–16 thêm lượt (28/10/2026): số lượt thử tối đa phải bao được số lượt hiện có (+4 để còn chỗ dò). */
 const NOVICE_TURN_MAX = [27, 29, 20, 23, 23, 21, 20, 20, 17, 17, 16, 16, 15, 15, 17, 18];
 const playerOf = (level: number): TargetPlayer =>
@@ -59,7 +59,8 @@ const THEME: Shape[] = [
     spread: [3],
     waves: [{ kind: 'slime', counts: [3, 4] }],
     nextWaveAt: [2, 3],
-    quest: { kind: 'slime', counts: [7, 8, 9] },
+    // Chủ dự án duyệt 28/10/2026: nhiệm vụ 5 cho người mới thắng ~80% (thêm lượt không giúp).
+    quest: { kind: 'slime', counts: [5, 6, 7, 8, 9] },
     turns: [8, 16],
   },
   {

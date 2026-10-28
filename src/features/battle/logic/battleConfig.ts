@@ -212,15 +212,16 @@ export const BATTLE_CONFIG: BattleConfig = {
       target: { winRate: 0.87, spareTurns: 7.75 },
       targetPlayer: 'Người mới',
     },
-    // Màn 2: slime đông hơn.
+    // Màn 2: slime đông hơn. Chủ dự án duyệt 28/10/2026: người mới chỉ thắng 54% (thua vì hết máu, không vì
+    // hết lượt — thêm lượt không giúp) → nhiệm vụ 8 → 5 slime cho người mới thắng ~80%.
     {
       monsters: ['slime', 'slime', 'slime', 'slime', 'slime', 'slime'],
       spread: 3,
       waves: [['slime', 'slime', 'slime']],
       nextWaveAt: 2,
-      quest: { kind: 'slime', count: 8 },
+      quest: { kind: 'slime', count: 5 },
       turnLimit: 25,
-      target: { winRate: 0.54, spareTurns: 8.25 },
+      target: { winRate: 0.8, spareTurns: 14.75 },
       targetPlayer: 'Người mới',
     },
     // Màn 3: trùm nhỏ Slime Vua (B1) — nhiệm vụ hạ trùm.
