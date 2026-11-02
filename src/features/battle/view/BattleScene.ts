@@ -90,11 +90,11 @@ const MOVE_TWEEN_MS = 180;
 const DEPTH = { arena: 0, zone: 1, monster: 2, hero: 3, popup: 4, hud: 5, result: 10 } as const;
 
 /** B6: màu riêng của từng skill — nút nạp, chớp sân khi bấm. */
-const SKILL_COLOR: Record<SkillKind, PaletteColor> = { iceRain: 'sky', fireball: 'orange' };
+const SKILL_COLOR: Record<SkillKind, PaletteColor> = { iceRain: 'blue', fireball: 'orange' };
 /** B6: quái bị đóng băng phủ kín màu này. */
 const FROZEN_TINT: PaletteColor = 'cyan';
 /** Đợt 5: quái hiếm phát sáng màu này (WebGL) và phập phồng nhẹ (mọi máy). */
-const RARE_GLOW: PaletteColor = 'sand';
+const RARE_GLOW: PaletteColor = 'yellow';
 /** F12: độ đậm của quái ma lúc vô hình — đủ thấy để người chơi biết nó ở đâu. */
 const GHOST_HIDDEN_ALPHA = 0.3;
 
@@ -306,11 +306,11 @@ export class BattleScene extends Scene {
     const outer = ringInnerRadius(ringCount, ARENA_LAYOUT);
     const g = this.add.graphics().setDepth(DEPTH.arena);
 
-    g.fillStyle(colorNumber('teal')).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    g.fillStyle(colorNumber('forest')).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     g.fillStyle(colorNumber('grass')).fillCircle(centerX, centerY, outer);
 
     // Vạch chia 24 lát và các vòng, mờ để không lấn vùng xanh.
-    g.lineStyle(1, colorNumber('teal'), 0.5);
+    g.lineStyle(1, colorNumber('forest'), 0.5);
     for (let sector = 0; sector < sectorCount; sector++) {
       const angle = sectorStartAngle(sector, sectorCount);
       const from = polarToPoint(angle, heroRadius, ARENA_LAYOUT);
@@ -321,7 +321,7 @@ export class BattleScene extends Scene {
       g.strokeCircle(centerX, centerY, ringInnerRadius(ring, ARENA_LAYOUT));
     }
 
-    g.fillStyle(colorNumber('teal')).fillCircle(centerX, centerY, heroRadius);
+    g.fillStyle(colorNumber('forest')).fillCircle(centerX, centerY, heroRadius);
     g.lineStyle(3, colorNumber('ink')).strokeCircle(centerX, centerY, outer);
   }
 
@@ -345,7 +345,7 @@ export class BattleScene extends Scene {
         g.arc(centerX, centerY, inner, end, start, true);
         g.closePath();
       };
-      g.fillStyle(colorNumber('lime'), 0.6);
+      g.fillStyle(colorNumber('leaf'), 0.6);
       wedge();
       g.fillPath();
       g.lineStyle(2, colorNumber('white'), 0.9);
@@ -411,7 +411,7 @@ export class BattleScene extends Scene {
       const mark =
         this.threatMarks.get(id) ??
         this.add
-          .text(0, 0, '!', { ...TEXT, fontSize: '18px', color: PALETTE.crimson })
+          .text(0, 0, '!', { ...TEXT, fontSize: '18px', color: PALETTE.red })
           .setOrigin(0.5)
           .setDepth(DEPTH.popup);
       mark.setPosition(point.x, point.y - 20);
@@ -452,7 +452,7 @@ export class BattleScene extends Scene {
         .text(sprite.x, sprite.y - 10, `-${hit.damage}`, {
           ...TEXT,
           fontSize: '18px',
-          color: hit.killed ? PALETTE.orange : PALETTE.sand,
+          color: hit.killed ? PALETTE.orange : PALETTE.yellow,
         })
         .setOrigin(0.5)
         .setDepth(DEPTH.popup);
@@ -489,11 +489,11 @@ export class BattleScene extends Scene {
   /** B6: nhát chí mạng hiện "CHÍ MẠNG!" trên đầu nhân vật; nhát hồi máu hiện "+n" bên cạnh. */
   private showStrikeBonus(state: BattleState): void {
     const { centerX, centerY } = ARENA_LAYOUT;
-    if (state.lastAttack?.crit) this.popText(centerX, centerY - 44, 'CHÍ MẠNG!', PALETTE.crimson);
+    if (state.lastAttack?.crit) this.popText(centerX, centerY - 44, 'CHÍ MẠNG!', PALETTE.red);
     const healed = state.lastAttack?.healed ?? 0;
     // Hồi máu rồi vẫn gục trong cùng lượt: không hiện "+n" chồng lên màn THUA.
     if (healed > 0 && state.phase !== 'lost')
-      this.popText(centerX + 34, centerY - 6, `+${healed}`, PALETTE.lime, '20px');
+      this.popText(centerX + 34, centerY - 6, `+${healed}`, PALETTE.leaf, '20px');
   }
 
   /** B6: chớp cả sân màu của skill vừa bấm. */
@@ -523,11 +523,11 @@ export class BattleScene extends Scene {
     // F06: số lượt có thể 2 chữ số ("Lượt: 12/12") nên thanh trên chia 2 hàng, mỗi hàng chỉ 2 ô
     // ở hai mép — không ô nào đè ô nào.
     this.heroHpText = this.add
-      .text(GAME_WIDTH - 16, 46, '', { ...TEXT, fontSize: '20px', color: PALETTE.lime })
+      .text(GAME_WIDTH - 16, 46, '', { ...TEXT, fontSize: '20px', color: PALETTE.leaf })
       .setOrigin(1, 0)
       .setDepth(DEPTH.hud);
     this.levelText = this.add
-      .text(16, 46, '', { ...TEXT, fontSize: '20px', color: PALETTE.sand })
+      .text(16, 46, '', { ...TEXT, fontSize: '20px', color: PALETTE.yellow })
       .setDepth(DEPTH.hud);
     this.questText = this.add
       .text(GAME_WIDTH - 16, 16, '', { ...TEXT, fontSize: '20px' })
@@ -578,7 +578,7 @@ export class BattleScene extends Scene {
       if (!rect || !weapon) return;
       const centerX = rect.x + rect.width / 2;
       const frame = this.add
-        .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('navy'))
+        .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('dusk'))
         .setOrigin(0)
         .setDepth(DEPTH.hud);
       const name = this.add
@@ -605,7 +605,7 @@ export class BattleScene extends Scene {
     if (!rect || kind === undefined) return;
     const centerX = rect.x + rect.width / 2;
     const frame = this.add
-      .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('navy'))
+      .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('dusk'))
       .setOrigin(0)
       .setDepth(DEPTH.hud);
     // Mức nạp: hình chữ nhật mọc từ đáy ô lên (syncSkillButton đặt chiều cao và mép trên).
@@ -636,20 +636,20 @@ export class BattleScene extends Scene {
     const { frame } = button;
     const height = (frame.height * Math.min(state.skillCharge, chargeTurns)) / chargeTurns;
     button.fill.setSize(frame.width, height).setPosition(frame.x, frame.y + frame.height - height);
-    button.frame.setStrokeStyle(ready ? 3 : 1, colorNumber(ready ? 'sand' : 'slate'));
+    button.frame.setStrokeStyle(ready ? 3 : 1, colorNumber(ready ? 'yellow' : 'slate'));
     button.name.setColor(ready ? PALETTE.white : PALETTE.mist);
     button.charge
       .setText(ready ? 'BẤM!' : `${state.skillCharge}/${chargeTurns}`)
-      .setColor(ready ? PALETTE.sand : PALETTE.mist);
+      .setColor(ready ? PALETTE.yellow : PALETTE.mist);
   }
 
   /** Nút của vũ khí đang cầm có viền xanh lá và chữ sáng; các nút khác mờ đi. */
   private syncWeaponBar(state: BattleState): void {
     this.weaponButtons.forEach((button, i) => {
       const selected = state.loadout.weapons[i] === state.weaponIndex;
-      button.frame.setStrokeStyle(selected ? 3 : 1, colorNumber(selected ? 'lime' : 'slate'));
+      button.frame.setStrokeStyle(selected ? 3 : 1, colorNumber(selected ? 'leaf' : 'slate'));
       button.name.setColor(selected ? PALETTE.white : PALETTE.mist);
-      button.range.setColor(selected ? PALETTE.sand : PALETTE.mist);
+      button.range.setColor(selected ? PALETTE.yellow : PALETTE.mist);
       if (button.tier > 0) styleTierText(button.range, button.tier);
     });
   }
@@ -665,13 +665,13 @@ export class BattleScene extends Scene {
       .text(GAME_WIDTH / 2, 310, '', { ...TEXT, fontSize: '16px' })
       .setOrigin(0.5);
     this.resultGold = this.add
-      .text(GAME_WIDTH / 2, 342, '', { ...TEXT, fontSize: '16px', color: PALETTE.sand })
+      .text(GAME_WIDTH / 2, 342, '', { ...TEXT, fontSize: '16px', color: PALETTE.yellow })
       .setOrigin(0.5);
     this.resultLoot = this.add
       .text(GAME_WIDTH / 2, 370, '', { ...TEXT, fontSize: '15px' })
       .setOrigin(0.5);
     this.resultHint = this.add
-      .text(GAME_WIDTH / 2, 410, '', { ...TEXT, fontSize: '18px', color: PALETTE.sand })
+      .text(GAME_WIDTH / 2, 410, '', { ...TEXT, fontSize: '18px', color: PALETTE.yellow })
       .setOrigin(0.5);
     this.resultLayer = this.add
       .container(0, 0, [
@@ -693,11 +693,11 @@ export class BattleScene extends Scene {
     const { quest } = levelAt(state.level, this.config);
     const done = `${quest ? 'Xong nhiệm vụ' : 'Diệt sạch quái'}, còn dư ${state.turnsLeft} lượt`;
     if (isGameCleared(state, this.config)) {
-      this.resultTitle.setText('PHÁ ĐẢO!').setColor(PALETTE.sand);
+      this.resultTitle.setText('PHÁ ĐẢO!').setColor(PALETTE.yellow);
       this.resultDetail.setText(done);
       this.resultHint.setText(`Chạm để chơi lại từ màn ${next}`);
     } else if (state.phase === 'won') {
-      this.resultTitle.setText('THẮNG!').setColor(PALETTE.lime);
+      this.resultTitle.setText('THẮNG!').setColor(PALETTE.leaf);
       this.resultDetail.setText(done);
       this.resultHint.setText(`Chạm để sang màn ${next}`);
     } else {

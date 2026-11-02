@@ -13,12 +13,14 @@ repo vì là tài sản của game khác).
 
 ## Quy tắc cho game mình
 
-1. Chỉ dùng 16 màu của bảng **Sweetie 16** (GrafxKid) trong `src/shared/palette.ts`. Bảng này
-   phổ biến trong cộng đồng pixel art, màu tươi và tách bạch → nhân vật luôn "màu sắc rõ ràng".
-2. Mọi sprite có viền màu `ink` (gần đen). Nhân vật chính tông xanh dương/vàng, quái tông
-   đỏ/tím/hồng → nhìn là phân biệt phe.
-3. Vùng tấn công luôn là **xanh lá sáng** (`lime`, phủ 60% lên nền sân màu `grass`, viền `white`),
-   đúng mô tả "khoảng màu xanh" của chủ dự án.
+1. Chỉ dùng 32 màu của bảng **Endesga 32** trong `src/shared/palette.ts` (chủ dự án chọn 02/11/2026, thay
+   Sweetie 16). Bảng này phổ biến trong cộng đồng pixel art, có đủ sắc xanh lá, nâu, xám để vẽ khung cảnh có
+   khối mà nhân vật vẫn "màu sắc rõ ràng".
+2. Mọi sprite có viền màu `ink` (gần đen) — test `battleSprites.test.ts` kiểm. Mỗi mảng màu chính có sắc sáng ở
+   mép trên/trái, sắc tối ở mép phải/dưới. Nhân vật chính tông xanh dương/vàng, quái tông đỏ/tím/xanh lá →
+   nhìn là phân biệt phe.
+3. Vùng tấn công luôn là **khoảng xanh sáng** trên sân, viền `white`, đúng mô tả "khoảng màu xanh" của chủ
+   dự án.
 4. Sprite 16×16 pixel, phóng to nguyên lần (×2, ×3) và tắt làm mịn (`pixelArt: true`) để giữ nét.
 5. Số sát thương: chữ đậm, viền `ink`, bay lên rồi mờ dần.
 
