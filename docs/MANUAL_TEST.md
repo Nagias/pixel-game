@@ -34,13 +34,13 @@ Unit test và E2E điều khiển game qua cầu nối `window.__PIXEL_GAME__` v
 
 ## Kịch bản chung (chạy mọi lần)
 
-| #   | Làm                                | Đạt khi                                                                                                  |
-| --- | ---------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| C1  | Mở game, chạm "VÀO TRẬN"           | Thấy màn chuẩn bị (F07) rồi sân tròn, nhân vật giữa, quái ở rìa, thanh trên đọc rõ, các nút vũ khí ở đáy |
-| C2  | Chạm từng nút vũ khí               | Viền xanh lá chuyển sang nút vừa chạm; vùng xanh đổi hình; số lượt không đổi                             |
-| C3  | Chạm vào sân                       | Số lượt giảm 1; quái trong vùng xanh mất máu (số bay lên)                                                |
-| C4  | Chơi tới hết màn (thắng hoặc thua) | Có màn kết quả, ghi rõ chạm để làm gì; chạm thì đi đúng nơi đã ghi                                       |
-| C5  | Soát hình mọi màn hình đã đi qua   | Chữ không đè, không tràn khung; chỉ màu bảng Sweetie 16; không lỗi console                               |
+| #   | Làm                                | Đạt khi                                                                                                                                                                                                 |
+| --- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1  | Mở game, chạm "VÀO TRẬN"           | Thấy màn chuẩn bị (F07) rồi khung cảnh rừng, sân mờ trên cỏ, nhân vật giữa, quái ở rìa có thanh máu; thanh trên (vàng, LƯỢT, nhiệm vụ bằng hình quái) đọc rõ; thẻ vũ khí có hình trên dải nền tối ở đáy |
+| C2  | Chạm từng nút vũ khí               | Viền xanh lá chuyển sang thẻ vừa chạm; khoảng sáng (vùng đánh) đổi hình; số lượt không đổi                                                                                                              |
+| C3  | Chạm vào sân                       | Số lượt giảm 1; quái trong vùng đánh mất máu (số bay lên, thanh máu ngắn lại)                                                                                                                           |
+| C4  | Chơi tới hết màn (thắng hoặc thua) | Có màn kết quả, ghi rõ chạm để làm gì; chạm thì đi đúng nơi đã ghi                                                                                                                                      |
+| C5  | Soát hình mọi màn hình đã đi qua   | Chữ không đè, không tràn khung; chỉ màu bảng Endesga 32; không lỗi console                                                                                                                              |
 
 Cộng thêm **kịch bản riêng** của từng việc (ghi trong kế hoạch của việc đó).
 

@@ -25,7 +25,7 @@
 | F15  | Chủ đề Rừng rậm: 20 màn, 5 quái mới, bộ sinh màn   | ✅ Xong    | `logic/chapters.ts`, `battleConfig.ts`, `scripts/levelGen*.ts` | `logic/chapters.test.ts`, `scripts/levelGenCore.test.ts`   |
 | F16  | Quái hiếm, may mắn, rơi vũ khí 6 cấp màu, túi đồ   | ✅ Xong    | `logic/loot.ts`, `logic/battle.ts`, `view/weaponTierStyle.ts`  | `logic/loot.test.ts`, `logic/rare.test.ts`                 |
 | F17  | Cửa hàng: vũ khí cấp Hiếm dùng có hạn              | ✅ Xong    | `logic/shop.ts`, `view/ShopScene.ts`                           | `logic/shop.test.ts`                                       |
-| F18  | Giao diện mobile kiểu Micro RPG (5 đợt)            | 🚧 Đợt B   | `src/shared/palette.ts`, `view/battleSprites.ts`               | `src/shared/palette.test.ts`, `view/battleSprites.test.ts` |
+| F18  | Giao diện mobile kiểu Micro RPG (5 đợt)            | 🚧 Đợt C   | `src/shared/palette.ts`, `view/battleSprites.ts`               | `src/shared/palette.test.ts`, `view/battleSprites.test.ts` |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -1015,11 +1015,26 @@ kích thước. Bố cục các màn chưa đổi. Tên màu cũ đổi sang mà
    game mở lại vẫn còn; hồ sơ trỏ tới món không còn trong cấu hình thì về bộ mặc định
    (`logic/loadout.ts` `toSavedLoadout` / `fromSavedLoadout`). Skill nhớ qua hồ sơ thay cho biến trong scene.
 
+**Đợt C — khung cảnh rừng vẽ bằng code + màn trận đấu mới (xong):**
+
+1. **Khung cảnh** (`view/scenery.ts` hàm thuần `paintScenery`, bộ màu và bố cục `view/sceneryForest.ts`): khung
+   180×320 phóng ×2. Nền cỏ mảng đậm nhạt, ngọn cỏ, hoa; cây ghép 6–8 chùm lá có đổ bóng, cây lá thu; bụi, đá,
+   ao có bờ. Không có đường lát đá (chủ dự án bỏ). Vẽ một lần thành texture (`app/sceneryTexture.ts`), mở lại
+   màn dùng lại. Cây, ao không đè lên sân đấu (test kiểm).
+2. **Màn trận đấu**: sân chỉ hiện mờ trên cỏ (24×6 ô xen kẽ); vùng đánh là khoảng sáng (trắng phủ 45%) viền trắng;
+   thanh trên: ô vàng, thẻ treo "LƯỢT" + số lượt còn lại, ô nhiệm vụ bằng hình quái + "đã hạ/cần"; số màn chữ nhỏ
+   dưới ô vàng (chơi lại thì ô vàng ghi "—"). Máu hiệp sĩ và từng quái là **thanh máu trên đầu**; mọi đơn vị có
+   bóng dưới chân. Thẻ vũ khí có hình (`view/uiSprites.ts`) trên dải nền tối — viền xanh lá thẻ đang cầm; bảng kết
+   quả kiểu khung viền mực. Bỏ dòng "Chạm sân: chém…". `ARENA_LAYOUT`, `WEAPON_BAR` giữ nguyên số.
+3. **Bài học:** màu viền chọn `leaf` trùng màu cỏ `leaf` của khung cảnh — đặt thẳng lên cỏ thì mất viền; thanh
+   vũ khí phải có dải nền.
+
 **Kiểm chứng tự động:** `src/shared/palette.test.ts` (đủ 32 màu, không trùng, thứ tự ký tự);
 `view/battleSprites.test.ts` (ký tự thuộc bảng, viền mực ở mép mỗi hàng, giữ kích thước 12 hình);
 `profile/logic/profile.test.ts` (trạng thái màn, chơi lại, phá đảo, phiên bản 5, dữ liệu lạ);
 `logic/loadout.test.ts` (đồ đang mang ↔ dạng lưu); E2E "Đợt B (F18)…" (lưu đồ qua lần mở lại, chơi lại
-không nhận vàng).
+không nhận vàng); `view/scenery.test.ts` (đúng bảng màu, lặp lại theo hạt giống, không đè sân), `view/uiSprites.test.ts`,
+`view/battleLayout.test.ts` (thanh trên không đè sân); E2E "Đợt C (F18)…" (thanh máu khớp máu thật).
 
 **Nợ liên quan:** DEBT-007 (hình vẫn là lưới ký tự).
 

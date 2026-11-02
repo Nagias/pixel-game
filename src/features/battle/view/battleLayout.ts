@@ -153,6 +153,22 @@ export function isInWeaponBar(x: number, y: number, bar: WeaponBarLayout): boole
   return x >= bar.left && x < bar.left + bar.width && y >= bar.top && y < bar.top + bar.height;
 }
 
+// ---------- F18 đợt C: thanh thông tin trên cùng (bố cục học Micro RPG) ----------
+
+/** Dải nền thanh trên cùng. */
+export const TOP_BAR: Rect = { x: 0, y: 0, width: 360, height: 56 };
+/** Ô vàng nhặt trong trận (trái). */
+export const GOLD_PILL: Rect = { x: 8, y: 11, width: 112, height: 34 };
+/** Thẻ treo "LƯỢT" + số lượt còn lại (giữa), thò xuống dưới dải nền. */
+export const TURN_TAB: Rect = { x: 140, y: 0, width: 80, height: 68 };
+/** Ô nhiệm vụ: hình quái + "đã hạ/cần hạ" (phải). */
+export const QUEST_PILL: Rect = { x: 230, y: 11, width: 122, height: 34 };
+
+/** Mép trên của thanh máu (cao 8) đặt cách đỉnh hình 4 điểm; hình cao `spriteHeight` điểm phóng `scale`. */
+export function hpBarAnchor(point: Point, spriteHeight: number, scale: number): Point {
+  return { x: point.x, y: point.y - (spriteHeight * scale) / 2 - 4 - 8 };
+}
+
 /** Đổi góc của game (0 = 12 giờ) sang góc Phaser Graphics (0 = 3 giờ). */
 export function toPhaserAngle(angle: number): number {
   return angle - Math.PI / 2;
