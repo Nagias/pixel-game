@@ -193,3 +193,16 @@ Chủ dự án chốt: màn 1–5 +10 lượt, màn 6–16 giảm dần +8 → +
 - [x] Đo: người mới thua màn 2 vì hết máu, thêm lượt không giúp; giảm nhiệm vụ mới giúp
 - [x] Nhiệm vụ 8 → 5 slime (người mới ~80%), cập nhật mục tiêu + bản mô tả bộ sinh màn
 - [x] `npm run check`, thử tay màn chuẩn bị "hạ 5 Slime", FEATURE_MAP, PR, gộp khi CI xanh
+
+## F18 — Giao diện mobile kiểu Micro RPG (02/11/2026)
+
+Thiết kế `docs/superpowers/specs/2026-11-02-giao-dien-mobile-design.md`, kế hoạch `docs/plans/2026-11-02-giao-dien-mobile.md`.
+
+- [x] Phân tích giao diện Micro RPG (7 ảnh chủ dự án gửi), bản phác bố cục + khung cảnh, chủ dự án chọn bản 32 màu
+- [x] Thiết kế + kế hoạch, chủ dự án duyệt (PR #34)
+- [x] Đợt A — bảng màu Endesga 32, tô lại hình (PR #35)
+- [x] Đợt B — hồ sơ phiên bản 5, lưu đồ, chơi lại không nhận vàng (PR #36)
+- [x] Đợt C — khung cảnh rừng vẽ bằng code, màn trận đấu mới (PR #37)
+- [x] Đợt D — bản đồ, bảng trước trận, màn Vũ khí (PR #38)
+- [x] Đợt E — Nâng cấp và Cửa hàng dạng thẻ
+- [ ] Rà soát cuối toàn bộ F18 (agent mạnh nhất)

@@ -1,15 +1,18 @@
-// Đợt 6: màn Cửa hàng — VỎ hiển thị. Mở từ Bản đồ (thanh nút dưới); mỗi món một hàng: tên + cấp, tình trạng (còn mấy
-// trận / đã có cấp cao hơn), nút mua. Luật giá / hạn dùng nằm ở logic/shop.ts; scene chỉ vẽ, chuyển cú chạm
-// thành buyRental() và lưu hồ sơ. Dùng chung bố cục hàng với màn Nâng cấp. "XONG" quay lại Bản đồ.
+// Đợt 6: màn Cửa hàng — VỎ hiển thị. F18 đợt E: dạng thẻ (học cách trình bày ảnh 3 Micro RPG, vẫn mua bằng
+// vàng): mỗi món một thẻ: hình, tên, chữ cấp "Hiếm", tình trạng, nút mua có đồng xu. Luật giá / hạn dùng nằm ở
+// logic/shop.ts; scene chỉ vẽ, chuyển cú chạm thành buyRental() và lưu. Dùng chung bố cục thẻ với Nâng cấp.
 import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
+import { registerPixelSprites } from '../../../app/pixelSprites';
 import { setSnapshotProvider } from '../../../app/testBridge';
-import { colorNumber, PALETTE } from '../../../shared/palette';
+import { PALETTE } from '../../../shared/palette';
 import { loadProfile, saveProfile, type Profile } from '../../profile';
 import { BATTLE_CONFIG, LOOT_CONFIG, SHOP_CONFIG } from '../logic/battleConfig';
 import type { WeaponRentals } from '../logic/battleTypes';
 import { buyRental } from '../logic/shop';
+import { CARD_TEXT, drawBuyButton, drawCardFrame, drawCardScreen, goFromNav } from './cardScreen';
 import type { MapSceneData } from './MapScene';
-import { buyButtonRect, UPGRADE_LAYOUT, upgradeRowTop, upgradeTapAt } from './upgradeLayout';
+import { UI_SPRITES, WEAPON_ICON, type UiSprite } from './uiSprites';
+import { buyButtonRect, cardRect, upgradeTapAt } from './upgradeLayout';
 import { styleTierText } from './weaponTierStyle';
 
 /** Thứ test E2E đọc được qua window.__PIXEL_GAME__.snapshot(). */
@@ -21,33 +24,25 @@ export interface ShopSnapshot {
   readonly canTap: boolean;
 }
 
-const GAME_WIDTH = 360;
-const GAME_HEIGHT = 640;
 /** Hành vi giao diện: màn vừa mở chờ chút mới nhận chạm (như Bản đồ). */
 const TAP_DELAY_MS = 500;
 
-const TEXT = {
-  fontFamily: 'monospace',
-  fontStyle: 'bold',
-  color: PALETTE.white,
-  stroke: PALETTE.ink,
-  strokeThickness: 4,
-} as const;
-
-interface ShopRow {
+interface ShopCard {
   readonly weapon: number;
   readonly status: GameObjects.Text;
-  readonly frame: GameObjects.Rectangle;
+  readonly buy: GameObjects.Graphics;
+  readonly coin: GameObjects.Image;
   readonly price: GameObjects.Text;
 }
 
 export class ShopScene extends Scene {
-  /** Màn chuẩn bị để quay lại (màn sắp chơi + bộ đồ đang chọn). */
+  /** Bản đồ mở lại thế nào khi chạm CHƠI. */
   private returnTo: MapSceneData = {};
   private profile!: Profile;
-  private rows: ShopRow[] = [];
-  private goldText!: GameObjects.Text;
+  private cards: ShopCard[] = [];
+  private gold!: { set(text: string): void };
   private notice!: GameObjects.Text;
+  private uiKeys!: Record<UiSprite, string>;
   private openElapsedMs = 0;
   private leaving = false;
 
@@ -62,22 +57,17 @@ export class ShopScene extends Scene {
 
   create(): void {
     // Phaser dùng lại cùng đối tượng scene mỗi lần mở: bỏ tham chiếu tới hình của lần trước.
-    this.rows = [];
+    this.cards = [];
     this.openElapsedMs = 0;
     this.leaving = false;
-
-    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, colorNumber('forest')).setOrigin(0);
-    this.add
-      .text(GAME_WIDTH / 2, 40, 'CỬA HÀNG', { ...TEXT, fontSize: '32px', color: PALETTE.yellow })
-      .setOrigin(0.5);
-    this.goldText = this.add
-      .text(GAME_WIDTH / 2, 82, '', { ...TEXT, fontSize: '18px', color: PALETTE.yellow })
-      .setOrigin(0.5);
-    SHOP_CONFIG.weapons.forEach((weapon, row) => this.createRow(weapon, row));
-    this.notice = this.add
-      .text(GAME_WIDTH / 2, 500, '', { ...TEXT, fontSize: '14px', color: PALETTE.orange })
-      .setOrigin(0.5);
-    this.createBackButton();
+    this.uiKeys = registerPixelSprites(this, 'ui', UI_SPRITES);
+    ({ gold: this.gold, notice: this.notice } = drawCardScreen(
+      this,
+      'CỬA HÀNG',
+      'shop',
+      this.uiKeys,
+    ));
+    SHOP_CONFIG.weapons.forEach((weapon, index) => this.createCard(weapon, index));
 
     this.input.on('pointerdown', (pointer: Input.Pointer) => this.handleTap(pointer.x, pointer.y));
     const clearSnapshot = setSnapshotProvider(() => this.snapshot());
@@ -96,12 +86,12 @@ export class ShopScene extends Scene {
 
   private handleTap(x: number, y: number): void {
     if (!this.canTap()) return;
-    const tap = upgradeTapAt(x, y, SHOP_CONFIG.weapons.length, UPGRADE_LAYOUT);
-    if (tap?.kind === 'back') {
+    const tap = upgradeTapAt(x, y, SHOP_CONFIG.weapons.length);
+    if (tap?.kind === 'nav' && tap.target !== 'shop') {
       this.leaving = true;
-      this.scene.start('map', this.returnTo);
+      goFromNav(this, tap.target, this.returnTo, this.profile);
     } else if (tap?.kind === 'buy') {
-      const weapon = SHOP_CONFIG.weapons[tap.row];
+      const weapon = SHOP_CONFIG.weapons[tap.index];
       if (weapon !== undefined) this.buy(weapon);
     }
   }
@@ -140,68 +130,79 @@ export class ShopScene extends Scene {
 
   // ---------- Vẽ ----------
 
-  private createRow(weapon: number, row: number): void {
-    const L = UPGRADE_LAYOUT;
-    const top = upgradeRowTop(row, L);
+  private createCard(weapon: number, index: number): void {
+    const card = cardRect(index);
+    const cx = card.x + card.width / 2;
     const name = BATTLE_CONFIG.weapons[weapon]?.name ?? '';
-    this.add.text(L.left, top + 4, name, { ...TEXT, fontSize: '18px' });
-    const tier = this.add.text(L.left, top + 30, LOOT_CONFIG.tiers[SHOP_CONFIG.tier]?.name ?? '', {
-      ...TEXT,
-      fontSize: '14px',
-    });
+    drawCardFrame(this, card);
+    const icon = WEAPON_ICON[name];
+    if (icon) {
+      this.add
+        .image(cx, card.y + 36, this.uiKeys[icon])
+        .setScale(3)
+        .setDepth(5);
+    }
+    this.add
+      .text(cx, card.y + 74, name, { ...CARD_TEXT, fontSize: '15px' })
+      .setOrigin(0.5)
+      .setDepth(5);
+    const tier = this.add
+      .text(cx, card.y + 96, LOOT_CONFIG.tiers[SHOP_CONFIG.tier]?.name ?? '', {
+        ...CARD_TEXT,
+        fontSize: '13px',
+      })
+      .setOrigin(0.5)
+      .setDepth(5);
     styleTierText(tier, SHOP_CONFIG.tier);
-    const status = this.add.text(L.left, top + 52, '', {
-      ...TEXT,
-      fontSize: '13px',
-      color: PALETTE.mist,
-    });
-    const rect = buyButtonRect(row, L);
-    const frame = this.add
-      .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('dusk'))
-      .setOrigin(0);
-    const price = this.add
-      .text(rect.x + rect.width / 2, rect.y + rect.height / 2, '', {
-        ...TEXT,
-        fontSize: '14px',
+    const status = this.add
+      .text(cx, card.y + 126, '', {
+        ...CARD_TEXT,
+        fontSize: '12px',
+        color: PALETTE.mist,
         align: 'center',
+        wordWrap: { width: card.width - 16 },
       })
-      .setOrigin(0.5);
-    this.rows.push({ weapon, status, frame, price });
-  }
-
-  private createBackButton(): void {
-    const { back } = UPGRADE_LAYOUT;
-    this.add
-      .rectangle(back.x, back.y, back.width, back.height, colorNumber('grass'))
-      .setOrigin(0)
-      .setStrokeStyle(3, colorNumber('leaf'));
-    this.add
-      .text(back.x + back.width / 2, back.y + back.height / 2, 'XONG', {
-        ...TEXT,
-        fontSize: '26px',
+      .setOrigin(0.5)
+      .setDepth(5);
+    const rect = buyButtonRect(index);
+    const buy = this.add.graphics().setDepth(5);
+    const coin = this.add
+      .image(rect.x + 22, rect.y + rect.height / 2, this.uiKeys.coin)
+      .setScale(2)
+      .setDepth(5);
+    const price = this.add
+      .text(rect.x + rect.width / 2 + 12, rect.y + rect.height / 2, '', {
+        ...CARD_TEXT,
+        fontSize: '16px',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(5);
+    this.cards.push({ weapon, status, buy, coin, price });
   }
 
   /** Vẽ lại theo hồ sơ hiện tại: vàng, tình trạng từng món, nút mua sáng/tối. */
   private sync(): void {
     const { gold, rentals, weaponTiers } = this.profile;
-    this.goldText.setText(`Vàng: ${gold}`);
-    for (const row of this.rows) {
-      const left = rentals[row.weapon] ?? 0;
-      const owned = LOOT_CONFIG.tiers[weaponTiers[row.weapon] ?? 0]?.name ?? '';
-      row.status.setText(
-        this.ownsBetter(row.weapon)
+    this.gold.set(String(gold));
+    this.cards.forEach((card, index) => {
+      const left = rentals[card.weapon] ?? 0;
+      const owned = LOOT_CONFIG.tiers[weaponTiers[card.weapon] ?? 0]?.name ?? '';
+      const ownsBetter = this.ownsBetter(card.weapon);
+      card.status.setText(
+        ownsBetter
           ? `Đã có ${owned} (vĩnh viễn)`
           : left > 0
             ? `Còn ${left} trận · mua thêm ${SHOP_CONFIG.battles}`
             : `Dùng ${SHOP_CONFIG.battles} trận`,
       );
-      const affordable = this.canBuy(row.weapon);
-      row.frame.setStrokeStyle(affordable ? 3 : 1, colorNumber(affordable ? 'leaf' : 'slate'));
-      row.price
-        .setText(this.ownsBetter(row.weapon) ? 'ĐÃ CÓ' : `MUA\n${SHOP_CONFIG.price} vàng`)
-        .setColor(affordable ? PALETTE.white : PALETTE.mist);
-    }
+      const rect = buyButtonRect(index);
+      const affordable = this.canBuy(card.weapon);
+      drawBuyButton(card.buy, rect, affordable);
+      card.coin.setVisible(!ownsBetter);
+      card.price
+        .setText(ownsBetter ? 'ĐÃ CÓ' : String(SHOP_CONFIG.price))
+        .setX(rect.x + rect.width / 2 + (ownsBetter ? 0 : 12))
+        .setColor(affordable || ownsBetter ? PALETTE.white : PALETTE.mist);
+    });
   }
 }

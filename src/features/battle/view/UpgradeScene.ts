@@ -1,15 +1,18 @@
-// Đợt 4: màn Nâng cấp — VỎ hiển thị. Mở từ Bản đồ (thanh nút dưới); mỗi chỉ số một hàng: tên, cấp, hiệu lực hiện tại →
-// cấp kế, nút mua. Luật giá / giới hạn / hiệu lực nằm ở logic/upgrades.ts; scene chỉ vẽ, chuyển cú chạm
-// thành buyUpgrade() và lưu hồ sơ. "XONG" quay lại Bản đồ.
+// Đợt 4: màn Nâng cấp — VỎ hiển thị. F18 đợt E: dạng thẻ (học ảnh 2 Micro RPG) — mỗi chỉ số một thẻ: hình,
+// tên, cấp, hiệu lực hiện tại → cấp kế, nút mua có đồng xu. Mở từ thanh nút dưới, đi tiếp cũng bằng thanh đó.
+// Luật giá / giới hạn / hiệu lực nằm ở logic/upgrades.ts; scene chỉ vẽ, chuyển cú chạm thành buyUpgrade() và lưu.
 import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
+import { registerPixelSprites } from '../../../app/pixelSprites';
 import { setSnapshotProvider } from '../../../app/testBridge';
-import { colorNumber, PALETTE } from '../../../shared/palette';
+import { PALETTE } from '../../../shared/palette';
 import { loadProfile, saveProfile, type Profile } from '../../profile';
 import { BATTLE_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
 import { UPGRADE_KINDS, type UpgradeKind, type UpgradeLevels } from '../logic/battleTypes';
 import { buyUpgrade, upgradeCost, withUpgrades } from '../logic/upgrades';
+import { CARD_TEXT, drawBuyButton, drawCardFrame, drawCardScreen, goFromNav } from './cardScreen';
 import type { MapSceneData } from './MapScene';
-import { buyButtonRect, UPGRADE_LAYOUT, upgradeRowTop, upgradeTapAt } from './upgradeLayout';
+import { UI_SPRITES, UPGRADE_ICON, type UiSprite } from './uiSprites';
+import { buyButtonRect, cardRect, upgradeTapAt } from './upgradeLayout';
 
 /** Thứ test E2E đọc được qua window.__PIXEL_GAME__.snapshot(). */
 export interface UpgradeSnapshot {
@@ -20,24 +23,15 @@ export interface UpgradeSnapshot {
   readonly canTap: boolean;
 }
 
-const GAME_WIDTH = 360;
-const GAME_HEIGHT = 640;
 /** Hành vi giao diện: màn vừa mở chờ chút mới nhận chạm (như Bản đồ). */
 const TAP_DELAY_MS = 500;
 
-const TEXT = {
-  fontFamily: 'monospace',
-  fontStyle: 'bold',
-  color: PALETTE.white,
-  stroke: PALETTE.ink,
-  strokeThickness: 4,
-} as const;
-
-interface UpgradeRow {
+interface UpgradeCard {
   readonly kind: UpgradeKind;
   readonly level: GameObjects.Text;
   readonly effect: GameObjects.Text;
-  readonly frame: GameObjects.Rectangle;
+  readonly buy: GameObjects.Graphics;
+  readonly coin: GameObjects.Image;
   readonly price: GameObjects.Text;
 }
 
@@ -65,12 +59,13 @@ const EFFECT_UNIT: Record<UpgradeKind, string> = {
 };
 
 export class UpgradeScene extends Scene {
-  /** Màn chuẩn bị để quay lại (màn sắp chơi + bộ đồ đang chọn). */
+  /** Bản đồ mở lại thế nào khi chạm CHƠI. */
   private returnTo: MapSceneData = {};
   private profile!: Profile;
-  private rows: UpgradeRow[] = [];
-  private goldText!: GameObjects.Text;
+  private cards: UpgradeCard[] = [];
+  private gold!: { set(text: string): void };
   private notice!: GameObjects.Text;
+  private uiKeys!: Record<UiSprite, string>;
   private openElapsedMs = 0;
   private leaving = false;
 
@@ -85,22 +80,17 @@ export class UpgradeScene extends Scene {
 
   create(): void {
     // Phaser dùng lại cùng đối tượng scene mỗi lần mở: bỏ tham chiếu tới hình của lần trước.
-    this.rows = [];
+    this.cards = [];
     this.openElapsedMs = 0;
     this.leaving = false;
-
-    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, colorNumber('forest')).setOrigin(0);
-    this.add
-      .text(GAME_WIDTH / 2, 40, 'NÂNG CẤP', { ...TEXT, fontSize: '32px', color: PALETTE.yellow })
-      .setOrigin(0.5);
-    this.goldText = this.add
-      .text(GAME_WIDTH / 2, 82, '', { ...TEXT, fontSize: '18px', color: PALETTE.yellow })
-      .setOrigin(0.5);
-    UPGRADE_KINDS.forEach((kind, row) => this.createRow(kind, row));
-    this.notice = this.add
-      .text(GAME_WIDTH / 2, 500, '', { ...TEXT, fontSize: '14px', color: PALETTE.orange })
-      .setOrigin(0.5);
-    this.createBackButton();
+    this.uiKeys = registerPixelSprites(this, 'ui', UI_SPRITES);
+    ({ gold: this.gold, notice: this.notice } = drawCardScreen(
+      this,
+      'NÂNG CẤP',
+      'upgrade',
+      this.uiKeys,
+    ));
+    UPGRADE_KINDS.forEach((kind, index) => this.createCard(kind, index));
 
     this.input.on('pointerdown', (pointer: Input.Pointer) => this.handleTap(pointer.x, pointer.y));
     const clearSnapshot = setSnapshotProvider(() => this.snapshot());
@@ -119,12 +109,12 @@ export class UpgradeScene extends Scene {
 
   private handleTap(x: number, y: number): void {
     if (!this.canTap()) return;
-    const tap = upgradeTapAt(x, y, UPGRADE_KINDS.length, UPGRADE_LAYOUT);
-    if (tap?.kind === 'back') {
+    const tap = upgradeTapAt(x, y, UPGRADE_KINDS.length);
+    if (tap?.kind === 'nav' && tap.target !== 'upgrade') {
       this.leaving = true;
-      this.scene.start('map', this.returnTo);
+      goFromNav(this, tap.target, this.returnTo, this.profile);
     } else if (tap?.kind === 'buy') {
-      const kind = UPGRADE_KINDS[tap.row];
+      const kind = UPGRADE_KINDS[tap.index];
       if (kind !== undefined) this.buy(kind);
     }
   }
@@ -155,69 +145,71 @@ export class UpgradeScene extends Scene {
 
   // ---------- Vẽ ----------
 
-  private createRow(kind: UpgradeKind, row: number): void {
-    const L = UPGRADE_LAYOUT;
-    const top = upgradeRowTop(row, L);
-    this.add.text(L.left, top + 4, UPGRADE_CONFIG[kind].name, { ...TEXT, fontSize: '18px' });
-    const level = this.add.text(L.left, top + 30, '', {
-      ...TEXT,
-      fontSize: '14px',
-      color: PALETTE.yellow,
-    });
-    const effect = this.add.text(L.left, top + 52, '', {
-      ...TEXT,
-      fontSize: '13px',
-      color: PALETTE.mist,
-    });
-    const rect = buyButtonRect(row, L);
-    const frame = this.add
-      .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('dusk'))
-      .setOrigin(0);
-    const price = this.add
-      .text(rect.x + rect.width / 2, rect.y + rect.height / 2, '', {
-        ...TEXT,
-        fontSize: '14px',
+  private createCard(kind: UpgradeKind, index: number): void {
+    const card = cardRect(index);
+    const cx = card.x + card.width / 2;
+    drawCardFrame(this, card);
+    this.add
+      .image(cx, card.y + 36, this.uiKeys[UPGRADE_ICON[kind]])
+      .setScale(3)
+      .setDepth(5);
+    this.add
+      .text(cx, card.y + 74, UPGRADE_CONFIG[kind].name, { ...CARD_TEXT, fontSize: '15px' })
+      .setOrigin(0.5)
+      .setDepth(5);
+    const level = this.add
+      .text(cx, card.y + 96, '', { ...CARD_TEXT, fontSize: '13px', color: PALETTE.yellow })
+      .setOrigin(0.5)
+      .setDepth(5);
+    const effect = this.add
+      .text(cx, card.y + 126, '', {
+        ...CARD_TEXT,
+        fontSize: '12px',
+        color: PALETTE.mist,
         align: 'center',
+        wordWrap: { width: card.width - 16 },
       })
-      .setOrigin(0.5);
-    this.rows.push({ kind, level, effect, frame, price });
-  }
-
-  private createBackButton(): void {
-    const { back } = UPGRADE_LAYOUT;
-    this.add
-      .rectangle(back.x, back.y, back.width, back.height, colorNumber('grass'))
-      .setOrigin(0)
-      .setStrokeStyle(3, colorNumber('leaf'));
-    this.add
-      .text(back.x + back.width / 2, back.y + back.height / 2, 'XONG', {
-        ...TEXT,
-        fontSize: '26px',
+      .setOrigin(0.5)
+      .setDepth(5);
+    const rect = buyButtonRect(index);
+    const buy = this.add.graphics().setDepth(5);
+    const coin = this.add
+      .image(rect.x + 22, rect.y + rect.height / 2, this.uiKeys.coin)
+      .setScale(2)
+      .setDepth(5);
+    const price = this.add
+      .text(rect.x + rect.width / 2 + 12, rect.y + rect.height / 2, '', {
+        ...CARD_TEXT,
+        fontSize: '16px',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(5);
+    this.cards.push({ kind, level, effect, buy, coin, price });
   }
 
   /** Vẽ lại theo hồ sơ hiện tại: vàng, cấp, hiệu lực hiện tại → cấp kế, nút mua sáng/tối. */
   private sync(): void {
     const { gold, upgrades } = this.profile;
-    this.goldText.setText(`Vàng: ${gold}`);
-    for (const row of this.rows) {
-      const max = UPGRADE_CONFIG[row.kind].costs.length;
-      const level = Math.min(upgrades[row.kind] ?? 0, max);
-      const cost = upgradeCost(upgrades, row.kind, UPGRADE_CONFIG);
-      const now = effectValue(row.kind, upgrades);
-      const unit = EFFECT_UNIT[row.kind];
-      row.level.setText(`Cấp ${level}/${max}`);
-      row.effect.setText(
+    this.gold.set(String(gold));
+    this.cards.forEach((card, index) => {
+      const max = UPGRADE_CONFIG[card.kind].costs.length;
+      const level = Math.min(upgrades[card.kind] ?? 0, max);
+      const cost = upgradeCost(upgrades, card.kind, UPGRADE_CONFIG);
+      const now = effectValue(card.kind, upgrades);
+      const unit = EFFECT_UNIT[card.kind];
+      card.level.setText(`Cấp ${level}/${max}`);
+      card.effect.setText(
         cost === null
           ? `${now}${unit}`
-          : `${now} → ${effectValue(row.kind, { ...upgrades, [row.kind]: level + 1 })}${unit}`,
+          : `${now} → ${effectValue(card.kind, { ...upgrades, [card.kind]: level + 1 })}${unit}`,
       );
       const affordable = cost !== null && cost <= gold;
-      row.frame.setStrokeStyle(affordable ? 3 : 1, colorNumber(affordable ? 'leaf' : 'slate'));
-      row.price
-        .setText(cost === null ? 'TỐI ĐA' : `MUA\n${cost} vàng`)
-        .setColor(affordable ? PALETTE.white : PALETTE.mist);
-    }
+      drawBuyButton(card.buy, buyButtonRect(index), affordable);
+      card.coin.setVisible(cost !== null);
+      card.price
+        .setText(cost === null ? 'TỐI ĐA' : String(cost))
+        .setX(buyButtonRect(index).x + buyButtonRect(index).width / 2 + (cost === null ? 0 : 12))
+        .setColor(affordable || cost === null ? PALETTE.white : PALETTE.mist);
+    });
   }
 }

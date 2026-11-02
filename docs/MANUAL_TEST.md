@@ -43,6 +43,7 @@ Unit test và E2E điều khiển game qua cầu nối `window.__PIXEL_GAME__` v
 | C4  | Chơi tới hết màn (thắng hoặc thua) | Có màn kết quả, ghi rõ chạm để làm gì; chạm thì đi đúng nơi đã ghi                                                                                                                                               |
 | C6  | Chạm thẻ vũ khí ở bảng trước trận  | Mở màn Vũ khí; chạm Rìu → thẻ Rìu viền xanh ở hàng "Đang mang"; chạm CHƠI → về bảng, thẻ đồ là Rìu                                                                                                               |
 | C7  | Đóng bảng (X), chạm màn đã qua     | Bảng màn đó ghi "Chơi lại: không nhận vàng"; chạm màn chưa mở → không gì                                                                                                                                         |
+| C8  | Đi qua 4 nút thanh dưới            | Cửa hàng, Vũ khí, Nâng cấp mở đúng màn (nút của màn đang mở tô tối); CHƠI từ màn phụ mở bảng trước trận                                                                                                          |
 | C5  | Soát hình mọi màn hình đã đi qua   | Chữ không đè, không tràn khung; chỉ màu bảng Endesga 32; không lỗi console                                                                                                                                       |
 
 Cộng thêm **kịch bản riêng** của từng việc (ghi trong kế hoạch của việc đó).

@@ -1,59 +1,34 @@
-// Đợt 4: bố cục màn Nâng cấp (khung 360×640) — phép tính tọa độ thuần, không Phaser, không luật chơi.
-// Mỗi chỉ số một hàng: chữ bên trái (tên, cấp, hiệu lực), nút mua bên phải. Nút "XONG" ở đáy, đúng chỗ
-// nút "VÀO TRẬN" của màn chuẩn bị.
+// F18 đợt E: bố cục màn Nâng cấp và Cửa hàng dạng thẻ (học ảnh 2, 3 Micro RPG): lưới 2×2 thẻ, nút mua trong
+// thẻ, thanh nút dưới (thay nút "XONG" của đợt 4). Khung 360×640. Phép tính tọa độ thuần, không Phaser.
 import type { Rect } from './battleLayout';
+import { navTapAt, type NavTarget } from './navLayout';
 
-export interface UpgradeLayout {
-  readonly left: number;
-  readonly width: number;
-  readonly firstRowTop: number;
-  /** Chiều cao mỗi hàng (kể cả khoảng thở tới hàng dưới). */
-  readonly rowHeight: number;
-  readonly buyWidth: number;
-  readonly buyHeight: number;
-  readonly back: Rect;
+const COLUMNS = [18, 186] as const;
+const CARD = { width: 156, height: 222 } as const;
+const GRID_TOP = 96;
+const ROW_PITCH = 236;
+
+/** Thẻ thứ `index` (trái → phải, trên → dưới). */
+export function cardRect(index: number): Rect {
+  const x = COLUMNS[index % COLUMNS.length] ?? COLUMNS[0];
+  return { x, y: GRID_TOP + Math.floor(index / COLUMNS.length) * ROW_PITCH, ...CARD };
 }
 
-export const UPGRADE_LAYOUT: UpgradeLayout = {
-  left: 18,
-  width: 324,
-  firstRowTop: 120,
-  // Đợt 5: 4 hàng (thêm May mắn) — hàng cuối vẫn trên dòng báo lỗi (y 500) và nút "XONG".
-  rowHeight: 96,
-  buyWidth: 120,
-  buyHeight: 56,
-  back: { x: 18, y: 520, width: 324, height: 64 },
-};
-
-export function upgradeRowTop(row: number, layout: UpgradeLayout): number {
-  return layout.firstRowTop + row * layout.rowHeight;
+/** Nút mua ở đáy thẻ `index`. */
+export function buyButtonRect(index: number): Rect {
+  const card = cardRect(index);
+  return { x: card.x + 12, y: card.y + card.height - 56, width: card.width - 24, height: 44 };
 }
 
-/** Nút mua của hàng `row`: sát mép phải, giữa hàng theo chiều dọc phần chữ. */
-export function buyButtonRect(row: number, layout: UpgradeLayout): Rect {
-  return {
-    x: layout.left + layout.width - layout.buyWidth,
-    y: upgradeRowTop(row, layout) + 8,
-    width: layout.buyWidth,
-    height: layout.buyHeight,
-  };
-}
+export type UpgradeTap = { kind: 'buy'; index: number } | { kind: 'nav'; target: NavTarget };
 
-export type UpgradeTap = { readonly kind: 'buy'; readonly row: number } | { readonly kind: 'back' };
-
-const inside = (x: number, y: number, r: Rect) =>
-  x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height;
-
-/** Điểm chạm (x, y) trúng nút mua của hàng nào, nút "XONG", hay không trúng gì. */
-export function upgradeTapAt(
-  x: number,
-  y: number,
-  rowCount: number,
-  layout: UpgradeLayout,
-): UpgradeTap | null {
-  if (inside(x, y, layout.back)) return { kind: 'back' };
-  for (let row = 0; row < rowCount; row++) {
-    if (inside(x, y, buyButtonRect(row, layout))) return { kind: 'buy', row };
+/** Chạm: nút mua của thẻ nào (trong `count` thẻ), nút thanh dưới, hoặc null. */
+export function upgradeTapAt(x: number, y: number, count: number): UpgradeTap | null {
+  for (let index = 0; index < count; index++) {
+    const r = buyButtonRect(index);
+    if (x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height)
+      return { kind: 'buy', index };
   }
-  return null;
+  const target = navTapAt(x, y);
+  return target ? { kind: 'nav', target } : null;
 }

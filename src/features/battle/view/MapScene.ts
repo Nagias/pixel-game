@@ -86,6 +86,11 @@ const GAME_WIDTH = 360;
 const GAME_HEIGHT = 640;
 /** Hành vi giao diện: màn vừa mở chờ chút mới nhận chạm (chạm đúp ở màn kết quả không lọt sang đây). */
 const TAP_DELAY_MS = 500;
+/**
+ * Bảng trước trận vừa bật lên chờ chút mới nhận chạm: nhiều nút màn nằm đúng chỗ nút chơi / thẻ vũ khí của bảng,
+ * chạm đúp vào nút màn không được lọt thành "vào trận" (rà soát cuối F18).
+ */
+const POPUP_TAP_DELAY_MS = 400;
 /** Quái trùm — vẽ hình cạnh nút màn có nó (chỉ là hình, không phải luật). */
 const BOSS_KINDS: readonly MonsterKind[] = ['slimeKing', 'treant'];
 const DEPTH = { scenery: -1, map: 0, hud: 5, popup: 20 } as const;
@@ -109,6 +114,8 @@ export class MapScene extends Scene {
   private popupLevel: number | null = null;
   private popup: GameObjects.Container | null = null;
   private openElapsedMs = 0;
+  /** Thời gian bảng trước trận đang mở đã hiện (đếm theo khung hình, như openElapsedMs). */
+  private popupElapsedMs = POPUP_TAP_DELAY_MS;
   /** Đã chạm vào trận / sang màn khác — bỏ qua mọi chạm sau đó. */
   private leaving = false;
   private spriteKeys!: Record<keyof typeof BATTLE_SPRITES, string>;
@@ -136,12 +143,12 @@ export class MapScene extends Scene {
     const session = this.registry.get(SESSION_LOADOUT) as SavedLoadout | undefined;
     this.savedLoadout =
       fromSavedLoadout(session ?? profile.loadout, this.config) ?? defaultLoadout(this.config);
-    // `?level=N` (thử tay / E2E) mở sẵn bảng màn N nếu đã mở khóa; màn chưa mở thì không mở bảng.
-    const requested = data.popupLevel ?? parseLevelParam(window.location.search, count);
+    // Bảng do màn trong game gửi sang (trận đấu: màn kế theo luật; màn phụ: bảng đang xem dở) thì tin — bộ nhớ
+    // trình duyệt bị chặn thì hồ sơ không tiến, nhưng người chơi vẫn phải sang được màn kế trong phiên.
+    // `?level=N` (thử tay / E2E) chỉ mở sẵn bảng màn N nếu đã mở khóa.
+    const fromUrl = parseLevelParam(window.location.search, count);
     this.popupLevel =
-      requested !== null && requested !== undefined && this.statuses[requested] !== 'locked'
-        ? requested
-        : null;
+      data.popupLevel ?? (fromUrl !== null && this.statuses[fromUrl] !== 'locked' ? fromUrl : null);
   }
 
   create(): void {
@@ -176,10 +183,15 @@ export class MapScene extends Scene {
 
   override update(_time: number, delta: number): void {
     this.openElapsedMs += delta;
+    this.popupElapsedMs += delta;
   }
 
   private canTap(): boolean {
-    return this.openElapsedMs >= TAP_DELAY_MS && !this.leaving;
+    return (
+      this.openElapsedMs >= TAP_DELAY_MS &&
+      !this.leaving &&
+      (this.popupLevel === null || this.popupElapsedMs >= POPUP_TAP_DELAY_MS)
+    );
   }
 
   private snapshot(): MapSnapshot {
@@ -221,9 +233,9 @@ export class MapScene extends Scene {
     }
     const tap = mapTapAt(x, y);
     if (tap?.kind === 'level') {
-      if (this.statuses[tap.level] !== 'locked') this.openPopup(tap.level);
+      if (this.statuses[tap.level] !== 'locked') this.openPopup(tap.level, true);
     } else if (tap?.kind === 'nav') {
-      if (tap.target === 'play') this.openPopup(this.current);
+      if (tap.target === 'play') this.openPopup(this.current, true);
       else if (tap.target === 'weapons') this.leave('weapons', { returnTo: {} });
       else this.leave(tap.target, {});
     }
@@ -364,9 +376,11 @@ export class MapScene extends Scene {
   }
 
   /** Mở (hoặc thay) bảng trước trận của màn `level` (học ảnh 6 Micro RPG). */
-  private openPopup(level: number): void {
+  private openPopup(level: number, byTap = false): void {
     this.closePopup();
     this.popupLevel = level;
+    // Mở bằng cú chạm thì chờ POPUP_TAP_DELAY_MS; mở sẵn lúc vào màn thì đã có TAP_DELAY_MS của cả màn.
+    this.popupElapsedMs = byTap ? 0 : POPUP_TAP_DELAY_MS;
     const { panel, title, quest, monsters, gearCards, skillCard, play, close } = PREBATTLE_LAYOUT;
     const config = levelAt(level, this.config);
     const loadout = this.loadoutFor(level);
