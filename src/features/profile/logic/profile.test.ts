@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { applyBattleResult, emptyProfile, readProfile, startLevel, writeProfile } from './profile';
+import {
+  applyBattleResult,
+  emptyProfile,
+  isReplay,
+  levelStatus,
+  readProfile,
+  startLevel,
+  withSavedLoadout,
+  writeProfile,
+} from './profile';
 import { PROFILE_BACKUP_KEY, PROFILE_KEY, PROFILE_VERSION } from './profileConfig';
 import type { KeyValueStore, Profile } from './profileTypes';
 
@@ -35,6 +44,8 @@ describe('đọc / ghi hồ sơ', () => {
       weaponTiers: {},
       lootPity: {},
       rentals: {},
+      clearedAll: false,
+      loadout: null,
     });
   });
 
@@ -47,6 +58,8 @@ describe('đọc / ghi hồ sơ', () => {
       weaponTiers: { 0: 3, 2: 1 },
       lootPity: { dryRareKills: 2, dropsSinceHighTier: 11 },
       rentals: { 1: 4 },
+      clearedAll: true,
+      loadout: { weapons: ['Rìu', 'Giáo', 'Cung'], skill: 'fireball' },
     });
     expect(writeProfile(store, saved)).toBe(true);
     expect(readProfile(store)).toEqual(saved);
@@ -77,6 +90,37 @@ describe('đọc / ghi hồ sơ', () => {
     const { store, data } = memoryStore({ [PROFILE_KEY]: raw });
     expect(readProfile(store)).toEqual(profile({ gold: 8, unlockedLevel: 2, ...loot }));
     expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
+  });
+
+  // F18 đợt B: phiên bản 5 thêm "đã phá đảo" và đồ đang mang. Bản 4 (đợt 6) tự chuyển lên.
+  it('hồ sơ phiên bản 4 chuyển lên phiên bản 5: giữ mọi thứ, chưa phá đảo, chưa lưu đồ', () => {
+    const v4 = {
+      version: 4,
+      gold: 7,
+      unlockedLevel: 3,
+      upgrades: { hp: 1 },
+      weaponTiers: { 0: 2 },
+      lootPity: { dryRareKills: 1 },
+      rentals: { 1: 2 },
+    };
+    const { store, data } = memoryStore({ [PROFILE_KEY]: JSON.stringify(v4) });
+    expect(readProfile(store)).toEqual({
+      ...v4,
+      version: 5,
+      clearedAll: false,
+      loadout: null,
+    });
+    expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
+  });
+
+  it('lưu đồ đang mang rồi đọc lại ra y hệt (kể cả không mang skill)', () => {
+    const { store } = memoryStore();
+    const saved = withSavedLoadout(emptyProfile(), {
+      weapons: ['Kiếm', 'Giáo', 'Cung'],
+      skill: null,
+    });
+    writeProfile(store, saved);
+    expect(readProfile(store).loadout).toEqual({ weapons: ['Kiếm', 'Giáo', 'Cung'], skill: null });
   });
 
   it.each([
@@ -150,9 +194,78 @@ describe('đọc / ghi hồ sơ', () => {
       }),
     ],
     [
-      'phiên bản mới hơn game',
+      'phiên bản 5 thiếu phá đảo',
       JSON.stringify({
         version: 5,
+        gold: 0,
+        unlockedLevel: 0,
+        upgrades: {},
+        weaponTiers: {},
+        lootPity: {},
+        rentals: {},
+        loadout: null,
+      }),
+    ],
+    [
+      'phá đảo không phải true/false',
+      JSON.stringify({
+        version: 5,
+        gold: 0,
+        unlockedLevel: 0,
+        upgrades: {},
+        weaponTiers: {},
+        lootPity: {},
+        rentals: {},
+        clearedAll: 'có',
+        loadout: null,
+      }),
+    ],
+    [
+      'đồ đang mang không phải object',
+      JSON.stringify({
+        version: 5,
+        gold: 0,
+        unlockedLevel: 0,
+        upgrades: {},
+        weaponTiers: {},
+        lootPity: {},
+        rentals: {},
+        clearedAll: false,
+        loadout: 'Rìu',
+      }),
+    ],
+    [
+      'vũ khí đang mang không phải mảng chữ',
+      JSON.stringify({
+        version: 5,
+        gold: 0,
+        unlockedLevel: 0,
+        upgrades: {},
+        weaponTiers: {},
+        lootPity: {},
+        rentals: {},
+        clearedAll: false,
+        loadout: { weapons: [1, 2], skill: null },
+      }),
+    ],
+    [
+      'skill đang mang là số',
+      JSON.stringify({
+        version: 5,
+        gold: 0,
+        unlockedLevel: 0,
+        upgrades: {},
+        weaponTiers: {},
+        lootPity: {},
+        rentals: {},
+        clearedAll: false,
+        loadout: { weapons: ['Kiếm'], skill: 3 },
+      }),
+    ],
+    [
+      'phiên bản mới hơn game',
+      JSON.stringify({
+        version: 6,
         gold: 9,
         unlockedLevel: 4,
         upgrades: {},
@@ -256,5 +369,78 @@ describe('màn mở đầu khi vào game', () => {
 
   it('hồ sơ mở khóa nhiều màn hơn game hiện có (game bớt màn) thì về màn cuối', () => {
     expect(startLevel(profile({ unlockedLevel: 12 }), null, 7)).toBe(6);
+  });
+});
+
+// F18 đợt B (chủ dự án quyết 02/11/2026): "Cho chơi lại không có vàng" — chơi lại màn đã qua để luyện tay,
+// không cày được vàng hay đồ rơi ở màn dễ.
+describe('trạng thái màn trên bản đồ', () => {
+  const p = profile({ unlockedLevel: 3 });
+
+  it('màn nhỏ hơn màn đã mở là đã qua, bằng là đang tới, lớn hơn là chưa mở', () => {
+    expect(levelStatus(p, 2, 20)).toBe('cleared');
+    expect(levelStatus(p, 3, 20)).toBe('current');
+    expect(levelStatus(p, 4, 20)).toBe('locked');
+  });
+
+  it('đã phá đảo thì màn cuối cũng là đã qua; chưa thì vẫn là đang tới', () => {
+    expect(levelStatus(profile({ unlockedLevel: 19, clearedAll: true }), 19, 20)).toBe('cleared');
+    expect(levelStatus(profile({ unlockedLevel: 19 }), 19, 20)).toBe('current');
+  });
+
+  it('chơi lại = màn đã qua', () => {
+    expect(isReplay(p, 0, 20)).toBe(true);
+    expect(isReplay(p, 3, 20)).toBe(false);
+  });
+});
+
+describe('cộng kết quả trận chơi lại', () => {
+  const p = profile({
+    gold: 50,
+    unlockedLevel: 5,
+    weaponTiers: { 0: 1 },
+    lootPity: { dryRareKills: 2 },
+  });
+  const loot = { weaponTiers: { 0: 3 }, lootPity: { dryRareKills: 0 } };
+
+  it('chơi lại màn đã qua: không cộng vàng, không nhận đồ rơi, không đổi màn đã mở', () => {
+    const next = applyBattleResult(p, { level: 2, won: true, gold: 9, loot }, 20);
+    expect(next.gold).toBe(50);
+    expect(next.weaponTiers).toEqual({ 0: 1 });
+    expect(next.lootPity).toEqual({ dryRareKills: 2 });
+    expect(next.unlockedLevel).toBe(5);
+  });
+
+  it('chơi lại vẫn trừ món thuê mang vào trận', () => {
+    const next = applyBattleResult(
+      profile({ ...p, rentals: { 2: 3 } }),
+      { level: 2, won: false, gold: 0, rentals: { 2: 2 } },
+      20,
+    );
+    expect(next.rentals).toEqual({ 2: 2 });
+  });
+
+  it('thắng màn cuối lần đầu thì phá đảo và nhận vàng; chơi lại màn cuối sau đó không nhận vàng', () => {
+    const won = applyBattleResult(
+      profile({ gold: 50, unlockedLevel: 19 }),
+      { level: 19, won: true, gold: 10 },
+      20,
+    );
+    expect(won.clearedAll).toBe(true);
+    expect(won.gold).toBe(60);
+    const again = applyBattleResult(won, { level: 19, won: true, gold: 10 }, 20);
+    expect(again.gold).toBe(60);
+    expect(again.clearedAll).toBe(true);
+  });
+
+  it('thua màn cuối không phá đảo', () => {
+    expect(
+      applyBattleResult(profile({ unlockedLevel: 19 }), { level: 19, won: false, gold: 1 }, 20)
+        .clearedAll,
+    ).toBe(false);
+  });
+
+  it('màn đang tới vẫn cộng vàng như cũ', () => {
+    expect(applyBattleResult(p, { level: 5, won: false, gold: 4 }, 20).gold).toBe(54);
   });
 });

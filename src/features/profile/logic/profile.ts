@@ -1,7 +1,13 @@
 // Luật hồ sơ người chơi (đợt 3): đọc/ghi an toàn, cộng kết quả trận, chọn màn mở đầu. Hàm thuần — kho
 // lưu (localStorage) được truyền vào, không đụng trình duyệt.
 import { PROFILE_BACKUP_KEY, PROFILE_KEY, PROFILE_VERSION } from './profileConfig';
-import type { BattleResult, KeyValueStore, Profile } from './profileTypes';
+import type {
+  BattleResult,
+  KeyValueStore,
+  LevelStatus,
+  Profile,
+  SavedLoadout,
+} from './profileTypes';
 
 export function emptyProfile(): Profile {
   return {
@@ -12,6 +18,8 @@ export function emptyProfile(): Profile {
     weaponTiers: {},
     lootPity: {},
     rentals: {},
+    clearedAll: false,
+    loadout: null,
   };
 }
 
@@ -27,22 +35,42 @@ function parseProfile(raw: string): Profile | null {
     return null;
   }
   if (typeof data !== 'object' || data === null || Array.isArray(data)) return null;
-  const { version, gold, unlockedLevel, upgrades, weaponTiers, lootPity, rentals } = data as Record<
-    string,
-    unknown
-  >;
+  const {
+    version,
+    gold,
+    unlockedLevel,
+    upgrades,
+    weaponTiers,
+    lootPity,
+    rentals,
+    clearedAll,
+    loadout,
+  } = data as Record<string, unknown>;
   if (!isCount(gold) || !isCount(unlockedLevel)) return null;
   // Bước chuyển từ phiên bản cũ: 1 → 2 thêm cấp nâng cấp (chưa nâng gì); 2 → 3 thêm đồ rơi (chưa có gì);
-  // 3 → 4 thêm món thuê (chưa thuê gì).
+  // 3 → 4 thêm món thuê (chưa thuê gì); 4 → 5 thêm đã phá đảo (chưa) và đồ đang mang (chưa lưu).
   if (version === 1) return { ...emptyProfile(), gold, unlockedLevel };
   if (!isLevels(upgrades)) return null;
   if (version === 2) return { ...emptyProfile(), gold, unlockedLevel, upgrades };
   if (!isLevels(weaponTiers) || !isLevels(lootPity)) return null;
   const loot = { weaponTiers, lootPity };
   if (version === 3) return { ...emptyProfile(), gold, unlockedLevel, upgrades, ...loot };
-  if (version !== PROFILE_VERSION || !isLevels(rentals)) return null;
-  return { version, gold, unlockedLevel, upgrades, ...loot, rentals };
+  if (!isLevels(rentals)) return null;
+  if (version === 4) return { ...emptyProfile(), gold, unlockedLevel, upgrades, ...loot, rentals };
+  if (version !== PROFILE_VERSION || typeof clearedAll !== 'boolean') return null;
+  if (loadout !== null && !isSavedLoadout(loadout)) return null;
+  return { version, gold, unlockedLevel, upgrades, ...loot, rentals, clearedAll, loadout };
 }
+
+const isSavedLoadout = (value: unknown): value is SavedLoadout => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const { weapons, skill } = value as Record<string, unknown>;
+  return (
+    Array.isArray(weapons) &&
+    weapons.every((name) => typeof name === 'string') &&
+    (skill === null || typeof skill === 'string')
+  );
+};
 
 const isLevels = (value: unknown): value is Record<string, number> =>
   typeof value === 'object' &&
@@ -84,22 +112,47 @@ export function writeProfile(store: KeyValueStore, profile: Profile): boolean {
 }
 
 /**
+ * F18: trạng thái màn trên bản đồ. Màn trước màn cao nhất đã mở là đã qua; màn cuối là đã qua khi đã phá đảo.
+ */
+export function levelStatus(profile: Profile, level: number, levelCount: number): LevelStatus {
+  const current = Math.min(profile.unlockedLevel, levelCount - 1);
+  if (level < current || (level === current && profile.clearedAll && level === levelCount - 1)) {
+    return 'cleared';
+  }
+  return level === current ? 'current' : 'locked';
+}
+
+/** F18: chơi lại màn đã qua — không nhận vàng, không nhận đồ rơi (chủ dự án quyết 02/11/2026). */
+export function isReplay(profile: Profile, level: number, levelCount: number): boolean {
+  return levelStatus(profile, level, levelCount) === 'cleared';
+}
+
+/**
  * Cộng một trận vào hồ sơ: vàng nhặt được luôn được giữ (thắng hay thua — agent đề xuất, chủ dự án duyệt
- * 27/10/2026); thắng thì mở khóa màn kế (không vượt màn cuối, không làm tụt màn đã mở).
+ * 27/10/2026); thắng thì mở khóa màn kế (không vượt màn cuối, không làm tụt màn đã mở). F18: chơi lại màn đã
+ * qua chỉ trừ món thuê — không vàng, không đồ rơi, không đổi màn đã mở; thắng màn cuối lần đầu là phá đảo.
  */
 export function applyBattleResult(
   profile: Profile,
   result: BattleResult,
   levelCount: number,
 ): Profile {
+  const rentals = result.rentals ? { rentals: result.rentals } : {};
+  if (isReplay(profile, result.level, levelCount)) return { ...profile, ...rentals };
   const next = result.won ? Math.min(result.level + 1, levelCount - 1) : 0;
   return {
     ...profile,
     gold: profile.gold + result.gold,
     unlockedLevel: Math.max(profile.unlockedLevel, next),
+    clearedAll: profile.clearedAll || (result.won && result.level === levelCount - 1),
     ...result.loot,
-    ...(result.rentals ? { rentals: result.rentals } : {}),
+    ...rentals,
   };
+}
+
+/** F18: ghi đồ đang mang vào hồ sơ. */
+export function withSavedLoadout(profile: Profile, loadout: SavedLoadout): Profile {
+  return { ...profile, loadout };
 }
 
 /**

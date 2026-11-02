@@ -13,7 +13,23 @@ export interface Profile {
   readonly lootPity: Readonly<Record<string, number>>;
   /** Đợt 6 (phiên bản 4): món thuê ở cửa hàng — số trận còn dùng của từng vũ khí. */
   readonly rentals: Readonly<Record<string, number>>;
+  /** F18 (phiên bản 5): đã thắng màn cuối — để màn cuối hiện "đã qua" và chơi lại không nhận vàng. */
+  readonly clearedAll: boolean;
+  /** F18 (phiên bản 5): đồ đang mang, lưu để tắt game mở lại vẫn còn. Chưa chọn lần nào = null. */
+  readonly loadout: SavedLoadout | null;
 }
+
+/**
+ * Đồ đang mang ở dạng lưu: tên vũ khí theo thứ tự tầm gần → xa và tên skill (null = không mang). Lưu bằng tên
+ * để đổi thứ tự vũ khí trong cấu hình không làm lệch đồ (tính năng battle đổi qua lại).
+ */
+export interface SavedLoadout {
+  readonly weapons: readonly string[];
+  readonly skill: string | null;
+}
+
+/** F18: trạng thái một màn trên bản đồ. */
+export type LevelStatus = 'cleared' | 'current' | 'locked';
 
 /** Kết quả một trận cần cộng vào hồ sơ. */
 export interface BattleResult {

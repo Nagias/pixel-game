@@ -569,6 +569,45 @@ test('Đợt 3: vàng và màn đã mở khóa được lưu — mở lại game
   await page2.screenshot({ path: test.info().outputPath('22-mo-lai-con-tien-trinh.png') });
 });
 
+test('Đợt B (F18): đồ đang mang được lưu — chọn Rìu, mở lại game thì màn chuẩn bị vẫn chọn Rìu', async ({
+  page,
+  context,
+}) => {
+  const game = new BattleDriver(page);
+  await game.openLoadout(SEED);
+  const axeIndex = BATTLE_CONFIG.weapons.findIndex((w) => w.twoSided);
+  await game.chooseWeapon(axeIndex);
+  expect((await game.storedProfile())?.loadout).toEqual({
+    weapons: ['Rìu', 'Giáo', 'Cung'],
+    skill: null,
+  });
+
+  // Mở lại game (trang mới, cùng trình duyệt): Rìu vẫn được chọn, vào trận cầm Rìu.
+  const reopened = new BattleDriver(await context.newPage());
+  await reopened.open(`/?seed=${SEED}`);
+  expect((await reopened.waitLoadoutReady()).loadout).toEqual({ weapons: [axeIndex, 1, 2] });
+  await reopened.startBattle();
+  expect((await reopened.snapshot()).battle.weaponIndex).toBe(axeIndex);
+});
+
+test('Đợt B (F18): chơi lại màn đã qua không nhận vàng — đã mở tới màn 3, chơi lại màn 1 và thắng: vàng giữ nguyên', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.seedProfile({ gold: 30, unlockedLevel: 2 });
+  await game.open(`/?seed=${SEED}&level=1`);
+  expect(await game.waitLoadoutReady()).toMatchObject({ level: 0, gold: 30 });
+  await game.startBattle();
+  expect((await game.snapshot()).replay).toBe(true);
+  await playBestUntilOver(game);
+  const { battle } = await game.snapshot();
+  expect(battle.phase).toBe('won');
+  expect(battle.gold).toBeGreaterThan(0); // có nhặt vàng trong trận, nhưng không được cộng
+  expect(await game.storedProfile()).toMatchObject({ gold: 30, unlockedLevel: 2 });
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('34-choi-lai-khong-vang.png') });
+});
+
 test('B6: màn chuẩn bị từ màn 3 có hàng skill (Mưa băng chọn sẵn), chọn Cầu lửa thì mang Cầu lửa vào trận', async ({
   page,
 }) => {

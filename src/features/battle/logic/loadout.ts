@@ -1,5 +1,6 @@
 // B4: đồ mang vào trận — bộ mặc định, đổi món theo tầm, lựa chọn trên màn chuẩn bị, mô tả món.
 // Hàm thuần. "Sở hữu" là danh sách chỉ số vũ khí; chưa có túi đồ thì sở hữu = mọi vũ khí (allWeapons).
+import type { SavedLoadout } from '../../profile';
 import {
   WEAPON_SLOTS,
   type BattleConfig,
@@ -153,6 +154,35 @@ export function loadoutForLevel(loadout: Loadout, level: number, config: BattleC
   if (loadout.skill !== undefined) return loadout;
   const [first] = skillOptions(config);
   return first === undefined ? loadout : { ...loadout, skill: first };
+}
+
+// ---------- F18 đợt B: đồ đang mang lưu vào hồ sơ ----------
+
+/** Bộ đồ → dạng lưu trong hồ sơ (tên vũ khí gần → xa, tên skill hoặc null). */
+export function toSavedLoadout(loadout: Loadout, config: BattleConfig): SavedLoadout {
+  return {
+    weapons: loadout.weapons.map((index) => weaponAt(index, config).name),
+    skill: loadout.skill ?? null,
+  };
+}
+
+/**
+ * Dạng lưu → bộ đồ. Không dùng được (chưa lưu, món đã bỏ khỏi cấu hình, thiếu tầm, sai luật, skill lạ) thì
+ * null — người gọi dùng bộ mặc định, không bao giờ để hồ sơ cũ làm hỏng trận.
+ */
+export function fromSavedLoadout(saved: SavedLoadout | null, config: BattleConfig): Loadout | null {
+  if (saved === null) return null;
+  const weapons = saved.weapons.map((name) => config.weapons.findIndex((w) => w.name === name));
+  if (weapons.includes(-1) || weapons.length !== defaultLoadout(config).weapons.length) return null;
+  if (saved.skill !== null && !Object.hasOwn(config.skills, saved.skill)) return null;
+  const loadout: Loadout =
+    saved.skill === null ? { weapons } : { weapons, skill: saved.skill as SkillKind };
+  try {
+    validateLoadout(loadout, config);
+  } catch {
+    return null;
+  }
+  return loadout;
 }
 
 /** Một dòng mô tả skill trên màn chuẩn bị, sinh từ con số cấu hình. */

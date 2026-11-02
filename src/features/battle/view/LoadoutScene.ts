@@ -5,7 +5,7 @@ import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
 import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE } from '../../../shared/palette';
 import { parseLevelParam } from '../../../shared/levelParam';
-import { loadProfile, startLevel } from '../../profile';
+import { loadProfile, saveProfile, startLevel, withSavedLoadout } from '../../profile';
 import { levelAt } from '../logic/battle';
 import {
   BATTLE_CONFIG,
@@ -26,10 +26,12 @@ import {
   defaultLoadout,
   describeSkill,
   describeWeapon,
+  fromSavedLoadout,
   isSkillUnlocked,
   loadoutForLevel,
   skillOptions,
   slotOptions,
+  toSavedLoadout,
 } from '../logic/loadout';
 import { descriptionY, LOADOUT_LAYOUT, loadoutTapAt, optionRects, rowTop } from './loadoutLayout';
 import { addLightning, styleTierText } from './weaponTierStyle';
@@ -110,11 +112,6 @@ export class LoadoutScene extends Scene {
   private openElapsedMs = 0;
   /** Đã chạm "VÀO TRẬN" — bỏ qua mọi chạm sau đó (tránh mở trận hai lần). */
   private starting = false;
-  /**
-   * B6: skill người chơi chọn gần nhất. Cố ý KHÔNG xóa khi mở lại scene (Phaser dùng lại cùng đối tượng
-   * scene): đó chính là trí nhớ qua các màn chưa mở skill. Tắt game là mất (hồ sơ đợt 3 chỉ lưu vàng và màn đã mở khóa).
-   */
-  private lastSkill: SkillKind | undefined = undefined;
 
   constructor() {
     super('loadout');
@@ -145,13 +142,12 @@ export class LoadoutScene extends Scene {
       startLevel(profile, parseLevelParam(window.location.search, levelCount), levelCount);
     this.skills = isSkillUnlocked(this.level, this.config) ? skillOptions(this.config) : [];
     // B6: màn chưa mở skill thì bỏ skill; màn đã mở thì chọn sẵn skill người chơi chọn lần gần nhất
-    // (nhớ qua cả các màn chưa có skill, vd. sau phá đảo), chưa từng chọn thì skill đầu.
-    const previous = data.loadout ?? defaultLoadout(this.config, owned);
-    if (previous.skill !== undefined) this.lastSkill = previous.skill;
-    const remembered =
-      previous.skill === undefined && this.lastSkill !== undefined
-        ? { ...previous, skill: this.lastSkill }
-        : previous;
+    // (nhớ qua cả các màn chưa có skill, vd. sau phá đảo), chưa từng chọn thì skill đầu. F18 đợt B: đồ đang
+    // mang và skill nhớ trong hồ sơ, tắt game mở lại vẫn còn; hồ sơ trỏ tới món không còn thì bộ mặc định.
+    const saved = fromSavedLoadout(profile.loadout, this.config);
+    const previous = data.loadout ?? saved ?? defaultLoadout(this.config, owned);
+    const skill = previous.skill ?? saved?.skill;
+    const remembered = skill === undefined ? previous : { ...previous, skill };
     this.loadout = loadoutForLevel(remembered, this.level, this.config);
   }
 
@@ -237,6 +233,7 @@ export class LoadoutScene extends Scene {
       this.scene.start('shop', data);
     } else if (tap?.kind === 'start') {
       this.starting = true;
+      this.saveLoadout();
       const data: LoadoutSceneData = { level: this.level, loadout: this.loadout };
       this.scene.start('battle', data);
     } else if (tap?.kind === 'option') {
@@ -244,14 +241,26 @@ export class LoadoutScene extends Scene {
         const skill = this.skills[tap.option];
         if (skill === undefined) return;
         this.loadout = chooseSkill(this.loadout, skill);
-        this.lastSkill = skill;
       } else {
         const weaponIndex = this.rows[tap.row]?.weapons[tap.option];
         if (weaponIndex === undefined) return;
         this.loadout = chooseWeapon(this.loadout, weaponIndex, this.config);
       }
+      this.saveLoadout();
       this.sync();
     }
+  }
+
+  /**
+   * F18 đợt B: lưu đồ đang mang. Màn chưa mở skill thì bộ đồ không có skill — giữ skill đã lưu để lên màn có
+   * skill vẫn chọn sẵn. Lưu hỏng (bộ nhớ bị chặn) thì vẫn chơi tiếp với đồ vừa chọn.
+   */
+  private saveLoadout(): void {
+    const profile = loadProfile();
+    const next = toSavedLoadout(this.loadout, this.config);
+    saveProfile(
+      withSavedLoadout(profile, { ...next, skill: next.skill ?? profile.loadout?.skill ?? null }),
+    );
   }
 
   private snapshot(): LoadoutSnapshot {
