@@ -279,7 +279,7 @@ export class WeaponsScene extends Scene {
         this.add
           .graphics()
           .fillStyle(colorNumber('plum'))
-          .fillRect(rect.x + 3, rect.y + 3, rect.width - 6, rect.height - 6)
+          .fillRect(rect.x + 6, rect.y + 6, rect.width - 12, rect.height - 12)
           .setDepth(DEPTH.ui),
       );
       add(
@@ -315,9 +315,9 @@ export class WeaponsScene extends Scene {
       this.add
         .graphics()
         .fillStyle(colorNumber('navy'))
-        .fillRect(rect.x + 3, rect.y + 3, rect.width - 6, rect.height - 6)
+        .fillRect(rect.x + 6, rect.y + 6, rect.width - 12, rect.height - 12)
         .fillStyle(colorNumber(tierColor(tier)))
-        .fillRect(rect.x + 3, rect.y + 3, rect.width - 6, 4)
+        .fillRect(rect.x + 6, rect.y + 6, rect.width - 12, 4)
         .setDepth(DEPTH.ui),
     );
     const icon = WEAPON_ICON[weapon.name];
