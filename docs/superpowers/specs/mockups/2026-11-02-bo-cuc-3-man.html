@@ -1,0 +1,663 @@
+<h2>Bản phác 3 màn chính của game mình (kiểu pixel, bố cục học từ Micro RPG)</h2>
+<p class="subtitle">
+  Đây là hình minh họa, chưa phải game thật. Màu lấy đúng bảng 16 màu của game, hình hiệp sĩ và quái
+  là hình pixel đang có trong game. Số liệu trên hình chỉ là ví dụ.
+</p>
+
+<style>
+  .phones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    justify-content: center;
+    margin-top: 16px;
+  }
+  .phone {
+    width: 300px;
+  }
+  .phone canvas {
+    width: 300px;
+    height: 617px;
+    image-rendering: pixelated;
+    border: 6px solid #1a1c2c;
+    border-radius: 22px;
+    background: #1a1c2c;
+    display: block;
+  }
+  .phone h3 {
+    margin: 12px 0 4px;
+  }
+  .phone p {
+    margin: 0 0 6px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+</style>
+
+<div class="phones">
+  <div class="phone">
+    <canvas id="home" width="720" height="1480"></canvas>
+    <h3>1. Màn chính: bản đồ Rừng rậm</h3>
+    <p>
+      Học từ ảnh 1 của bạn. 20 màn nối thành đường đi uốn lượn, màn 10 và 20 là trùm Người Cây. Màn
+      đã qua tô xanh, màn đang tới có hiệp sĩ đứng, màn chưa mở tô xám.
+    </p>
+    <p>
+      Dưới cùng là thanh nút: Cửa hàng, Vũ khí, nút CHƠI to ở giữa, Nâng cấp. Trên cùng là số vàng.
+    </p>
+  </div>
+  <div class="phone">
+    <canvas id="popup" width="720" height="1480"></canvas>
+    <h3>2. Bảng trước trận</h3>
+    <p>
+      Học từ ảnh 6. Chạm vào một màn trên bản đồ thì hiện bảng này: nhiệm vụ bằng hình quái kèm số
+      lượng, các loại quái sẽ gặp, và đồ mang vào trận (hiệp sĩ + 3 vũ khí gần, vừa, xa).
+    </p>
+    <p>Thay cho màn chọn đồ toàn chữ hiện nay. Chạm vào thẻ vũ khí để đổi món.</p>
+  </div>
+  <div class="phone">
+    <canvas id="battle" width="720" height="1480"></canvas>
+    <h3>3. Trong trận</h3>
+    <p>
+      Học từ ảnh 7. Sân đấu đặt trên khung cảnh rừng, vòng tròn chỉ hiện mờ trên mặt cỏ. Mỗi con
+      quái và hiệp sĩ có thanh máu trên đầu.
+    </p>
+    <p>
+      Thanh trên cùng: vàng, số lượt còn lại ở giữa, nhiệm vụ bằng hình quái. Dưới cùng là 3 thẻ vũ
+      khí có hình.
+    </p>
+  </div>
+</div>
+
+<script>
+  (() => {
+    const C = {
+      0: '#1a1c2c',
+      1: '#5d275d',
+      2: '#b13e53',
+      3: '#ef7d57',
+      4: '#ffcd75',
+      5: '#a7f070',
+      6: '#38b764',
+      7: '#257179',
+      8: '#29366f',
+      9: '#3b5dc9',
+      A: '#41a6f6',
+      B: '#73eff7',
+      C: '#f4f4f4',
+      D: '#94b0c2',
+      E: '#566c86',
+      F: '#333c57',
+    };
+    const K = {
+      ink: C['0'],
+      plum: C['1'],
+      crimson: C['2'],
+      orange: C['3'],
+      sand: C['4'],
+      lime: C['5'],
+      grass: C['6'],
+      teal: C['7'],
+      navy: C['8'],
+      blue: C['9'],
+      sky: C.A,
+      cyan: C.B,
+      white: C.C,
+      mist: C.D,
+      slate: C.E,
+      shadow: C.F,
+    };
+
+    // Hình pixel lấy nguyên từ battleSprites.ts của game.
+    const S = {
+      hero: [
+        '......0000......',
+        '....00999900....',
+        '...0999AA9990...',
+        '..099999999990..',
+        '..099000000990..',
+        '..090444444090..',
+        '..090404404090..',
+        '..090444444090..',
+        '...0004444000...',
+        '..099999999990..',
+        '.0DD09944990DD0.',
+        '.0DD09999990DD0.',
+        '..000999999000..',
+        '....09900990....',
+        '....08800880....',
+        '....00000000....',
+      ],
+      slime: [
+        '....0000....',
+        '..00222200..',
+        '.0222C22220.',
+        '.02CC222220.',
+        '022222222220',
+        '022002200220',
+        '022222222220',
+        '021222222120',
+        '.0111111110.',
+        '..00000000..',
+      ],
+      goblin: [
+        '..00000000..',
+        '.0555555550.',
+        '005525525500',
+        '056555555650',
+        '.0554444550.',
+        '..05555550..',
+        '.0FFFFFFFF0.',
+        '05FFFFFFFF50',
+        '.0FF0000FF0.',
+        '.0660..0660.',
+        '.000....000.',
+      ],
+      wolf: [
+        '.00......00.',
+        '0DD0....0DD0',
+        '0DDD0000DDD0',
+        '0DDDDDDDDDD0',
+        '0D20DDDD02D0',
+        '0DDDDDDDDDD0',
+        '.0DDCCCCDD0.',
+        '..0DC00CD0..',
+        '...0EEEE0...',
+        '....0000....',
+      ],
+      treant: [
+        '....00000000....',
+        '..006655566600..',
+        '.06655566655660.',
+        '0665566555665660',
+        '0666666666666660',
+        '.00FFFFFFFFFF00.',
+        '..0FFFFFFFFFF0..',
+        '..0F44FFFF44F0..',
+        '..0FFFFFFFFFF0..',
+        '..0FF0FFFF0FF0..',
+        '..0FFF0000FFF0..',
+        '.0EFFFFFFFFFFE0.',
+        '0E0FFFFFFFFFF0E0',
+        '..0FFF0000FFF0..',
+        '.0FFF0....0FFF0.',
+        '.00000....00000.',
+      ],
+      // Hình mới chỉ để phác (đồng xu, vũ khí, cây, bụi, đá).
+      coin: [
+        '..0000..',
+        '.044440.',
+        '04C44440',
+        '04C44430',
+        '04444430',
+        '04444330',
+        '.033330.',
+        '..0000..',
+      ],
+      sword: [
+        '.........000',
+        '........0CC0',
+        '.......0CD0.',
+        '......0CD0..',
+        '.....0CD0...',
+        '.00.0CD0....',
+        '.0440D0.....',
+        '..0440......',
+        '.0F0440.....',
+        '0F0..00.....',
+        '00..........',
+      ],
+      spear: [
+        '.........00.',
+        '........0CC0',
+        '.......0CDC0',
+        '......00D00.',
+        '.....030....',
+        '....030.....',
+        '...030......',
+        '..030.......',
+        '.030........',
+        '030.........',
+        '00..........',
+      ],
+      bow: [
+        '..000.......',
+        '.0330.......',
+        '..0030......',
+        '..0C030.....',
+        '..0C.030....',
+        '..0C..030...',
+        '..0C..030...',
+        '..0C.030....',
+        '..0C030.....',
+        '..0030......',
+        '.0330.......',
+        '..000.......',
+      ],
+      up: [
+        '...00...',
+        '..0550..',
+        '.055550.',
+        '05555550',
+        '00555500',
+        '.055550.',
+        '.055550.',
+        '.000000.',
+      ],
+      bag: [
+        '..0000..',
+        '...00...',
+        '.044440.',
+        '04444440',
+        '04403440',
+        '04444440',
+        '04444440',
+        '.000000.',
+      ],
+      tree: [
+        '.....000000.....',
+        '...0066666600...',
+        '..066655566660..',
+        '.06655566666660.',
+        '.06666666556660.',
+        '0666556666666660',
+        '0665566666556660',
+        '0666666656666660',
+        '.06666666666660.',
+        '..006666666600..',
+        '....00011000....',
+        '.....011110.....',
+        '.....011110.....',
+        '....00111100....',
+        '....00000000....',
+      ],
+      bush: ['...0000...', '.00655600.', '0655666560', '0666666660', '.00000000.'],
+      rock: ['..0000..', '.0DDCD0.', '0DDDDDE0', '.000000.'],
+      flower: ['.C.', 'C4C', '.C.'],
+      star: ['...0...', '..040..', '0004000', '0444440', '.04440.', '.04040.', '.0...0.'],
+    };
+
+    function spr(ctx, name, x, y, s) {
+      const g = S[name];
+      g.forEach((row, j) =>
+        [...row].forEach((ch, i) => {
+          if (ch === '.') return;
+          ctx.fillStyle = C[ch];
+          ctx.fillRect(x + i * s, y + j * s, s, s);
+        }),
+      );
+    }
+    function sprC(ctx, name, cx, cy, s) {
+      const g = S[name];
+      spr(
+        ctx,
+        name,
+        Math.round(cx - (g[0].length * s) / 2),
+        Math.round(cy - (g.length * s) / 2),
+        s,
+      );
+    }
+    function box(ctx, x, y, w, h, fill, bw = 3, drop = 4) {
+      if (drop) {
+        ctx.fillStyle = K.ink;
+        ctx.fillRect(x, y + drop, w, h);
+      }
+      ctx.fillStyle = K.ink;
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = fill;
+      ctx.fillRect(x + bw, y + bw, w - bw * 2, h - bw * 2);
+    }
+    function txt(ctx, s, x, y, size = 13, color = K.white, align = 'center', stroke = K.ink) {
+      ctx.font = `bold ${size}px ui-monospace, Consolas, monospace`;
+      ctx.textAlign = align;
+      ctx.textBaseline = 'middle';
+      if (stroke) {
+        ctx.lineWidth = Math.max(3, size / 4);
+        ctx.strokeStyle = stroke;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(s, x, y);
+      }
+      ctx.fillStyle = color;
+      ctx.fillText(s, x, y);
+    }
+    function pillGold(ctx, x, y, amount) {
+      box(ctx, x, y, 118, 30, K.white, 3, 3);
+      spr(ctx, 'coin', x + 6, y + 7, 2);
+      txt(ctx, amount, x + 106, y + 15, 14, K.ink, 'right', null);
+    }
+    function hpBar(ctx, cx, y, w, ratio, value) {
+      ctx.fillStyle = K.ink;
+      ctx.fillRect(cx - w / 2, y, w, 8);
+      ctx.fillStyle = K.shadow;
+      ctx.fillRect(cx - w / 2 + 2, y + 2, w - 4, 4);
+      ctx.fillStyle = K.sand;
+      ctx.fillRect(cx - w / 2 + 2, y + 2, Math.round((w - 4) * ratio), 4);
+      txt(ctx, value, cx, y - 7, 11, K.white);
+    }
+    function setup(id) {
+      const cv = document.getElementById(id);
+      const ctx = cv.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.scale(2, 2);
+      return ctx;
+    }
+    function scatter(ctx, seed, n, x0, y0, x1, y1, fn) {
+      let r = seed;
+      const rnd = () => (r = (r * 1103515245 + 12345) % 2147483648) / 2147483648;
+      for (let i = 0; i < n; i++)
+        fn(Math.round(x0 + rnd() * (x1 - x0)), Math.round(y0 + rnd() * (y1 - y0)), rnd());
+    }
+
+    // ---------- 1. Màn chính: bản đồ ----------
+    const COLS = [56, 136, 224, 304];
+    const ROWS = [612, 512, 412, 312, 212];
+    function nodePos(level) {
+      // level 1..20, đường rắn
+      const i = level - 1,
+        row = Math.floor(i / 4),
+        k = i % 4;
+      return { x: COLS[row % 2 === 0 ? k : 3 - k], y: ROWS[row] };
+    }
+    function drawMap(ctx, current) {
+      ctx.fillStyle = K.grass;
+      ctx.fillRect(0, 0, 360, 740);
+      scatter(ctx, 7, 70, 0, 50, 360, 660, (x, y, r) => {
+        ctx.fillStyle = r < 0.5 ? K.lime : K.teal;
+        ctx.globalAlpha = 0.35;
+        ctx.fillRect(x, y, 6 + Math.round(r * 10), 4);
+        ctx.globalAlpha = 1;
+      });
+      scatter(ctx, 3, 26, 4, 140, 356, 650, (x, y, r) =>
+        spr(ctx, r < 0.7 ? 'flower' : 'rock', x, y, 2),
+      );
+      // đường nối
+      for (let lv = 1; lv < 20; lv++) {
+        const a = nodePos(lv),
+          b = nodePos(lv + 1);
+        ctx.fillStyle = lv < current ? K.white : K.slate;
+        ctx.fillRect(
+          Math.min(a.x, b.x) - 3,
+          Math.min(a.y, b.y) - 3,
+          Math.abs(a.x - b.x) + 6,
+          Math.abs(a.y - b.y) + 6,
+        );
+      }
+      // cây và bụi trang trí ở mép
+      [
+        [-14, 150],
+        [318, 160],
+        [-20, 340],
+        [326, 360],
+        [-12, 540],
+        [322, 560],
+        [150, 640],
+        [40, 646],
+        [270, 648],
+      ].forEach(([x, y]) => spr(ctx, 'tree', x, y, 3));
+      [
+        [110, 150],
+        [250, 250],
+        [160, 470],
+        [60, 455],
+        [280, 470],
+      ].forEach(([x, y]) => spr(ctx, 'bush', x, y, 3));
+      // nút màn
+      for (let lv = 1; lv <= 20; lv++) {
+        const { x, y } = nodePos(lv);
+        const boss = lv === 10 || lv === 20;
+        const fill = lv < current ? K.sky : lv === current ? K.sand : K.mist;
+        const w = boss ? 50 : 40,
+          h = boss ? 30 : 24;
+        box(ctx, x - w / 2, y - h / 2, w, h, fill, 3, 3);
+        if (lv < current) txt(ctx, String(lv), x, y, 13, K.white);
+        else txt(ctx, String(lv), x, y, 13, lv === current ? K.ink : K.slate, 'center', null);
+        if (boss) sprC(ctx, 'treant', x, y - 34, 2);
+      }
+      // sao cho màn đã qua
+      for (let lv = 1; lv < current; lv++) {
+        const { x, y } = nodePos(lv);
+        spr(ctx, 'star', x + 12, y - 22, 2);
+      }
+      // hiệp sĩ đứng ở màn hiện tại
+      const cur = nodePos(current);
+      sprC(ctx, 'hero', cur.x, cur.y - 30, 3);
+      // thanh trên
+      ctx.fillStyle = K.ink;
+      ctx.globalAlpha = 0.25;
+      ctx.fillRect(0, 0, 360, 48);
+      ctx.globalAlpha = 1;
+      pillGold(ctx, 10, 9, '1 250');
+      // băng rôn chủ đề
+      box(ctx, 134, 54, 92, 22, K.ink, 0, 0);
+      txt(ctx, 'CHỦ ĐỀ 1', 180, 65, 11, K.white, 'center', null);
+      box(ctx, 52, 76, 256, 52, K.sand, 4, 5);
+      ctx.fillStyle = K.orange;
+      ctx.fillRect(56, 80, 248, 8);
+      txt(ctx, 'RỪNG RẬM', 180, 106, 24, K.white);
+      txt(ctx, '2/20 màn', 180, 140, 12, K.white);
+      // thanh nút dưới
+      ctx.fillStyle = K.navy;
+      ctx.fillRect(0, 676, 360, 64);
+      ctx.fillStyle = K.ink;
+      ctx.fillRect(0, 672, 360, 4);
+      const nav = [
+        ['bag', 'Cửa hàng', 40],
+        ['sword', 'Vũ khí', 112],
+        ['up', 'Nâng cấp', 320],
+      ];
+      nav.forEach(([icon, label, x]) => {
+        box(ctx, x - 22, 684, 44, 34, K.blue, 3, 3);
+        sprC(ctx, icon, x, 701, 2);
+        txt(ctx, label, x, 729, 10, K.white);
+      });
+      box(ctx, 196, 664, 76, 66, K.crimson, 4, 5);
+      ctx.fillStyle = K.white;
+      ctx.beginPath();
+      ctx.moveTo(222, 680);
+      ctx.lineTo(222, 714);
+      ctx.lineTo(250, 697);
+      ctx.closePath();
+      ctx.fill();
+      txt(ctx, 'CHƠI', 234, 736, 10, K.white);
+    }
+    drawMap(setup('home'), 3);
+
+    // ---------- 2. Bảng trước trận ----------
+    (() => {
+      const ctx = setup('popup');
+      drawMap(ctx, 3);
+      ctx.fillStyle = K.ink;
+      ctx.globalAlpha = 0.7;
+      ctx.fillRect(0, 0, 360, 740);
+      ctx.globalAlpha = 1;
+      pillGold(ctx, 10, 9, '1 250');
+      box(ctx, 20, 96, 320, 540, K.white, 4, 6);
+      box(ctx, 130, 80, 100, 30, K.navy, 3, 0);
+      txt(ctx, 'MÀN 3', 180, 95, 16, K.white);
+      // Nhiệm vụ
+      txt(ctx, 'Nhiệm vụ', 36, 134, 15, K.ink, 'left', null);
+      txt(ctx, '23 lượt', 324, 134, 12, K.ink, 'right', null);
+      box(ctx, 34, 148, 292, 52, K.sand, 3, 0);
+      spr(ctx, 'star', 44, 164, 3);
+      sprC(ctx, 'slime', 130, 174, 3);
+      txt(ctx, '×5', 176, 174, 18, K.white);
+      sprC(ctx, 'goblin', 236, 174, 2.5);
+      txt(ctx, '×1', 278, 174, 18, K.white);
+      // Quái trong màn
+      box(ctx, 34, 220, 292, 26, K.shadow, 0, 0);
+      txt(ctx, 'Quái sẽ gặp', 180, 233, 13, K.white, 'center', null);
+      [
+        ['slime', 2.5],
+        ['goblin', 2.5],
+        ['wolf', 2.5],
+      ].forEach(([m, s], i) => {
+        const x = 80 + i * 100;
+        box(ctx, x - 34, 256, 68, 60, K.mist, 3, 3);
+        sprC(ctx, m, x, 286, s);
+      });
+      // Mang vào trận
+      box(ctx, 34, 336, 292, 26, K.shadow, 0, 0);
+      txt(ctx, 'Mang vào trận', 180, 349, 13, K.white, 'center', null);
+      const cards = [
+        ['hero', 'Hiệp sĩ', 'cấp 2', K.sky],
+        ['sword', 'Kiếm', 'gần', K.sky],
+        ['spear', 'Giáo', 'vừa', K.sky],
+        ['bow', 'Cung', 'xa', K.lime],
+      ];
+      cards.forEach(([icon, name, sub, tierCol], i) => {
+        const x = 36 + i * 72;
+        box(ctx, x, 372, 64, 92, K.blue, 3, 3);
+        ctx.fillStyle = tierCol;
+        ctx.fillRect(x + 3, 372 + 3, 58, 4);
+        sprC(ctx, icon, x + 32, 408, icon === 'hero' ? 2.5 : 3);
+        txt(ctx, name, x + 32, 442, 12, K.white);
+        txt(ctx, sub, x + 32, 456, 10, K.sand);
+      });
+      txt(ctx, 'Chạm thẻ vũ khí để đổi món', 180, 486, 11, K.slate, 'center', null);
+      // Skill
+      box(ctx, 34, 500, 292, 46, K.shadow, 3, 0);
+      txt(ctx, 'Skill: Mưa băng (nạp 3 lượt)', 180, 523, 12, K.cyan, 'center', null);
+      // Nút chơi + đóng
+      box(ctx, 140, 590, 80, 70, K.crimson, 4, 6);
+      ctx.fillStyle = K.white;
+      ctx.beginPath();
+      ctx.moveTo(168, 608);
+      ctx.lineTo(168, 642);
+      ctx.lineTo(196, 625);
+      ctx.closePath();
+      ctx.fill();
+      box(ctx, 284, 604, 44, 44, K.shadow, 3, 4);
+      txt(ctx, 'X', 306, 626, 20, K.white, 'center', null);
+    })();
+
+    // ---------- 3. Trong trận ----------
+    (() => {
+      const ctx = setup('battle');
+      ctx.fillStyle = K.grass;
+      ctx.fillRect(0, 0, 360, 740);
+      // rừng phía sau
+      ctx.fillStyle = K.teal;
+      ctx.fillRect(0, 56, 360, 120);
+      for (let x = -20; x < 380; x += 44)
+        spr(ctx, 'tree', x, 64 + ((x / 44) % 2 === 0 ? 0 : 18), 3);
+      ctx.fillStyle = K.grass;
+      ctx.fillRect(0, 160, 360, 520);
+      scatter(ctx, 11, 60, 0, 170, 360, 680, (x, y, r) => {
+        ctx.fillStyle = r < 0.5 ? K.lime : K.teal;
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(x, y, 6 + Math.round(r * 8), 4);
+        ctx.globalAlpha = 1;
+      });
+      scatter(ctx, 5, 14, 4, 180, 356, 660, (x, y, r) =>
+        spr(ctx, r < 0.6 ? 'flower' : 'rock', x, y, 2),
+      );
+      // sân tròn mờ: 24 lát × 6 vòng, ô xen kẽ đậm nhạt
+      const cx = 180,
+        cy = 410,
+        R0 = 28,
+        RW = 25;
+      const slice = (Math.PI * 2) / 24;
+      for (let r = 0; r < 6; r++)
+        for (let s = 0; s < 24; s++) {
+          ctx.beginPath();
+          const a0 = s * slice - Math.PI / 2,
+            a1 = a0 + slice;
+          ctx.arc(cx, cy, R0 + (r + 1) * RW, a0, a1);
+          ctx.arc(cx, cy, R0 + r * RW, a1, a0, true);
+          ctx.closePath();
+          ctx.fillStyle = (r + s) % 2 ? K.lime : K.teal;
+          ctx.globalAlpha = (r + s) % 2 ? 0.14 : 0.1;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      ctx.beginPath();
+      ctx.arc(cx, cy, R0, 0, Math.PI * 2);
+      ctx.fillStyle = K.lime;
+      ctx.globalAlpha = 0.18;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      // vùng xanh của Kiếm: vòng 0–1, rộng 5 lát
+      const w0 = 1 * slice - Math.PI / 2,
+        w1 = w0 + 5 * slice;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R0 + 2 * RW, w0, w1);
+      ctx.arc(cx, cy, R0, w1, w0, true);
+      ctx.closePath();
+      ctx.fillStyle = K.lime;
+      ctx.globalAlpha = 0.6;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = K.white;
+      ctx.stroke();
+      // quái
+      const pos = (r, s) => {
+        const a = (s + 0.5) * slice - Math.PI / 2,
+          d = R0 + (r + 0.5) * RW;
+        return [cx + Math.cos(a) * d, cy + Math.sin(a) * d];
+      };
+      const mons = [
+        ['slime', 5, 15, 6, 6],
+        ['slime', 5, 17, 6, 6],
+        ['slime', 4, 16, 3, 6],
+        ['slime', 5, 19, 6, 6],
+        ['goblin', 3, 4, 8, 8],
+        ['wolf', 1, 3, 5, 10],
+        ['slime', 1, 2, 2, 6],
+      ];
+      mons.forEach(([m, r, s, hp, max]) => {
+        const [x, y] = pos(r, s);
+        ctx.fillStyle = K.ink;
+        ctx.globalAlpha = 0.25;
+        ctx.fillRect(x - 12, y + 9, 24, 5);
+        ctx.globalAlpha = 1;
+        sprC(ctx, m, x, y, 2.5);
+        hpBar(ctx, x, y - 25, 30, hp / max, String(hp));
+      });
+      // hiệp sĩ
+      ctx.fillStyle = K.ink;
+      ctx.globalAlpha = 0.25;
+      ctx.fillRect(cx - 16, cy + 14, 32, 6);
+      ctx.globalAlpha = 1;
+      sprC(ctx, 'hero', cx, cy, 2.5);
+      hpBar(ctx, cx, cy - 34, 40, 1, '10');
+      // bụi phía trước
+      for (let x = -10; x < 380; x += 34) spr(ctx, 'bush', x, 628 + ((x / 34) % 2 ? 6 : 0), 4);
+      // thanh trên
+      ctx.fillStyle = K.shadow;
+      ctx.fillRect(0, 0, 360, 56);
+      ctx.fillStyle = K.ink;
+      ctx.fillRect(0, 56, 360, 3);
+      pillGold(ctx, 8, 13, '24');
+      box(ctx, 140, 0, 80, 68, K.ink, 0, 0);
+      txt(ctx, 'LƯỢT', 180, 20, 12, K.mist, 'center', null);
+      txt(ctx, '23', 180, 46, 26, K.white, 'center', null);
+      box(ctx, 230, 11, 122, 34, K.white, 3, 3);
+      spr(ctx, 'star', 238, 20, 2);
+      sprC(ctx, 'slime', 274, 28, 1.6);
+      txt(ctx, '2/5', 314, 28, 14, K.ink, 'center', null);
+      // thẻ vũ khí dưới
+      ctx.fillStyle = K.navy;
+      ctx.fillRect(0, 676, 360, 64);
+      ctx.fillStyle = K.ink;
+      ctx.fillRect(0, 672, 360, 4);
+      [
+        ['sword', 'Kiếm', true],
+        ['spear', 'Giáo', false],
+        ['bow', 'Cung', false],
+      ].forEach(([icon, name, sel], i) => {
+        const x = 10 + i * 86;
+        box(ctx, x, 682, 78, 50, sel ? K.lime : K.blue, 3, 0);
+        if (sel) {
+          ctx.fillStyle = K.blue;
+          ctx.fillRect(x + 6, 688, 66, 38);
+        }
+        sprC(ctx, icon, x + 22, 707, 2);
+        txt(ctx, name, x + 54, 707, 12, K.white);
+      });
+      box(ctx, 274, 682, 76, 50, K.plum, 3, 0);
+      txt(ctx, 'Skill', 312, 699, 12, K.cyan);
+      txt(ctx, '1/3', 312, 718, 12, K.white);
+    })();
+  })();
+</script>
