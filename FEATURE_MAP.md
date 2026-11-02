@@ -14,7 +14,7 @@
 | F05  | Đẩy quái theo vũ khí (knockback)                   | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
 | F06  | Màn chơi nối tiếp + trùm Slime Vua                 | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
 | F07a | Rìu chém hai phía + màn 4 quái tới từ hai phía     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
-| F07  | Màn chuẩn bị trận: chọn mỗi tầm một vũ khí         | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
+| F07  | Màn chuẩn bị trận: chọn mỗi tầm một vũ khí         | ↪ F18      | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
 | F08  | Skill bấm đánh cả sân + máu, hồi máu, chí mạng     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
 | F09  | Quái bắn xa Slime Pháo + màn 5                     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
 | F10  | Tự động cân bằng (mục tiêu, bot nhìn trước, dò số) | ✅ Xong    | `scripts/`, `logic/autoPlay.ts`, `logic/battleConfig.ts`       | `scripts/tuneCore.test.ts`, `logic/balance.test.ts`        |
@@ -25,7 +25,7 @@
 | F15  | Chủ đề Rừng rậm: 20 màn, 5 quái mới, bộ sinh màn   | ✅ Xong    | `logic/chapters.ts`, `battleConfig.ts`, `scripts/levelGen*.ts` | `logic/chapters.test.ts`, `scripts/levelGenCore.test.ts`   |
 | F16  | Quái hiếm, may mắn, rơi vũ khí 6 cấp màu, túi đồ   | ✅ Xong    | `logic/loot.ts`, `logic/battle.ts`, `view/weaponTierStyle.ts`  | `logic/loot.test.ts`, `logic/rare.test.ts`                 |
 | F17  | Cửa hàng: vũ khí cấp Hiếm dùng có hạn              | ✅ Xong    | `logic/shop.ts`, `view/ShopScene.ts`                           | `logic/shop.test.ts`                                       |
-| F18  | Giao diện mobile kiểu Micro RPG (5 đợt)            | 🚧 Đợt C   | `src/shared/palette.ts`, `view/battleSprites.ts`               | `src/shared/palette.test.ts`, `view/battleSprites.test.ts` |
+| F18  | Giao diện mobile kiểu Micro RPG (5 đợt)            | 🚧 Đợt D   | `src/shared/palette.ts`, `view/battleSprites.ts`               | `src/shared/palette.test.ts`, `view/battleSprites.test.ts` |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -1029,12 +1029,35 @@ kích thước. Bố cục các màn chưa đổi. Tên màu cũ đổi sang mà
 3. **Bài học:** màu viền chọn `leaf` trùng màu cỏ `leaf` của khung cảnh — đặt thẳng lên cỏ thì mất viền; thanh
    vũ khí phải có dải nền.
 
+**Đợt D — Bản đồ, bảng trước trận, màn Vũ khí (xong):** màn chuẩn bị cũ (F07, `LoadoutScene`) bị xóa.
+
+1. **Bản đồ** (`view/MapScene.ts`, bố cục `view/mapLayout.ts`, khung cảnh `FOREST_MAP_SCENERY`): mở game là màn
+   này. Băng rôn "CHỦ ĐỀ 1 / RỪNG RẬM / n/20 màn"; 20 nút màn nối đường rắn 5 hàng × 4 (màn 1 góc dưới trái);
+   nút đã qua xanh, đang tới vàng (hiệp sĩ đứng trên), chưa mở xám; đường đã đi sáng, chưa mở tối; hình trùm
+   cạnh màn có Slime Vua / Người Cây; ô vàng góc trên. Chạm màn đã qua / đang tới → bảng trước trận; màn chưa mở
+   → không gì. `?level=N` (đã mở khóa) mở sẵn bảng màn N.
+2. **Thanh nút dưới** (`view/navLayout.ts`, `view/navBar.ts`): Cửa hàng · Vũ khí · **CHƠI** (to, nhô lên) ·
+   Nâng cấp. CHƠI mở bảng màn đang tới.
+3. **Bảng trước trận** (`PREBATTLE_LAYOUT`): "MÀN n", nhiệm vụ bằng hình quái × số (không nhiệm vụ: "Hạ hết
+   quái"), số lượt, "Quái sẽ gặp" (`logic/levelInfo.ts` `levelMonsterKinds`), "Mang vào trận" (thẻ hiệp sĩ ghi
+   máu tối đa + 3 thẻ vũ khí có vạch màu cấp + ô skill), "Chơi lại: không nhận vàng" khi màn đã qua, nút chơi và
+   nút X. Chạm thẻ vũ khí/skill → màn Vũ khí; chạm ngoài bảng không đóng bảng (chống chạm nhầm).
+4. **Màn Vũ khí** (`view/WeaponsScene.ts`, `view/weaponsLayout.ts`): nơi duy nhất đổi đồ. Hàng "Đang mang"
+   (gần, vừa, xa) + ô skill/dòng mô tả; lưới thẻ 4 vũ khí (+ 2 skill từ màn mở skill), món đang thuê ghi "Hiếm · n
+   trận". Chạm thẻ là mang món đó, lưu hồ sơ và bộ nhớ phiên (bộ nhớ trình duyệt bị chặn vẫn dùng đúng đồ tới khi
+   tắt game). Chạm CHƠI về bảng trước trận.
+5. **Đi lại**: hết trận chạm → Bản đồ với bảng màn chơi tiếp mở sẵn (thắng: màn kế; thua: màn vừa chơi) — vẫn hai
+   lần chạm là vào trận tiếp. Nâng cấp, Cửa hàng mở từ thanh dưới, "XONG" về Bản đồ (đợt E đổi giao diện).
+
 **Kiểm chứng tự động:** `src/shared/palette.test.ts` (đủ 32 màu, không trùng, thứ tự ký tự);
 `view/battleSprites.test.ts` (ký tự thuộc bảng, viền mực ở mép mỗi hàng, giữ kích thước 12 hình);
 `profile/logic/profile.test.ts` (trạng thái màn, chơi lại, phá đảo, phiên bản 5, dữ liệu lạ);
 `logic/loadout.test.ts` (đồ đang mang ↔ dạng lưu); E2E "Đợt B (F18)…" (lưu đồ qua lần mở lại, chơi lại
 không nhận vàng); `view/scenery.test.ts` (đúng bảng màu, lặp lại theo hạt giống, không đè sân), `view/uiSprites.test.ts`,
-`view/battleLayout.test.ts` (thanh trên không đè sân); E2E "Đợt C (F18)…" (thanh máu khớp máu thật).
+`view/battleLayout.test.ts` (thanh trên không đè sân); E2E "Đợt C (F18)…" (thanh máu khớp máu thật);
+`view/mapLayout.test.ts`, `view/navLayout.test.ts`, `view/weaponsLayout.test.ts`, `logic/levelInfo.test.ts`; E2E
+"Đợt D (F18)…" ×6 (bản đồ, bảng trước trận, thắng về bản đồ + chơi lại, chạm đúp nút chơi, bộ nhớ bị chặn, skill
+theo màn) và mọi E2E cũ chạy theo luồng mới.
 
 **Nợ liên quan:** DEBT-007 (hình vẫn là lưới ký tự).
 

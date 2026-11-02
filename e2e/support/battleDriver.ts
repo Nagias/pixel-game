@@ -1,10 +1,12 @@
 // Phần điều khiển riêng của tính năng "battle" (F01–F06): đổi vũ khí, ngắm vùng xanh, chém.
-// B4: màn chuẩn bị trận — chọn món, chạm "VÀO TRẬN".
+// F18 đợt D: mở game là Bản đồ — chạm CHƠI/nút màn mở bảng trước trận, chạm nút chơi vào trận; đổi đồ ở màn
+// Vũ khí (chọn xong chạm CHƠI về bảng trước trận).
 import type {
   BattleSnapshot,
-  LoadoutSnapshot,
+  MapSnapshot,
   ShopSnapshot,
   UpgradeSnapshot,
+  WeaponsSnapshot,
 } from '../../src/features/battle';
 import * as autoPlay from '../../src/features/battle/logic/autoPlay';
 import type { Move } from '../../src/features/battle/logic/autoPlay';
@@ -20,7 +22,9 @@ import {
   WEAPON_BAR,
   weaponButtonRects,
 } from '../../src/features/battle/view/battleLayout';
-import { LOADOUT_LAYOUT, optionRects } from '../../src/features/battle/view/loadoutLayout';
+import { levelNodeRect, PREBATTLE_LAYOUT } from '../../src/features/battle/view/mapLayout';
+import { navButtonRect, type NavTarget } from '../../src/features/battle/view/navLayout';
+import { gridCardRect } from '../../src/features/battle/view/weaponsLayout';
 import { buyButtonRect, UPGRADE_LAYOUT } from '../../src/features/battle/view/upgradeLayout';
 import { PROFILE_KEY, PROFILE_VERSION } from '../../src/features/profile/logic/profileConfig';
 import type { RngState } from '../../src/shared/random';
@@ -31,6 +35,15 @@ const FRAME_MS = 16;
 const SCENE_SWITCH_MS = 100;
 
 export type { Move };
+
+/** Bảng trước trận đang mở (đọc từ ảnh chụp trạng thái của Bản đồ) kèm vàng và cờ nhận chạm. */
+export type PrebattleView = NonNullable<MapSnapshot['popup']> & {
+  readonly gold: number;
+  readonly canTap: boolean;
+};
+
+const center = (r: { x: number; y: number; width: number; height: number }) =>
+  [r.x + r.width / 2, r.y + r.height / 2] as const;
 
 /** Hồ sơ đã lưu trong localStorage (đọc thô — test so với kỳ vọng). */
 interface StoredProfile {
@@ -45,13 +58,13 @@ interface StoredProfile {
 
 export class BattleDriver extends GameDriver {
   /**
-   * Mở game ở màn chuẩn bị với seed cố định để ván chơi lặp lại y hệt; `level` (đếm từ 1) mở thẳng
-   * màn đó qua `?level=` — đợt 3: nạp sẵn hồ sơ đã mở khóa tới màn đó (như người chơi đã qua các màn
-   * trước), vì `?level=` chỉ mở được màn đã mở khóa.
+   * Mở game với seed cố định rồi chờ bảng trước trận mở và nhận chạm. `level` (đếm từ 1) mở thẳng bảng của màn
+   * đó qua `?level=` — nạp sẵn hồ sơ đã mở khóa tới màn đó (như người chơi đã qua các màn trước).
    */
-  async openLoadout(seed: number, level?: number): Promise<void> {
+  async openPrebattle(seed: number, level?: number): Promise<PrebattleView> {
     if (level !== undefined) await this.seedProfile({ unlockedLevel: level - 1 });
     await this.open(`/?seed=${seed}${level === undefined ? '' : `&level=${level}`}`);
+    return this.waitPrebattleReady();
   }
 
   /**
@@ -92,12 +105,9 @@ export class BattleDriver extends GameDriver {
     return this.snapshotOf<UpgradeSnapshot>('upgrade');
   }
 
-  /** Đợt 4: màn chuẩn bị — chạm "NÂNG CẤP", chờ màn Nâng cấp mở và nhận chạm. */
+  /** Đợt 4: từ Bản đồ (đóng bảng trước trận nếu đang mở) chạm nút Nâng cấp ở thanh dưới, chờ màn mở. */
   async openUpgrade(): Promise<UpgradeSnapshot> {
-    await this.waitLoadoutReady();
-    const { upgrade } = LOADOUT_LAYOUT;
-    await this.tapAt(upgrade.x + upgrade.width / 2, upgrade.y + upgrade.height / 2);
-    await this.waitSceneSwitch();
+    await this.goToNav('upgrade');
     for (let attempt = 0; attempt < 20; attempt++) {
       const snapshot = await this.upgradeSnapshot();
       if (snapshot.canTap) return snapshot;
@@ -112,7 +122,7 @@ export class BattleDriver extends GameDriver {
     await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
   }
 
-  /** Đợt 4: màn Nâng cấp (đợt 6: cả màn Cửa hàng, cùng chỗ nút) — chạm "XONG", chờ quay lại màn chuẩn bị. */
+  /** Đợt 4: màn Nâng cấp (đợt 6: cả màn Cửa hàng, cùng chỗ nút) — chạm "XONG", chờ quay lại Bản đồ. */
   async closeUpgrade(): Promise<void> {
     const { back } = UPGRADE_LAYOUT;
     await this.tapAt(back.x + back.width / 2, back.y + back.height / 2);
@@ -123,12 +133,9 @@ export class BattleDriver extends GameDriver {
     return this.snapshotOf<ShopSnapshot>('shop');
   }
 
-  /** Đợt 6: màn chuẩn bị — chạm "CỬA HÀNG", chờ màn Cửa hàng mở và nhận chạm. */
+  /** Đợt 6: từ Bản đồ chạm nút Cửa hàng ở thanh dưới, chờ màn Cửa hàng mở và nhận chạm. */
   async openShop(): Promise<ShopSnapshot> {
-    await this.waitLoadoutReady();
-    const { shop } = LOADOUT_LAYOUT;
-    await this.tapAt(shop.x + shop.width / 2, shop.y + shop.height / 2);
-    await this.waitSceneSwitch();
+    await this.goToNav('shop');
     for (let attempt = 0; attempt < 20; attempt++) {
       const snapshot = await this.shopSnapshot();
       if (snapshot.canTap) return snapshot;
@@ -151,7 +158,7 @@ export class BattleDriver extends GameDriver {
 
   /** Mở game rồi vào trận ngay với bộ đồ mặc định. */
   async openBattle(seed: number, level?: number): Promise<void> {
-    await this.openLoadout(seed, level);
+    await this.openPrebattle(seed, level);
     await this.startBattle();
   }
 
@@ -159,8 +166,12 @@ export class BattleDriver extends GameDriver {
     return this.snapshotOf<BattleSnapshot>('battle');
   }
 
-  loadoutSnapshot(): Promise<LoadoutSnapshot> {
-    return this.snapshotOf<LoadoutSnapshot>('loadout');
+  mapSnapshot(): Promise<MapSnapshot> {
+    return this.snapshotOf<MapSnapshot>('map');
+  }
+
+  weaponsSnapshot(): Promise<WeaponsSnapshot> {
+    return this.snapshotOf<WeaponsSnapshot>('weapons');
   }
 
   /** Cho vài khung hình chạy để scene vừa gọi scene.start() kịp mở. */
@@ -168,35 +179,99 @@ export class BattleDriver extends GameDriver {
     await this.advance(SCENE_SWITCH_MS);
   }
 
-  /** Màn chuẩn bị vừa mở chưa nhận chạm (chống chạm nhầm): cho thời gian trôi tới khi nhận. */
-  async waitLoadoutReady(): Promise<LoadoutSnapshot> {
+  /** Bản đồ vừa mở chưa nhận chạm (chống chạm nhầm): cho thời gian trôi tới khi nhận. */
+  async waitMapReady(): Promise<MapSnapshot> {
     for (let attempt = 0; attempt < 20; attempt++) {
-      const snapshot = await this.loadoutSnapshot();
+      const snapshot = await this.mapSnapshot();
       if (snapshot.canTap) return snapshot;
       await this.advance(SCENE_SWITCH_MS);
     }
-    throw new Error('Màn chuẩn bị không nhận chạm sau 2 giây');
+    throw new Error('Bản đồ không nhận chạm sau 2 giây');
   }
 
-  /** Màn chuẩn bị: chạm nút của vũ khí `weaponIndex` (chỉ số trong config.weapons). */
+  /** Bảng trước trận đang mở (lỗi nếu bảng đang đóng). */
+  async prebattleSnapshot(): Promise<PrebattleView> {
+    const snapshot = await this.mapSnapshot();
+    if (!snapshot.popup) throw new Error('Bảng trước trận đang đóng');
+    return { ...snapshot.popup, gold: snapshot.gold, canTap: snapshot.canTap };
+  }
+
+  /** Chờ Bản đồ nhận chạm; bảng trước trận chưa mở thì chạm CHƠI ở thanh dưới để mở bảng màn đang tới. */
+  async waitPrebattleReady(): Promise<PrebattleView> {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const snapshot = await this.waitMapReady();
+      if (snapshot.popup) return this.prebattleSnapshot();
+      await this.tapAt(...center(navButtonRect('play')));
+      await this.advance(FRAME_MS * 2);
+    }
+    throw new Error('Không mở được bảng trước trận');
+  }
+
+  /** Bản đồ: chạm nút màn `level` (đếm từ 0). */
+  async tapLevel(level: number): Promise<void> {
+    await this.tapAt(...center(levelNodeRect(level, true)));
+    await this.advance(FRAME_MS * 2);
+  }
+
+  /** Bảng trước trận: chạm nút đóng. */
+  async closePrebattle(): Promise<void> {
+    await this.tapAt(...center(PREBATTLE_LAYOUT.close));
+    await this.advance(FRAME_MS * 2);
+  }
+
+  /** Từ Bản đồ (đóng bảng nếu đang mở) chạm một nút ở thanh dưới rồi chờ đổi scene. */
+  async goToNav(target: NavTarget): Promise<void> {
+    if ((await this.waitMapReady()).popup) await this.closePrebattle();
+    await this.tapAt(...center(navButtonRect(target)));
+    await this.waitSceneSwitch();
+  }
+
+  /** Màn Vũ khí vừa mở chưa nhận chạm: cho thời gian trôi tới khi nhận. */
+  async waitWeaponsReady(): Promise<WeaponsSnapshot> {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const snapshot = await this.weaponsSnapshot();
+      if (snapshot.canTap) return snapshot;
+      await this.advance(SCENE_SWITCH_MS);
+    }
+    throw new Error('Màn Vũ khí không nhận chạm sau 2 giây');
+  }
+
+  /** Bảng trước trận đang mở thì chạm thẻ vũ khí; không thì chạm nút Vũ khí ở thanh dưới. */
+  async openWeapons(): Promise<WeaponsSnapshot> {
+    if ((await this.waitMapReady()).popup) {
+      await this.tapAt(...center(PREBATTLE_LAYOUT.gearCards[1] ?? PREBATTLE_LAYOUT.skillCard));
+      await this.waitSceneSwitch();
+    } else {
+      await this.goToNav('weapons');
+    }
+    return this.waitWeaponsReady();
+  }
+
+  /** Màn Vũ khí: chạm CHƠI ở thanh dưới, về bảng trước trận. */
+  async backToPrebattle(): Promise<PrebattleView> {
+    await this.tapAt(...center(navButtonRect('play')));
+    await this.waitSceneSwitch();
+    return this.waitPrebattleReady();
+  }
+
+  /** Màn Vũ khí: chạm thẻ thứ `index` của lưới rồi về bảng trước trận. */
+  private async chooseCard(index: number): Promise<void> {
+    if (index < 0) throw new Error('Màn Vũ khí không có thẻ này');
+    await this.tapAt(...center(gridCardRect(index)));
+    await this.advance(FRAME_MS * 2);
+    await this.backToPrebattle();
+  }
+
+  /** Mở màn Vũ khí, chạm thẻ vũ khí `weaponIndex` (chỉ số trong config.weapons), về bảng trước trận. */
   async chooseWeapon(weaponIndex: number): Promise<void> {
-    const { rows } = await this.waitLoadoutReady();
-    const row = rows.findIndex((r) => r.weapons.includes(weaponIndex));
-    const rowInfo = rows[row];
-    if (!rowInfo) throw new Error(`Màn chuẩn bị không có vũ khí số ${weaponIndex}`);
-    const rect = optionRects(row, rowInfo.weapons.length, LOADOUT_LAYOUT)[
-      rowInfo.weapons.indexOf(weaponIndex)
-    ];
-    if (!rect) throw new Error(`Không có nút cho vũ khí số ${weaponIndex}`);
-    await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    const { cards } = await this.openWeapons();
+    await this.chooseCard(cards.findIndex((c) => c.kind === 'weapon' && c.weapon === weaponIndex));
   }
 
-  /** B6: màn chuẩn bị — chạm nút skill `skill` ở hàng skill (ngay dưới các hàng vũ khí). */
+  /** B6: mở màn Vũ khí, chạm thẻ skill `skill`, về bảng trước trận. */
   async chooseSkill(skill: SkillKind): Promise<void> {
-    const { rows, skills } = await this.waitLoadoutReady();
-    const rect = optionRects(rows.length, skills.length, LOADOUT_LAYOUT)[skills.indexOf(skill)];
-    if (!rect) throw new Error(`Màn chuẩn bị không có nút skill "${skill}"`);
-    await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    const { cards } = await this.openWeapons();
+    await this.chooseCard(cards.findIndex((c) => c.kind === 'skill' && c.skill === skill));
   }
 
   /** B6: chạm ô skill cuối thanh nút (bấm skill nếu đã đầy; chưa đầy thì không có gì xảy ra). */
@@ -209,11 +284,10 @@ export class BattleDriver extends GameDriver {
     await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
   }
 
-  /** Màn chuẩn bị: chạm "VÀO TRẬN", chờ scene trận mở. */
+  /** Bảng trước trận (mở bảng màn đang tới nếu chưa mở): chạm nút chơi, chờ scene trận mở. */
   async startBattle(): Promise<void> {
-    await this.waitLoadoutReady();
-    const { start } = LOADOUT_LAYOUT;
-    await this.tapAt(start.x + start.width / 2, start.y + start.height / 2);
+    await this.waitPrebattleReady();
+    await this.tapAt(...center(PREBATTLE_LAYOUT.play));
     await this.waitSceneSwitch();
     await this.snapshot();
   }

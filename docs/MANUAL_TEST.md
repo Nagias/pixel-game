@@ -34,13 +34,16 @@ Unit test và E2E điều khiển game qua cầu nối `window.__PIXEL_GAME__` v
 
 ## Kịch bản chung (chạy mọi lần)
 
-| #   | Làm                                | Đạt khi                                                                                                                                                                                                 |
-| --- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| C1  | Mở game, chạm "VÀO TRẬN"           | Thấy màn chuẩn bị (F07) rồi khung cảnh rừng, sân mờ trên cỏ, nhân vật giữa, quái ở rìa có thanh máu; thanh trên (vàng, LƯỢT, nhiệm vụ bằng hình quái) đọc rõ; thẻ vũ khí có hình trên dải nền tối ở đáy |
-| C2  | Chạm từng nút vũ khí               | Viền xanh lá chuyển sang thẻ vừa chạm; khoảng sáng (vùng đánh) đổi hình; số lượt không đổi                                                                                                              |
-| C3  | Chạm vào sân                       | Số lượt giảm 1; quái trong vùng đánh mất máu (số bay lên, thanh máu ngắn lại)                                                                                                                           |
-| C4  | Chơi tới hết màn (thắng hoặc thua) | Có màn kết quả, ghi rõ chạm để làm gì; chạm thì đi đúng nơi đã ghi                                                                                                                                      |
-| C5  | Soát hình mọi màn hình đã đi qua   | Chữ không đè, không tràn khung; chỉ màu bảng Endesga 32; không lỗi console                                                                                                                              |
+| #   | Làm                                | Đạt khi                                                                                                                                                                                                          |
+| --- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1  | Mở game                            | Thấy Bản đồ Rừng rậm: băng rôn, 20 nút màn nối đường rắn, hiệp sĩ đứng ở màn đang tới, hình trùm cạnh màn có trùm, thanh nút dưới (Cửa hàng · Vũ khí · CHƠI · Nâng cấp)                                          |
+| C1b | Chạm CHƠI rồi nút chơi của bảng    | Bảng trước trận đọc rõ (nhiệm vụ bằng hình quái, quái sẽ gặp, đồ mang vào); vào trận: khung cảnh rừng, sân mờ trên cỏ, quái có thanh máu, thanh trên (vàng, LƯỢT, nhiệm vụ), thẻ vũ khí có hình trên dải nền tối |
+| C2  | Chạm từng nút vũ khí               | Viền xanh lá chuyển sang thẻ vừa chạm; khoảng sáng (vùng đánh) đổi hình; số lượt không đổi                                                                                                                       |
+| C3  | Chạm vào sân                       | Số lượt giảm 1; quái trong vùng đánh mất máu (số bay lên, thanh máu ngắn lại)                                                                                                                                    |
+| C4  | Chơi tới hết màn (thắng hoặc thua) | Có màn kết quả, ghi rõ chạm để làm gì; chạm thì đi đúng nơi đã ghi                                                                                                                                               |
+| C6  | Chạm thẻ vũ khí ở bảng trước trận  | Mở màn Vũ khí; chạm Rìu → thẻ Rìu viền xanh ở hàng "Đang mang"; chạm CHƠI → về bảng, thẻ đồ là Rìu                                                                                                               |
+| C7  | Đóng bảng (X), chạm màn đã qua     | Bảng màn đó ghi "Chơi lại: không nhận vàng"; chạm màn chưa mở → không gì                                                                                                                                         |
+| C5  | Soát hình mọi màn hình đã đi qua   | Chữ không đè, không tràn khung; chỉ màu bảng Endesga 32; không lỗi console                                                                                                                                       |
 
 Cộng thêm **kịch bản riêng** của từng việc (ghi trong kế hoạch của việc đó).
 

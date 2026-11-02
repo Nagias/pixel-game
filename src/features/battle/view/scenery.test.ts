@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { PALETTE, type PaletteColor } from '../../../shared/palette';
 import { ARENA_LAYOUT } from './battleLayout';
 import { itemBounds, paintScenery, type SceneryLayout } from './scenery';
-import { FOREST_BATTLE_SCENERY, FOREST_THEME } from './sceneryForest';
+import { LEVEL_COUNT_ON_MAP, levelNodeRect } from './mapLayout';
+import { FOREST_BATTLE_SCENERY, FOREST_MAP_SCENERY, FOREST_THEME } from './sceneryForest';
 
 // F18 đợt C: khung cảnh vẽ bằng code (chủ dự án chọn bản 32 màu, bỏ đường lát đá). Hàm thuần nên test được
 // đủ: đúng bảng màu, lặp lại được, không đặt cây/ao đè lên sân đấu.
@@ -98,6 +99,44 @@ describe('FOREST_BATTLE_SCENERY', () => {
               zone.rect.x < bounds.x + bounds.width &&
               bounds.y < zone.rect.y + zone.rect.height &&
               zone.rect.y < bounds.y + bounds.height;
+        expect(hit, JSON.stringify(item)).toBe(false);
+      }
+    }
+  });
+});
+
+describe('FOREST_MAP_SCENERY', () => {
+  it('khung 180×320; vùng cấm chứa mọi nút màn (chia 2) để cây không che nút', () => {
+    expect([FOREST_MAP_SCENERY.width, FOREST_MAP_SCENERY.height]).toEqual([180, 320]);
+    const rects = FOREST_MAP_SCENERY.keepClear.flatMap((zone) =>
+      'rect' in zone ? [zone.rect] : [],
+    );
+    for (let level = 0; level < LEVEL_COUNT_ON_MAP; level++) {
+      const node = levelNodeRect(level, true);
+      const half = { x: node.x / 2, y: node.y / 2, width: node.width / 2, height: node.height / 2 };
+      const covered = rects.some(
+        (r) =>
+          r.x <= half.x &&
+          r.y <= half.y &&
+          r.x + r.width >= half.x + half.width &&
+          r.y + r.height >= half.y + half.height,
+      );
+      expect(covered, `màn ${level + 1}`).toBe(true);
+    }
+  });
+
+  it('có cây, bụi, đá; không món nào đè lên nút màn hay đường nối', () => {
+    expect(FOREST_MAP_SCENERY.items.length).toBeGreaterThan(8);
+    for (const item of FOREST_MAP_SCENERY.items) {
+      const b = itemBounds(item);
+      for (const zone of FOREST_MAP_SCENERY.keepClear) {
+        if (!('rect' in zone)) continue;
+        const r = zone.rect;
+        const hit =
+          b.x < r.x + r.width &&
+          r.x < b.x + b.width &&
+          b.y < r.y + r.height &&
+          r.y < b.y + b.height;
         expect(hit, JSON.stringify(item)).toBe(false);
       }
     }

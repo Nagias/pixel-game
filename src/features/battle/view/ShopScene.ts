@@ -1,6 +1,6 @@
-// Đợt 6: màn Cửa hàng — VỎ hiển thị. Mở từ màn chuẩn bị; mỗi món một hàng: tên + cấp, tình trạng (còn mấy
+// Đợt 6: màn Cửa hàng — VỎ hiển thị. Mở từ Bản đồ (thanh nút dưới); mỗi món một hàng: tên + cấp, tình trạng (còn mấy
 // trận / đã có cấp cao hơn), nút mua. Luật giá / hạn dùng nằm ở logic/shop.ts; scene chỉ vẽ, chuyển cú chạm
-// thành buyRental() và lưu hồ sơ. Dùng chung bố cục hàng với màn Nâng cấp. "XONG" quay lại màn chuẩn bị.
+// thành buyRental() và lưu hồ sơ. Dùng chung bố cục hàng với màn Nâng cấp. "XONG" quay lại Bản đồ.
 import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
 import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE } from '../../../shared/palette';
@@ -8,7 +8,7 @@ import { loadProfile, saveProfile, type Profile } from '../../profile';
 import { BATTLE_CONFIG, LOOT_CONFIG, SHOP_CONFIG } from '../logic/battleConfig';
 import type { WeaponRentals } from '../logic/battleTypes';
 import { buyRental } from '../logic/shop';
-import type { LoadoutSceneData } from './LoadoutScene';
+import type { MapSceneData } from './MapScene';
 import { buyButtonRect, UPGRADE_LAYOUT, upgradeRowTop, upgradeTapAt } from './upgradeLayout';
 import { styleTierText } from './weaponTierStyle';
 
@@ -23,7 +23,7 @@ export interface ShopSnapshot {
 
 const GAME_WIDTH = 360;
 const GAME_HEIGHT = 640;
-/** Hành vi giao diện: màn vừa mở chờ chút mới nhận chạm (như màn chuẩn bị). */
+/** Hành vi giao diện: màn vừa mở chờ chút mới nhận chạm (như Bản đồ). */
 const TAP_DELAY_MS = 500;
 
 const TEXT = {
@@ -43,7 +43,7 @@ interface ShopRow {
 
 export class ShopScene extends Scene {
   /** Màn chuẩn bị để quay lại (màn sắp chơi + bộ đồ đang chọn). */
-  private returnTo!: LoadoutSceneData;
+  private returnTo: MapSceneData = {};
   private profile!: Profile;
   private rows: ShopRow[] = [];
   private goldText!: GameObjects.Text;
@@ -55,7 +55,7 @@ export class ShopScene extends Scene {
     super('shop');
   }
 
-  init(data: LoadoutSceneData): void {
+  init(data: Partial<MapSceneData>): void {
     this.returnTo = data;
     this.profile = loadProfile();
   }
@@ -99,7 +99,7 @@ export class ShopScene extends Scene {
     const tap = upgradeTapAt(x, y, SHOP_CONFIG.weapons.length, UPGRADE_LAYOUT);
     if (tap?.kind === 'back') {
       this.leaving = true;
-      this.scene.start('loadout', this.returnTo);
+      this.scene.start('map', this.returnTo);
     } else if (tap?.kind === 'buy') {
       const weapon = SHOP_CONFIG.weapons[tap.row];
       if (weapon !== undefined) this.buy(weapon);

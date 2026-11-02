@@ -1,6 +1,6 @@
-// Đợt 4: màn Nâng cấp — VỎ hiển thị. Mở từ màn chuẩn bị; mỗi chỉ số một hàng: tên, cấp, hiệu lực hiện tại →
+// Đợt 4: màn Nâng cấp — VỎ hiển thị. Mở từ Bản đồ (thanh nút dưới); mỗi chỉ số một hàng: tên, cấp, hiệu lực hiện tại →
 // cấp kế, nút mua. Luật giá / giới hạn / hiệu lực nằm ở logic/upgrades.ts; scene chỉ vẽ, chuyển cú chạm
-// thành buyUpgrade() và lưu hồ sơ. "XONG" quay lại màn chuẩn bị đúng màn và bộ đồ đang chọn.
+// thành buyUpgrade() và lưu hồ sơ. "XONG" quay lại Bản đồ.
 import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
 import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE } from '../../../shared/palette';
@@ -8,7 +8,7 @@ import { loadProfile, saveProfile, type Profile } from '../../profile';
 import { BATTLE_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
 import { UPGRADE_KINDS, type UpgradeKind, type UpgradeLevels } from '../logic/battleTypes';
 import { buyUpgrade, upgradeCost, withUpgrades } from '../logic/upgrades';
-import type { LoadoutSceneData } from './LoadoutScene';
+import type { MapSceneData } from './MapScene';
 import { buyButtonRect, UPGRADE_LAYOUT, upgradeRowTop, upgradeTapAt } from './upgradeLayout';
 
 /** Thứ test E2E đọc được qua window.__PIXEL_GAME__.snapshot(). */
@@ -22,7 +22,7 @@ export interface UpgradeSnapshot {
 
 const GAME_WIDTH = 360;
 const GAME_HEIGHT = 640;
-/** Hành vi giao diện: màn vừa mở chờ chút mới nhận chạm (như màn chuẩn bị). */
+/** Hành vi giao diện: màn vừa mở chờ chút mới nhận chạm (như Bản đồ). */
 const TAP_DELAY_MS = 500;
 
 const TEXT = {
@@ -66,7 +66,7 @@ const EFFECT_UNIT: Record<UpgradeKind, string> = {
 
 export class UpgradeScene extends Scene {
   /** Màn chuẩn bị để quay lại (màn sắp chơi + bộ đồ đang chọn). */
-  private returnTo!: LoadoutSceneData;
+  private returnTo: MapSceneData = {};
   private profile!: Profile;
   private rows: UpgradeRow[] = [];
   private goldText!: GameObjects.Text;
@@ -78,7 +78,7 @@ export class UpgradeScene extends Scene {
     super('upgrade');
   }
 
-  init(data: LoadoutSceneData): void {
+  init(data: Partial<MapSceneData>): void {
     this.returnTo = data;
     this.profile = loadProfile();
   }
@@ -122,7 +122,7 @@ export class UpgradeScene extends Scene {
     const tap = upgradeTapAt(x, y, UPGRADE_KINDS.length, UPGRADE_LAYOUT);
     if (tap?.kind === 'back') {
       this.leaving = true;
-      this.scene.start('loadout', this.returnTo);
+      this.scene.start('map', this.returnTo);
     } else if (tap?.kind === 'buy') {
       const kind = UPGRADE_KINDS[tap.row];
       if (kind !== undefined) this.buy(kind);
