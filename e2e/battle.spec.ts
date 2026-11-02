@@ -22,7 +22,7 @@ import {
   WEAPON_BAR,
   weaponButtonRects,
 } from '../src/features/battle/view/battleLayout';
-import { PREBATTLE_LAYOUT } from '../src/features/battle/view/mapLayout';
+import { levelNodeRect, PREBATTLE_LAYOUT } from '../src/features/battle/view/mapLayout';
 import { seedRng } from '../src/shared/random';
 import { BattleDriver, bestMove, hitIds, lookaheadTurn, missMove } from './support/battleDriver';
 
@@ -687,6 +687,42 @@ test('Đợt D (F18): chạm đúp nút chơi của bảng trước trận chỉ
   const { battle } = await game.snapshot();
   expect(battle).toMatchObject({ level: 0, turnsLeft: LEVEL_1.turnLimit });
   expect(battle.lastAttack).toBeNull();
+});
+
+test('Đợt D (F18): chạm đúp nút màn 2 trên bản đồ chỉ mở bảng, không lọt vào nút chơi của bảng', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.seedProfile({ unlockedLevel: 1 });
+  await game.open(`/?seed=${SEED}`);
+  await game.waitMapReady();
+  // Điểm nằm trong vùng chạm của nút màn 2 và cũng trong nút chơi của bảng sẽ bật lên.
+  const node = levelNodeRect(1, true);
+  const { play } = PREBATTLE_LAYOUT;
+  const x = Math.max(node.x, play.x) + 4;
+  const y = Math.max(node.y, play.y) + 4;
+  expect(x).toBeLessThan(Math.min(node.x + node.width, play.x + play.width));
+  await game.tapAt(x, y);
+  await game.advance(150);
+  await game.tapAt(x, y);
+  await game.waitSceneSwitch();
+  expect((await game.mapSnapshot()).popup?.level).toBe(1);
+});
+
+test('Đợt D (F18): bộ nhớ bị chặn — thắng màn 1 vẫn sang được bảng màn 2', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem = () => {
+      throw new Error('bộ nhớ bị chặn');
+    };
+  });
+  const game = new BattleDriver(page);
+  await game.openBattle(SEED);
+  await playBestUntilOver(game);
+  expect((await game.snapshot()).battle.phase).toBe('won');
+  await game.advance(RESULT_SCREEN_WAIT_MS);
+  await game.tap();
+  await game.waitSceneSwitch();
+  expect((await game.waitMapReady()).popup?.level).toBe(1);
 });
 
 test('Đợt D (F18): bộ nhớ trình duyệt bị chặn — chọn Rìu ở màn Vũ khí vẫn mang Rìu vào trận', async ({

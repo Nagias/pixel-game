@@ -25,7 +25,7 @@
 | F15  | Chủ đề Rừng rậm: 20 màn, 5 quái mới, bộ sinh màn   | ✅ Xong    | `logic/chapters.ts`, `battleConfig.ts`, `scripts/levelGen*.ts` | `logic/chapters.test.ts`, `scripts/levelGenCore.test.ts`   |
 | F16  | Quái hiếm, may mắn, rơi vũ khí 6 cấp màu, túi đồ   | ✅ Xong    | `logic/loot.ts`, `logic/battle.ts`, `view/weaponTierStyle.ts`  | `logic/loot.test.ts`, `logic/rare.test.ts`                 |
 | F17  | Cửa hàng: vũ khí cấp Hiếm dùng có hạn              | ✅ Xong    | `logic/shop.ts`, `view/ShopScene.ts`                           | `logic/shop.test.ts`                                       |
-| F18  | Giao diện mobile kiểu Micro RPG (5 đợt)            | ✅ Xong    | `src/shared/palette.ts`, `view/battleSprites.ts`               | `src/shared/palette.test.ts`, `view/battleSprites.test.ts` |
+| F18  | Giao diện mobile kiểu Micro RPG (5 đợt)            | ✅ Xong    | `view/MapScene.ts`, `view/WeaponsScene.ts`, `view/scenery.ts`  | `src/shared/palette.test.ts`, `view/battleSprites.test.ts` |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -702,6 +702,8 @@ nút xóa tiến trình / chơi lại từ đầu.
 **Người chơi thấy và làm gì:** màn chuẩn bị có nút **NÂNG CẤP** dưới "VÀO TRẬN". Màn Nâng cấp: mỗi chỉ số
 một hàng — tên, "Cấp n/3", hiệu lực hiện tại → cấp kế ("10 → 12 máu"), nút "MUA / n vàng" (viền xanh khi đủ
 vàng, mờ khi thiếu, "TỐI ĐA" khi hết cấp). "XONG" quay lại màn chuẩn bị đúng màn và bộ đồ đang chọn.
+**Từ F18 đợt E:** mở bằng nút Nâng cấp ở thanh nút dưới; màn dạng thẻ 2×2 (hình, tên, cấp, hiệu lực, nút giá có
+đồng xu); không còn "XONG" — đi bằng thanh nút dưới. Luật không đổi.
 
 **Luật** (nguồn sự thật: `logic/upgrades.ts` + `logic/upgrades.test.ts`; đợt 4 kế hoạch sau B6, chủ dự án
 duyệt 27/10/2026 — "agent đề xuất"):
@@ -950,7 +952,8 @@ vẫn đạt.
 Cửa hàng: Kiếm, Rìu, Giáo, Cung — mỗi món cấp **Hiếm** (chữ xanh dương), tình trạng ("Dùng 5 trận" / "Còn
 3 trận · mua thêm 5" / "Đã có Sử thi (vĩnh viễn)"), nút "MUA / 25 vàng" (viền xanh khi đủ vàng, mờ khi thiếu,
 "ĐÃ CÓ" khi không cần mua). "XONG" quay lại màn chuẩn bị đúng màn và bộ đồ đang chọn; món đang thuê ghi
-"Hiếm · 5 trận" dưới tên.
+"Hiếm · 5 trận" dưới tên. **Từ F18 đợt E:** mở bằng nút Cửa hàng ở thanh nút dưới; màn dạng thẻ 2×2, không còn
+"XONG"; món đang thuê ghi "Hiếm · n trận" ở màn Vũ khí. Luật không đổi.
 
 **Luật** (chủ dự án duyệt 27/10/2026 — lượt duyệt chung mục 1b; nguồn sự thật: `logic/shop.ts` +
 `logic/shop.test.ts`):
@@ -1011,7 +1014,7 @@ kích thước. Bố cục các màn chưa đổi. Tên màu cũ đổi sang mà
    **không cộng vàng, không rơi đồ, không đổi màn đã mở**; món thuê mang vào vẫn bị trừ 1 trận. Màn kết quả ghi
    "Chơi lại: không nhận vàng". Hiện chỉ vào được bằng `?level=N` hoặc sau phá đảo; đợt D thêm bản đồ.
 2. **Hồ sơ phiên bản 5**: thêm `clearedAll` (đã thắng màn cuối) và `loadout` (đồ đang mang: tên vũ khí gần →
-   xa + tên skill). Hồ sơ 1–4 tự chuyển lên, không mất gì. Đồ đang mang lưu mỗi lần chọn và lúc vào trận; tắt
+   xa + tên skill). Hồ sơ 1–4 tự chuyển lên, không mất gì. Đồ đang mang lưu mỗi lần chọn (từ đợt D: ở màn Vũ khí); tắt
    game mở lại vẫn còn; hồ sơ trỏ tới món không còn trong cấu hình thì về bộ mặc định
    (`logic/loadout.ts` `toSavedLoadout` / `fromSavedLoadout`). Skill nhớ qua hồ sơ thay cho biến trong scene.
 
@@ -1047,7 +1050,9 @@ kích thước. Bố cục các màn chưa đổi. Tên màu cũ đổi sang mà
    trận". Chạm thẻ là mang món đó, lưu hồ sơ và bộ nhớ phiên (bộ nhớ trình duyệt bị chặn vẫn dùng đúng đồ tới khi
    tắt game). Chạm CHƠI về bảng trước trận.
 5. **Đi lại**: hết trận chạm → Bản đồ với bảng màn chơi tiếp mở sẵn (thắng: màn kế; thua: màn vừa chơi) — vẫn hai
-   lần chạm là vào trận tiếp. Nâng cấp, Cửa hàng mở từ thanh dưới, "XONG" về Bản đồ (đợt E đổi giao diện).
+   lần chạm là vào trận tiếp (kể cả khi bộ nhớ trình duyệt bị chặn: Bản đồ tin màn kế trận đấu gửi sang). Bảng
+   trước trận vừa bật lên chờ 0,4 giây mới nhận chạm — chạm đúp vào nút màn không lọt thành "vào trận". Nâng cấp,
+   Cửa hàng mở từ thanh dưới (đợt E đổi giao diện).
 
 **Đợt E — Nâng cấp và Cửa hàng dạng thẻ (xong):** lưới 2×2 thẻ (`view/upgradeLayout.ts` dùng chung cho hai
 màn, phần vẽ chung `view/cardScreen.ts`): băng rôn tên màn, ô vàng; mỗi thẻ có hình, tên, "Cấp n/3" (Nâng cấp) hoặc
