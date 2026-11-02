@@ -205,4 +205,4 @@ Thiết kế `docs/superpowers/specs/2026-11-02-giao-dien-mobile-design.md`, k�
 - [x] Đợt C — khung cảnh rừng vẽ bằng code, màn trận đấu mới (PR #37)
 - [x] Đợt D — bản đồ, bảng trước trận, màn Vũ khí (PR #38)
 - [x] Đợt E — Nâng cấp và Cửa hàng dạng thẻ
-- [ ] Rà soát cuối toàn bộ F18 (agent mạnh nhất)
+- [x] Rà soát cuối toàn bộ F18 (agent mạnh nhất): sửa 3 lỗi (chạm đúp nút màn, bộ nhớ bị chặn, tài liệu F14/F17)
