@@ -1,6 +1,6 @@
 // F18 đợt D: màn Vũ khí — VỎ hiển thị (học ảnh 2 Micro RPG). Nơi DUY NHẤT đổi đồ: hàng "Đang mang" (gần, vừa,
 // xa + skill), lưới thẻ mọi vũ khí và skill; chạm thẻ là mang món đó. Luật chọn ở logic/loadout.ts; đồ chọn lưu
-// vào hồ sơ ngay (lưu hỏng thì vẫn giữ trong màn). Chạm CHƠI về bảng trước trận.
+// vào hồ sơ và bộ nhớ phiên. Chạm CHƠI về bảng trước trận (màn đang xem dở, không thì màn đang tới).
 import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
 import { registerPixelSprites } from '../../../app/pixelSprites';
 import { setSnapshotProvider } from '../../../app/testBridge';
@@ -31,6 +31,7 @@ import { effectiveTiers } from '../logic/shop';
 import { withUpgrades } from '../logic/upgrades';
 import type { MapSceneData } from './MapScene';
 import { MAP_GOLD_PILL } from './mapLayout';
+import { goFromNav } from './cardScreen';
 import { drawNavBar } from './navBar';
 import { drawPanel, goldPill, SESSION_LOADOUT } from './uiKit';
 import { SKILL_ICON, UI_SPRITES, WEAPON_ICON, type UiSprite } from './uiSprites';
@@ -188,8 +189,7 @@ export class WeaponsScene extends Scene {
       this.redraw();
     } else if (tap?.kind === 'nav' && tap.target !== 'weapons') {
       this.leaving = true;
-      if (tap.target === 'play') this.scene.start('map', this.returnTo);
-      else this.scene.start(tap.target, {});
+      goFromNav(this, tap.target, this.returnTo, loadProfile());
     }
   }
 

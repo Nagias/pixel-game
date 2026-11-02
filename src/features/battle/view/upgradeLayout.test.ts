@@ -1,37 +1,48 @@
 import { describe, expect, it } from 'vitest';
 import { UPGRADE_KINDS } from '../logic/battleTypes';
-import { buyButtonRect, UPGRADE_LAYOUT, upgradeRowTop, upgradeTapAt } from './upgradeLayout';
+import type { Rect } from './battleLayout';
+import { NAV_BAR, navButtonRect } from './navLayout';
+import { buyButtonRect, cardRect, upgradeTapAt } from './upgradeLayout';
 
-const L = UPGRADE_LAYOUT;
-/** Đợt 5: 4 hàng (thêm May mắn). */
-const ROWS = UPGRADE_KINDS.length;
-const center = (r: { x: number; y: number; width: number; height: number }) => ({
-  x: r.x + r.width / 2,
-  y: r.y + r.height / 2,
-});
+// F18 đợt E: màn Nâng cấp và Cửa hàng dạng thẻ (học ảnh 2, 3 Micro RPG) — lưới 2×2 thẻ, nút mua trong thẻ,
+// thanh nút dưới thay nút "XONG". Hai màn dùng chung bố cục này (4 chỉ số / 4 món).
+const COUNT = UPGRADE_KINDS.length;
+const overlap = (a: Rect, b: Rect) =>
+  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+const mid = (r: Rect) => [r.x + r.width / 2, r.y + r.height / 2] as const;
 
-// Đợt 4: màn Nâng cấp — mỗi chỉ số một hàng (tên, cấp, hiệu lực bên trái; nút mua bên phải), nút "XONG"
-// ở đáy đúng chỗ nút "VÀO TRẬN" của màn chuẩn bị.
-describe('bố cục màn Nâng cấp', () => {
-  it('mỗi chỉ số một hàng: nút mua trong khung, đủ cao cho ngón tay, hàng không chồng nhau, nằm trên nút "XONG"', () => {
-    for (let row = 0; row < ROWS; row++) {
-      const r = buyButtonRect(row, L);
+describe('bố cục thẻ Nâng cấp / Cửa hàng', () => {
+  const cards = Array.from({ length: COUNT }, (_, i) => cardRect(i));
+
+  it('4 thẻ trong khung, trên thanh nút dưới (kể cả nút CHƠI nhô lên), không đè nhau', () => {
+    expect(COUNT).toBe(4);
+    for (const r of cards) {
+      expect(r.x).toBeGreaterThanOrEqual(0);
       expect(r.x + r.width).toBeLessThanOrEqual(360);
-      expect(r.height).toBeGreaterThanOrEqual(44);
-      expect(upgradeRowTop(row + 1, L)).toBeGreaterThanOrEqual(upgradeRowTop(row, L) + L.rowHeight);
+      expect(r.y + r.height).toBeLessThan(navButtonRect('play').y);
+      expect(r.y + r.height).toBeLessThan(NAV_BAR.y);
     }
-    expect(upgradeRowTop(ROWS - 1, L) + L.rowHeight).toBeLessThanOrEqual(L.back.y);
-    expect(L.back.y + L.back.height).toBeLessThanOrEqual(640);
+    cards.forEach((a, i) => cards.forEach((b, j) => i < j && expect(overlap(a, b)).toBe(false)));
   });
 
-  it('chạm giữa nút mua thì trúng đúng hàng; chạm "XONG" là quay lại; chạm nền không trúng gì', () => {
-    for (let row = 0; row < ROWS; row++) {
-      const p = center(buyButtonRect(row, L));
-      expect(upgradeTapAt(p.x, p.y, ROWS, L)).toEqual({ kind: 'buy', row });
+  it('nút mua nằm trong thẻ, đủ cao cho ngón tay', () => {
+    cards.forEach((card, i) => {
+      const buy = buyButtonRect(i);
+      expect(buy.height).toBeGreaterThanOrEqual(44);
+      expect(buy.x).toBeGreaterThanOrEqual(card.x);
+      expect(buy.y + buy.height).toBeLessThanOrEqual(card.y + card.height);
+    });
+  });
+
+  it('chạm nút mua ra đúng thẻ; chạm thân thẻ ngoài nút mua không gì; chạm thanh dưới ra nút', () => {
+    for (let i = 0; i < COUNT; i++) {
+      expect(upgradeTapAt(...mid(buyButtonRect(i)), COUNT)).toEqual({ kind: 'buy', index: i });
+      const card = cardRect(i);
+      expect(upgradeTapAt(card.x + card.width / 2, card.y + 20, COUNT)).toBeNull();
     }
-    const b = center(L.back);
-    expect(upgradeTapAt(b.x, b.y, ROWS, L)).toEqual({ kind: 'back' });
-    expect(upgradeTapAt(30, upgradeRowTop(0, L) + 10, ROWS, L)).toBeNull();
-    expect(upgradeTapAt(180, 20, ROWS, L)).toBeNull();
+    expect(upgradeTapAt(...mid(navButtonRect('play')), COUNT)).toEqual({
+      kind: 'nav',
+      target: 'play',
+    });
   });
 });

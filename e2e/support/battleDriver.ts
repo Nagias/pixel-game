@@ -25,7 +25,7 @@ import {
 import { levelNodeRect, PREBATTLE_LAYOUT } from '../../src/features/battle/view/mapLayout';
 import { navButtonRect, type NavTarget } from '../../src/features/battle/view/navLayout';
 import { gridCardRect } from '../../src/features/battle/view/weaponsLayout';
-import { buyButtonRect, UPGRADE_LAYOUT } from '../../src/features/battle/view/upgradeLayout';
+import { buyButtonRect } from '../../src/features/battle/view/upgradeLayout';
 import { PROFILE_KEY, PROFILE_VERSION } from '../../src/features/profile/logic/profileConfig';
 import type { RngState } from '../../src/shared/random';
 import { GameDriver } from './gameDriver';
@@ -118,14 +118,13 @@ export class BattleDriver extends GameDriver {
 
   /** Đợt 4: màn Nâng cấp — chạm nút mua của chỉ số `kind`. */
   async buyUpgrade(kind: UpgradeKind): Promise<void> {
-    const rect = buyButtonRect(UPGRADE_KINDS.indexOf(kind), UPGRADE_LAYOUT);
+    const rect = buyButtonRect(UPGRADE_KINDS.indexOf(kind));
     await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
   }
 
-  /** Đợt 4: màn Nâng cấp (đợt 6: cả màn Cửa hàng, cùng chỗ nút) — chạm "XONG", chờ quay lại Bản đồ. */
+  /** Màn Nâng cấp / Cửa hàng (F18 đợt E: không còn "XONG") — chạm CHƠI ở thanh dưới, về bảng trước trận. */
   async closeUpgrade(): Promise<void> {
-    const { back } = UPGRADE_LAYOUT;
-    await this.tapAt(back.x + back.width / 2, back.y + back.height / 2);
+    await this.tapAt(...center(navButtonRect('play')));
     await this.waitSceneSwitch();
   }
 
@@ -146,7 +145,7 @@ export class BattleDriver extends GameDriver {
 
   /** Đợt 6: màn Cửa hàng — chạm nút mua của vũ khí `weaponIndex` (chung bố cục hàng với màn Nâng cấp). */
   async buyFromShop(weaponIndex: number): Promise<void> {
-    const rect = buyButtonRect(SHOP_CONFIG.weapons.indexOf(weaponIndex), UPGRADE_LAYOUT);
+    const rect = buyButtonRect(SHOP_CONFIG.weapons.indexOf(weaponIndex));
     await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
   }
 

@@ -25,7 +25,7 @@
 | F15  | Chủ đề Rừng rậm: 20 màn, 5 quái mới, bộ sinh màn   | ✅ Xong    | `logic/chapters.ts`, `battleConfig.ts`, `scripts/levelGen*.ts` | `logic/chapters.test.ts`, `scripts/levelGenCore.test.ts`   |
 | F16  | Quái hiếm, may mắn, rơi vũ khí 6 cấp màu, túi đồ   | ✅ Xong    | `logic/loot.ts`, `logic/battle.ts`, `view/weaponTierStyle.ts`  | `logic/loot.test.ts`, `logic/rare.test.ts`                 |
 | F17  | Cửa hàng: vũ khí cấp Hiếm dùng có hạn              | ✅ Xong    | `logic/shop.ts`, `view/ShopScene.ts`                           | `logic/shop.test.ts`                                       |
-| F18  | Giao diện mobile kiểu Micro RPG (5 đợt)            | 🚧 Đợt D   | `src/shared/palette.ts`, `view/battleSprites.ts`               | `src/shared/palette.test.ts`, `view/battleSprites.test.ts` |
+| F18  | Giao diện mobile kiểu Micro RPG (5 đợt)            | ✅ Xong    | `src/shared/palette.ts`, `view/battleSprites.ts`               | `src/shared/palette.test.ts`, `view/battleSprites.test.ts` |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -992,7 +992,7 @@ nhầm) — trên điện thoại thật không gặp.
 
 **Nợ liên quan:** DEBT-009 (giá và hạn chưa qua chơi thử).
 
-## F18 — Giao diện mobile kiểu Micro RPG (đang làm)
+## F18 — Giao diện mobile kiểu Micro RPG
 
 **Vì sao:** chủ dự án chơi thử và thấy giao diện "không giống game mobile chút nào" (02/11/2026). Thiết kế đã
 duyệt: `docs/superpowers/specs/2026-11-02-giao-dien-mobile-design.md`; kế hoạch 5 đợt:
@@ -1049,11 +1049,17 @@ kích thước. Bố cục các màn chưa đổi. Tên màu cũ đổi sang mà
 5. **Đi lại**: hết trận chạm → Bản đồ với bảng màn chơi tiếp mở sẵn (thắng: màn kế; thua: màn vừa chơi) — vẫn hai
    lần chạm là vào trận tiếp. Nâng cấp, Cửa hàng mở từ thanh dưới, "XONG" về Bản đồ (đợt E đổi giao diện).
 
+**Đợt E — Nâng cấp và Cửa hàng dạng thẻ (xong):** lưới 2×2 thẻ (`view/upgradeLayout.ts` dùng chung cho hai
+màn, phần vẽ chung `view/cardScreen.ts`): băng rôn tên màn, ô vàng; mỗi thẻ có hình, tên, "Cấp n/3" (Nâng cấp) hoặc
+chữ cấp "Hiếm" (Cửa hàng), hiệu lực hiện tại → cấp kế / tình trạng món thuê, nút giá có đồng xu (đủ vàng sáng,
+thiếu mờ, "TỐI ĐA" / "ĐÃ CÓ"). Bỏ nút "XONG": đi bằng thanh nút dưới; CHƠI ở màn phụ nào cũng mở bảng trước trận
+(màn đang xem dở, không thì màn đang tới). Luật F14, F17 không đổi.
+
 **Kiểm chứng tự động:** `src/shared/palette.test.ts` (đủ 32 màu, không trùng, thứ tự ký tự);
 `view/battleSprites.test.ts` (ký tự thuộc bảng, viền mực ở mép mỗi hàng, giữ kích thước 12 hình);
 `profile/logic/profile.test.ts` (trạng thái màn, chơi lại, phá đảo, phiên bản 5, dữ liệu lạ);
 `logic/loadout.test.ts` (đồ đang mang ↔ dạng lưu); E2E "Đợt B (F18)…" (lưu đồ qua lần mở lại, chơi lại
-không nhận vàng); `view/scenery.test.ts` (đúng bảng màu, lặp lại theo hạt giống, không đè sân), `view/uiSprites.test.ts`,
+không nhận vàng); `view/upgradeLayout.test.ts` (thẻ, nút mua, thanh dưới); `view/scenery.test.ts` (đúng bảng màu, lặp lại theo hạt giống, không đè sân), `view/uiSprites.test.ts`,
 `view/battleLayout.test.ts` (thanh trên không đè sân); E2E "Đợt C (F18)…" (thanh máu khớp máu thật);
 `view/mapLayout.test.ts`, `view/navLayout.test.ts`, `view/weaponsLayout.test.ts`, `logic/levelInfo.test.ts`; E2E
 "Đợt D (F18)…" ×6 (bản đồ, bảng trước trận, thắng về bản đồ + chơi lại, chạm đúp nút chơi, bộ nhớ bị chặn, skill

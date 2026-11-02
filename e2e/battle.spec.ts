@@ -543,7 +543,7 @@ test('Đợt 4: màn Nâng cấp — mua bằng vàng, giá tăng theo cấp, th
   await page.screenshot({ path: test.info().outputPath('23-nang-cap.png') });
   expect(await game.storedProfile()).toMatchObject({ gold: 5, upgrades: { hp: 2 } });
 
-  // "XONG" về màn chuẩn bị đúng màn; vào trận thì máu tối đa +2 mỗi cấp.
+  // Chạm CHƠI ở thanh dưới về bảng trước trận đúng màn; vào trận thì máu tối đa +2 mỗi cấp.
   await game.closeUpgrade();
   expect(await game.waitPrebattleReady()).toMatchObject({ level: 0, gold: 5 });
   await game.startBattle();
@@ -921,7 +921,7 @@ test('Đợt 6: cửa hàng — mua Giáo Hiếm 25 vàng (mua thêm thì cộng
   await page.screenshot({ path: test.info().outputPath('32-cua-hang.png') });
   expect(await game.storedProfile()).toMatchObject({ gold: 10, rentals: { [spear]: 10 } });
 
-  // "XONG" về màn chuẩn bị: Giáo dùng cấp Hiếm.
+  // Chạm CHƠI về bảng trước trận: Giáo dùng cấp Hiếm.
   await game.closeUpgrade();
   const prep = await game.waitPrebattleReady();
   expect(prep.tiers[spear]).toBe(SHOP_CONFIG.tier);
