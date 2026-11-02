@@ -3,6 +3,7 @@
 // B4: mở từ màn chuẩn bị (LoadoutScene) với màn + bộ đồ; hết màn thì quay về màn chuẩn bị màn kế.
 import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
 import { registerPixelSprites } from '../../../app/pixelSprites';
+import { registerSceneryTexture } from '../../../app/sceneryTexture';
 import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE, type PaletteColor } from '../../../shared/palette';
 import { parseSeedParam } from '../../../shared/seedParam';
@@ -43,10 +44,15 @@ import type {
 import { defaultLoadout } from '../logic/loadout';
 import {
   ARENA_LAYOUT,
+  GOLD_PILL,
+  hpBarAnchor,
+  QUEST_PILL,
+  TOP_BAR,
+  TURN_TAB,
   barButtonCount,
   cellToPoint,
   type Point,
-  polarToPoint,
+  type Rect,
   ringInnerRadius,
   sectorStartAngle,
   skillButtonIndex,
@@ -59,6 +65,10 @@ import {
   zoneRadii,
 } from './battleLayout';
 import { BATTLE_SPRITES, SPRITE_SCALE } from './battleSprites';
+import { paintScenery } from './scenery';
+import { FOREST_BATTLE_SCENERY, FOREST_THEME } from './sceneryForest';
+import { drawPanel, goldPill, HpBar } from './uiKit';
+import { UI_SPRITES, WEAPON_ICON, type UiSprite } from './uiSprites';
 import type { LoadoutSceneData } from './LoadoutScene';
 import { addLightning, styleTierText } from './weaponTierStyle';
 
@@ -81,6 +91,8 @@ export interface BattleSnapshot {
   readonly drop: Drop | null;
   /** F18 đợt B: trận chơi lại màn đã qua — không nhận vàng, không rơi đồ. */
   readonly replay: boolean;
+  /** F18 đợt C: số máu đang ghi trên thanh máu của từng quái đang hiện. */
+  readonly hpBars: readonly { readonly id: number; readonly hp: number }[];
 }
 
 const GAME_WIDTH = 360;
@@ -89,7 +101,18 @@ const GAME_HEIGHT = 640;
 const RESTART_DELAY_MS = 500;
 const MOVE_TWEEN_MS = 180;
 
-const DEPTH = { arena: 0, zone: 1, monster: 2, hero: 3, popup: 4, hud: 5, result: 10 } as const;
+const DEPTH = {
+  scenery: -1,
+  arena: 0,
+  zone: 1,
+  shadow: 1.5,
+  monster: 2,
+  hero: 3,
+  hpBar: 3.5,
+  popup: 4,
+  hud: 5,
+  result: 10,
+} as const;
 
 /** B6: màu riêng của từng skill — nút nạp, chớp sân khi bấm. */
 const SKILL_COLOR: Record<SkillKind, PaletteColor> = { iceRain: 'blue', fireball: 'orange' };
@@ -120,11 +143,22 @@ export class BattleScene extends Scene {
   private endedAtMs: number | null = null;
 
   private zone!: GameObjects.Graphics;
+  /** F18 đợt C: số lượt còn lại trên thẻ treo giữa thanh trên. */
   private turnsText!: GameObjects.Text;
   private levelText!: GameObjects.Text;
-  private heroHpText!: GameObjects.Text;
-  /** F11: tiến độ nhiệm vụ (góc trên bên phải). */
+  /** F18 đợt C: vàng nhặt trong trận (ô vàng góc trái). */
+  private gold!: { set(text: string): void };
+  /** F18 đợt C: thanh máu trên đầu hiệp sĩ (thay dòng chữ "Máu: n/m"). */
+  private heroHp!: HpBar;
+  /** F11: tiến độ nhiệm vụ — hình quái + "đã hạ/cần" (ô bên phải). */
   private questText!: GameObjects.Text;
+  private questIcon!: GameObjects.Image;
+  /** F18 đợt C: bóng và thanh máu của từng quái, theo id; `max` = máu lúc quái xuất hiện. */
+  private readonly monsterUnits = new Map<
+    number,
+    { shadow: GameObjects.Graphics; hp: HpBar; max: number; shown: number }
+  >();
+  private uiKeys!: Record<UiSprite, string>;
   /** F04: dấu "!" trên đầu quái sắp đánh, theo id quái. */
   private readonly threatMarks = new Map<number, GameObjects.Text>();
   private resultLayer!: GameObjects.Container;
@@ -142,7 +176,9 @@ export class BattleScene extends Scene {
   private readonly monsterSprites = new Map<number, GameObjects.Image>();
   private spriteKeys!: Record<keyof typeof BATTLE_SPRITES, string>;
   private weaponButtons: {
-    frame: GameObjects.Rectangle;
+    /** Khung thẻ (vẽ lại khi chọn): viền 3 điểm xanh lá khi đang cầm. */
+    box: GameObjects.Graphics;
+    rect: Rect;
     name: GameObjects.Text;
     range: GameObjects.Text;
     /** Đợt 5: cấp màu (> 0 thì dòng dưới ghi tên cấp, tô màu cấp). */
@@ -150,8 +186,10 @@ export class BattleScene extends Scene {
   }[] = [];
   /** B6: ô skill cuối thanh nút (null nếu không mang skill). */
   private skillButton: {
-    frame: GameObjects.Rectangle;
-    fill: GameObjects.Rectangle;
+    /** Khung + mức nạp mọc từ đáy (Graphics vẽ lại theo state). */
+    box: GameObjects.Graphics;
+    rect: Rect;
+    color: PaletteColor;
     name: GameObjects.Text;
     charge: GameObjects.Text;
   } | null = null;
@@ -177,17 +215,31 @@ export class BattleScene extends Scene {
   create(): void {
     // Phaser dùng lại cùng đối tượng scene mỗi lần mở: bỏ tham chiếu tới hình của lần trước.
     this.monsterSprites.clear();
+    this.monsterUnits.clear();
     this.threatMarks.clear();
     this.weaponButtons = [];
     this.skillButton = null;
 
     this.spriteKeys = registerPixelSprites(this, 'battle', BATTLE_SPRITES);
+    this.uiKeys = registerPixelSprites(this, 'ui', UI_SPRITES);
+    // F18 đợt C: khung cảnh rừng vẽ bằng code (180×320, phóng ×2), vẽ một lần rồi dùng lại.
+    const { width, height } = FOREST_BATTLE_SCENERY;
+    const scenery = registerSceneryTexture(this, 'scenery.forestBattle', width, height, () =>
+      paintScenery(FOREST_BATTLE_SCENERY, FOREST_THEME),
+    );
+    this.add.image(0, 0, scenery).setOrigin(0).setScale(2).setDepth(DEPTH.scenery);
     this.drawArena();
     this.zone = this.add.graphics().setDepth(DEPTH.zone);
+    const heroPoint = { x: ARENA_LAYOUT.centerX, y: ARENA_LAYOUT.centerY };
+    const heroHeight = BATTLE_SPRITES.hero.length;
+    this.addShadow(heroPoint, heroHeight, SPRITE_SCALE.hero, BATTLE_SPRITES.hero[0]?.length ?? 16);
     this.add
-      .image(ARENA_LAYOUT.centerX, ARENA_LAYOUT.centerY, this.spriteKeys.hero)
+      .image(heroPoint.x, heroPoint.y, this.spriteKeys.hero)
       .setScale(SPRITE_SCALE.hero)
       .setDepth(DEPTH.hero);
+    this.heroHp = new HpBar(this, DEPTH.hpBar);
+    const anchor = hpBarAnchor(heroPoint, heroHeight, SPRITE_SCALE.hero);
+    this.heroHp.moveTo(anchor.x, anchor.y);
     this.createHud();
     this.createWeaponBar();
     this.createResultLayer();
@@ -301,34 +353,53 @@ export class BattleScene extends Scene {
       config: this.config,
       drop: this.drop,
       replay: this.replay,
+      hpBars: [...this.monsterUnits].map(([id, unit]) => ({ id, hp: unit.shown })),
     };
   }
 
   // ---------- Vẽ ----------
 
+  /**
+   * F18 đợt C: sân đấu hiện mờ trên mặt cỏ như Micro RPG — 24 lát × 6 vòng tô ô xen kẽ đậm nhạt nhẹ, vòng giữa
+   * sáng, viền ngoài mờ. Không còn đĩa xanh đặc.
+   */
   private drawArena(): void {
     const { centerX, centerY, heroRadius } = ARENA_LAYOUT;
     const { ringCount, sectorCount } = this.config;
     const outer = ringInnerRadius(ringCount, ARENA_LAYOUT);
     const g = this.add.graphics().setDepth(DEPTH.arena);
-
-    g.fillStyle(colorNumber('forest')).fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    g.fillStyle(colorNumber('grass')).fillCircle(centerX, centerY, outer);
-
-    // Vạch chia 24 lát và các vòng, mờ để không lấn vùng xanh.
-    g.lineStyle(1, colorNumber('forest'), 0.5);
-    for (let sector = 0; sector < sectorCount; sector++) {
-      const angle = sectorStartAngle(sector, sectorCount);
-      const from = polarToPoint(angle, heroRadius, ARENA_LAYOUT);
-      const to = polarToPoint(angle, outer, ARENA_LAYOUT);
-      g.lineBetween(from.x, from.y, to.x, to.y);
+    for (let ring = 0; ring < ringCount; ring++) {
+      const inner = ringInnerRadius(ring, ARENA_LAYOUT);
+      const outerR = ringInnerRadius(ring + 1, ARENA_LAYOUT);
+      for (let sector = 0; sector < sectorCount; sector++) {
+        const start = toPhaserAngle(sectorStartAngle(sector, sectorCount));
+        const end = toPhaserAngle(sectorStartAngle(sector + 1, sectorCount));
+        const dark = (ring + sector) % 2 === 1;
+        g.fillStyle(colorNumber(dark ? 'ink' : 'white'), dark ? 0.1 : 0.07);
+        g.beginPath();
+        g.arc(centerX, centerY, outerR, start, end, false);
+        g.arc(centerX, centerY, inner, end, start, true);
+        g.closePath();
+        g.fillPath();
+      }
     }
-    for (let ring = 1; ring < ringCount; ring++) {
-      g.strokeCircle(centerX, centerY, ringInnerRadius(ring, ARENA_LAYOUT));
-    }
+    g.fillStyle(colorNumber('white'), 0.16).fillCircle(centerX, centerY, heroRadius);
+    g.lineStyle(2, colorNumber('ink'), 0.25).strokeCircle(centerX, centerY, outer);
+  }
 
-    g.fillStyle(colorNumber('forest')).fillCircle(centerX, centerY, heroRadius);
-    g.lineStyle(3, colorNumber('ink')).strokeCircle(centerX, centerY, outer);
+  /** F18 đợt C: bóng elip dưới chân một hình (cao `height`, rộng `width` điểm, phóng `scale`). */
+  private addShadow(
+    point: Point,
+    height: number,
+    scale: number,
+    width: number,
+  ): GameObjects.Graphics {
+    return this.add
+      .graphics()
+      .fillStyle(colorNumber('ink'), 0.25)
+      .fillEllipse(0, 0, width * scale * 0.9, 6)
+      .setPosition(point.x, point.y + (height * scale) / 2)
+      .setDepth(DEPTH.shadow);
   }
 
   /**
@@ -351,10 +422,11 @@ export class BattleScene extends Scene {
         g.arc(centerX, centerY, inner, end, start, true);
         g.closePath();
       };
-      g.fillStyle(colorNumber('leaf'), 0.6);
+      // F18 đợt C: trắng phủ lên cỏ thành khoảng xanh sáng, viền trắng.
+      g.fillStyle(colorNumber('white'), 0.45);
       wedge();
       g.fillPath();
-      g.lineStyle(2, colorNumber('white'), 0.9);
+      g.lineStyle(2, colorNumber('white'), 1);
       wedge();
       g.strokePath();
     }
@@ -367,6 +439,13 @@ export class BattleScene extends Scene {
    */
   private syncMonsters(state: BattleState): void {
     const present = new Set(state.monsters.map((m) => m.id));
+    for (const [id, unit] of this.monsterUnits) {
+      if (present.has(id)) continue;
+      this.monsterUnits.delete(id);
+      this.tweens.killTweensOf([unit.shadow, ...unit.hp.parts]);
+      unit.shadow.destroy();
+      unit.hp.destroy();
+    }
     for (const [id, sprite] of this.monsterSprites) {
       if (present.has(id)) continue;
       this.monsterSprites.delete(id);
@@ -388,6 +467,7 @@ export class BattleScene extends Scene {
       } else {
         sprite = this.spawnMonster(monster, point);
       }
+      this.syncUnit(monster, point);
       // B6: quái đang bị đóng băng phủ kín màu băng (khối băng); hết băng thì về màu gốc. Phủ kín chứ
       // không nhân màu: nhân màu băng lên quái xanh lá (Yêu tinh…) gần như không đổi, người chơi không thấy.
       if ((monster.frozenTurns ?? 0) > 0) sprite.setTintFill(colorNumber(FROZEN_TINT));
@@ -423,6 +503,32 @@ export class BattleScene extends Scene {
       mark.setPosition(point.x, point.y - 20);
       this.threatMarks.set(id, mark);
     }
+  }
+
+  /** F18 đợt C: bóng và thanh máu của quái — tạo khi chưa có, dời theo hình, vẽ lại máu theo state. */
+  private syncUnit(monster: Monster, point: Point): void {
+    const rows = BATTLE_SPRITES[monster.kind];
+    const scale = SPRITE_SCALE[monster.kind];
+    const anchor = hpBarAnchor(point, rows.length, scale);
+    const shadowY = point.y + (rows.length * scale) / 2;
+    let unit = this.monsterUnits.get(monster.id);
+    if (!unit) {
+      unit = {
+        shadow: this.addShadow(point, rows.length, scale, rows[0]?.length ?? 12),
+        hp: new HpBar(this, DEPTH.hpBar),
+        max: monster.hp,
+        shown: monster.hp,
+      };
+      unit.hp.moveTo(anchor.x, anchor.y);
+      this.monsterUnits.set(monster.id, unit);
+    } else {
+      this.tweens.add({ targets: unit.shadow, x: point.x, y: shadowY, duration: MOVE_TWEEN_MS });
+      const [bar, label] = unit.hp.parts;
+      this.tweens.add({ targets: bar, x: anchor.x, y: anchor.y, duration: MOVE_TWEEN_MS });
+      this.tweens.add({ targets: label, x: anchor.x, y: anchor.y - 1, duration: MOVE_TWEEN_MS });
+    }
+    unit.hp.draw(monster.hp, unit.max);
+    unit.shown = monster.hp;
   }
 
   private spawnMonster(monster: Monster, point: Point): GameObjects.Image {
@@ -506,12 +612,9 @@ export class BattleScene extends Scene {
   private flashArena(color: PaletteColor): void {
     const { centerX, centerY } = ARENA_LAYOUT;
     const flash = this.add
-      .circle(
-        centerX,
-        centerY,
-        ringInnerRadius(this.config.ringCount, ARENA_LAYOUT),
-        colorNumber(color),
-      )
+      .graphics()
+      .fillStyle(colorNumber(color))
+      .fillCircle(centerX, centerY, ringInnerRadius(this.config.ringCount, ARENA_LAYOUT))
       .setAlpha(0.5)
       .setDepth(DEPTH.popup);
     this.tweens.add({
@@ -524,43 +627,71 @@ export class BattleScene extends Scene {
 
   // ---------- Chữ trên màn hình ----------
 
+  /**
+   * F18 đợt C: thanh trên kiểu Micro RPG — ô vàng (trái), thẻ treo "LƯỢT" + số lượt còn lại (giữa), ô nhiệm
+   * vụ bằng hình quái (phải); số màn chữ nhỏ dưới ô vàng. Máu hiệp sĩ là thanh trên đầu.
+   */
   private createHud(): void {
-    this.turnsText = this.add.text(16, 16, '', { ...TEXT, fontSize: '20px' }).setDepth(DEPTH.hud);
-    // F06: số lượt có thể 2 chữ số ("Lượt: 12/12") nên thanh trên chia 2 hàng, mỗi hàng chỉ 2 ô
-    // ở hai mép — không ô nào đè ô nào.
-    this.heroHpText = this.add
-      .text(GAME_WIDTH - 16, 46, '', { ...TEXT, fontSize: '20px', color: PALETTE.leaf })
-      .setOrigin(1, 0)
+    this.add
+      .graphics()
+      .fillStyle(colorNumber('shadow'))
+      .fillRect(TOP_BAR.x, TOP_BAR.y, TOP_BAR.width, TOP_BAR.height)
+      .fillStyle(colorNumber('ink'))
+      .fillRect(TOP_BAR.x, TOP_BAR.y + TOP_BAR.height, TOP_BAR.width, 3)
       .setDepth(DEPTH.hud);
-    this.levelText = this.add
-      .text(16, 46, '', { ...TEXT, fontSize: '20px', color: PALETTE.yellow })
+    this.gold = goldPill(this, GOLD_PILL, this.uiKeys.coin, DEPTH.hud);
+    drawPanel(this, TURN_TAB, 'ink', DEPTH.hud, 0);
+    const tabX = TURN_TAB.x + TURN_TAB.width / 2;
+    this.add
+      .text(tabX, TURN_TAB.y + 18, 'LƯỢT', { ...TEXT, fontSize: '12px', color: PALETTE.mist })
+      .setOrigin(0.5)
+      .setDepth(DEPTH.hud);
+    this.turnsText = this.add
+      .text(tabX, TURN_TAB.y + 45, '', { ...TEXT, fontSize: '26px' })
+      .setOrigin(0.5)
+      .setDepth(DEPTH.hud);
+    drawPanel(this, QUEST_PILL, 'white', DEPTH.hud, 3);
+    this.add
+      .image(QUEST_PILL.x + 14, QUEST_PILL.y + QUEST_PILL.height / 2, this.uiKeys.star)
+      .setScale(2)
+      .setDepth(DEPTH.hud);
+    this.questIcon = this.add
+      .image(QUEST_PILL.x + 46, QUEST_PILL.y + QUEST_PILL.height / 2, this.spriteKeys.slime)
+      .setScale(1.5)
       .setDepth(DEPTH.hud);
     this.questText = this.add
-      .text(GAME_WIDTH - 16, 16, '', { ...TEXT, fontSize: '20px' })
-      .setOrigin(1, 0)
-      .setDepth(DEPTH.hud);
-    this.add
-      .text(GAME_WIDTH / 2, 490, 'Chạm sân: chém · Chạm nút: đổi vũ khí', {
+      .text(QUEST_PILL.x + QUEST_PILL.width - 10, QUEST_PILL.y + QUEST_PILL.height / 2, '', {
         ...TEXT,
-        fontSize: '14px',
-        color: PALETTE.mist,
+        fontSize: '15px',
+        color: PALETTE.ink,
+        strokeThickness: 0,
       })
-      .setOrigin(0.5)
+      .setOrigin(1, 0.5)
+      .setDepth(DEPTH.hud);
+    this.levelText = this.add
+      .text(GOLD_PILL.x + 4, GOLD_PILL.y + GOLD_PILL.height + 14, '', {
+        ...TEXT,
+        fontSize: '13px',
+        color: PALETTE.yellow,
+      })
+      .setOrigin(0, 0.5)
       .setDepth(DEPTH.hud);
   }
 
   private updateHud(): void {
-    const { turnLimit, quest } = levelAt(this.battle.level, this.config);
-    this.turnsText.setText(`Lượt: ${this.battle.turnsLeft}/${turnLimit}`);
+    const { quest } = levelAt(this.battle.level, this.config);
+    this.turnsText.setText(String(this.battle.turnsLeft));
     // Đợt 7: số màn đếm trong chương (chủ đề).
     const chapter = chapterOf(this.battle.level, CHAPTERS);
     this.levelText.setText(`Màn ${chapter.number}/${chapter.levelCount}`);
-    this.heroHpText.setText(`Máu: ${this.battle.heroHp}/${this.config.hero.hp}`);
-    // F11: ô nhiệm vụ thay ô "Quái: n" — "Slime 3/6" (màn không có nhiệm vụ thì vẫn đếm quái).
+    // F18 đợt B: chơi lại không nhận vàng — ô vàng ghi "—".
+    this.gold.set(this.replay ? '—' : String(this.battle.gold));
+    this.heroHp.draw(this.battle.heroHp, this.config.hero.hp);
+    // F11: nhiệm vụ "đã hạ/cần" với hình quái của nhiệm vụ; màn không nhiệm vụ thì đếm quái còn lại.
+    const kind = quest?.kind ?? this.battle.monsters[0]?.kind ?? 'slime';
+    this.questIcon.setTexture(this.spriteKeys[kind]);
     this.questText.setText(
-      quest
-        ? `${this.config.monsterKinds[quest.kind].name} ${this.battle.questProgress}/${quest.count}`
-        : `Quái: ${this.battle.monsters.length}`,
+      quest ? `${this.battle.questProgress}/${quest.count}` : String(this.battle.monsters.length),
     );
   }
 
@@ -577,27 +708,42 @@ export class BattleScene extends Scene {
     // B4: chỉ các món đã mang vào trận, theo thứ tự tầm gần → xa. B6: ô skill ở cuối nếu mang skill.
     const { weapons } = this.loadout;
     const rects = weaponButtonRects(barButtonCount(this.loadout), WEAPON_BAR);
+    // F18 đợt C: dải nền tối sau thanh vũ khí (như bản phác) — viền xanh lá của thẻ đang cầm trùng màu cỏ,
+    // đặt thẳng lên khung cảnh thì không thấy.
+    const bandTop = WEAPON_BAR.top - 12;
+    this.add
+      .graphics()
+      .fillStyle(colorNumber('ink'))
+      .fillRect(0, bandTop - 3, GAME_WIDTH, 3)
+      .fillStyle(colorNumber('dusk'))
+      .fillRect(0, bandTop, GAME_WIDTH, GAME_HEIGHT - bandTop)
+      .setDepth(DEPTH.hud);
     this.createSkillButton(rects);
     weapons.forEach((weaponIndex, i) => {
       const rect = rects[i];
       const weapon = this.config.weapons[weaponIndex];
       if (!rect || !weapon) return;
-      const centerX = rect.x + rect.width / 2;
-      const frame = this.add
-        .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('dusk'))
-        .setOrigin(0)
-        .setDepth(DEPTH.hud);
+      // F18 đợt C: thẻ có hình vũ khí bên trái, tên và tầm/cấp bên phải.
+      const textX = rect.x + rect.width / 2 + 14;
+      const box = this.add.graphics().setDepth(DEPTH.hud);
+      const icon = WEAPON_ICON[weapon.name];
+      if (icon) {
+        this.add
+          .image(rect.x + 20, rect.y + rect.height / 2, this.uiKeys[icon])
+          .setScale(2)
+          .setDepth(DEPTH.hud);
+      }
       const name = this.add
-        .text(centerX, rect.y + 26, weapon.name, { ...TEXT, fontSize: '18px' })
+        .text(textX, rect.y + 26, weapon.name, { ...TEXT, fontSize: '17px' })
         .setOrigin(0.5)
         .setDepth(DEPTH.hud);
       const range = this.add
-        .text(centerX, rect.y + 50, this.weaponSubLabel(weaponIndex), { ...TEXT, fontSize: '14px' })
+        .text(textX, rect.y + 50, this.weaponSubLabel(weaponIndex), { ...TEXT, fontSize: '13px' })
         .setOrigin(0.5)
         .setDepth(DEPTH.hud);
       // Đợt 5: cấp cao nhất ("Thần") có sét sáng quanh nút.
       if (weapon.tier === LOOT_CONFIG.tiers.length - 1) addLightning(this, rect, DEPTH.hud);
-      this.weaponButtons.push({ frame, name, range, tier: weapon.tier ?? 0 });
+      this.weaponButtons.push({ box, rect, name, range, tier: weapon.tier ?? 0 });
     });
   }
 
@@ -610,15 +756,7 @@ export class BattleScene extends Scene {
     const rect = index === null ? undefined : rects[index];
     if (!rect || kind === undefined) return;
     const centerX = rect.x + rect.width / 2;
-    const frame = this.add
-      .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('dusk'))
-      .setOrigin(0)
-      .setDepth(DEPTH.hud);
-    // Mức nạp: hình chữ nhật mọc từ đáy ô lên (syncSkillButton đặt chiều cao và mép trên).
-    const fill = this.add
-      .rectangle(rect.x, rect.y + rect.height, rect.width, 0, colorNumber(SKILL_COLOR[kind]), 0.55)
-      .setOrigin(0)
-      .setDepth(DEPTH.hud);
+    const box = this.add.graphics().setDepth(DEPTH.hud);
     const name = this.add
       .text(centerX, rect.y + 24, this.config.skills[kind].name, { ...TEXT, fontSize: '13px' })
       .setOrigin(0.5)
@@ -627,7 +765,7 @@ export class BattleScene extends Scene {
       .text(centerX, rect.y + 50, '', { ...TEXT, fontSize: '15px' })
       .setOrigin(0.5)
       .setDepth(DEPTH.hud);
-    this.skillButton = { frame, fill, name, charge };
+    this.skillButton = { box, rect, color: SKILL_COLOR[kind], name, charge };
   }
 
   /** B6: cập nhật ô skill theo state — mức nạp, chữ, viền vàng khi bấm được. */
@@ -637,12 +775,18 @@ export class BattleScene extends Scene {
     if (!button || kind === undefined) return;
     const { chargeTurns } = this.config.skills[kind];
     const ready = canCastSkill(state, this.config);
-    // Đổi cả kích thước lẫn mép trên (setSize): gán .height trực tiếp thì Phaser không tính lại tâm hình
-    // nên khối nạp mọc tràn xuống dưới ô.
-    const { frame } = button;
-    const height = (frame.height * Math.min(state.skillCharge, chargeTurns)) / chargeTurns;
-    button.fill.setSize(frame.width, height).setPosition(frame.x, frame.y + frame.height - height);
-    button.frame.setStrokeStyle(ready ? 3 : 1, colorNumber(ready ? 'yellow' : 'slate'));
+    const { rect, box } = button;
+    const inner = { x: rect.x + 3, y: rect.y + 3, width: rect.width - 6, height: rect.height - 6 };
+    const height = (inner.height * Math.min(state.skillCharge, chargeTurns)) / chargeTurns;
+    // Viền 3 điểm vàng khi bấm được; mức nạp mọc từ đáy ô lên.
+    box
+      .clear()
+      .fillStyle(colorNumber(ready ? 'yellow' : 'ink'))
+      .fillRect(rect.x, rect.y, rect.width, rect.height)
+      .fillStyle(colorNumber('plum'))
+      .fillRect(inner.x, inner.y, inner.width, inner.height)
+      .fillStyle(colorNumber(button.color), 0.55)
+      .fillRect(inner.x, inner.y + inner.height - height, inner.width, height);
     button.name.setColor(ready ? PALETTE.white : PALETTE.mist);
     button.charge
       .setText(ready ? 'BẤM!' : `${state.skillCharge}/${chargeTurns}`)
@@ -653,7 +797,13 @@ export class BattleScene extends Scene {
   private syncWeaponBar(state: BattleState): void {
     this.weaponButtons.forEach((button, i) => {
       const selected = state.loadout.weapons[i] === state.weaponIndex;
-      button.frame.setStrokeStyle(selected ? 3 : 1, colorNumber(selected ? 'leaf' : 'slate'));
+      const { rect } = button;
+      button.box
+        .clear()
+        .fillStyle(colorNumber(selected ? 'leaf' : 'ink'))
+        .fillRect(rect.x, rect.y, rect.width, rect.height)
+        .fillStyle(colorNumber('navy'))
+        .fillRect(rect.x + 3, rect.y + 3, rect.width - 6, rect.height - 6);
       button.name.setColor(selected ? PALETTE.white : PALETTE.mist);
       button.range.setColor(selected ? PALETTE.yellow : PALETTE.mist);
       if (button.tier > 0) styleTierText(button.range, button.tier);
@@ -662,8 +812,11 @@ export class BattleScene extends Scene {
 
   private createResultLayer(): void {
     const backdrop = this.add
-      .rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, colorNumber('ink'), 0.8)
-      .setOrigin(0);
+      .graphics()
+      .fillStyle(colorNumber('ink'), 0.7)
+      .fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    // F18 đợt C: bảng kết quả cùng kiểu khung với các bảng khác (khối viền mực, đổ bóng).
+    const panel = drawPanel(this, { x: 24, y: 196, width: 312, height: 250 }, 'dusk', DEPTH.result);
     this.resultTitle = this.add
       .text(GAME_WIDTH / 2, 250, '', { ...TEXT, fontSize: '44px' })
       .setOrigin(0.5);
@@ -682,6 +835,7 @@ export class BattleScene extends Scene {
     this.resultLayer = this.add
       .container(0, 0, [
         backdrop,
+        panel,
         this.resultTitle,
         this.resultDetail,
         this.resultGold,

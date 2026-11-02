@@ -3,6 +3,11 @@ import { isInZone, zoneSectors } from '../logic/arena';
 import type { WeaponConfig } from '../logic/battleTypes';
 import {
   ARENA_LAYOUT,
+  GOLD_PILL,
+  hpBarAnchor,
+  QUEST_PILL,
+  TOP_BAR,
+  TURN_TAB,
   barButtonCount,
   skillButtonIndex,
   cellToPoint,
@@ -212,5 +217,35 @@ describe('B6 — ô skill trên thanh nút', () => {
     expect(barButtonCount({ weapons: [0, 1, 2], skill: 'iceRain' })).toBe(4);
     expect(skillButtonIndex({ weapons: [0, 1, 2], skill: 'iceRain' })).toBe(3);
     expect(skillButtonIndex({ weapons: [0, 1, 2] })).toBeNull();
+  });
+});
+
+// F18 đợt C: thanh thông tin trên cùng kiểu Micro RPG — ô vàng, thẻ treo số lượt, ô nhiệm vụ.
+describe('thanh thông tin trên cùng (F18)', () => {
+  const outer = ARENA_LAYOUT.heroRadius + 6 * ARENA_LAYOUT.ringWidth;
+  const boxes = { TOP_BAR, TURN_TAB, GOLD_PILL, QUEST_PILL };
+
+  it('không ô nào đè lên sân đấu hay thanh nút vũ khí', () => {
+    for (const [name, r] of Object.entries(boxes)) {
+      expect(r.y + r.height, name).toBeLessThan(ARENA_LAYOUT.centerY - outer);
+      expect(r.y + r.height, name).toBeLessThan(WEAPON_BAR.top);
+    }
+  });
+
+  it('ô vàng, thẻ lượt, ô nhiệm vụ nằm trong khung và không đè nhau', () => {
+    const row = [GOLD_PILL, TURN_TAB, QUEST_PILL];
+    for (const r of row) {
+      expect(r.x).toBeGreaterThanOrEqual(0);
+      expect(r.x + r.width).toBeLessThanOrEqual(360);
+    }
+    expect(GOLD_PILL.x + GOLD_PILL.width).toBeLessThanOrEqual(TURN_TAB.x);
+    expect(TURN_TAB.x + TURN_TAB.width).toBeLessThanOrEqual(QUEST_PILL.x);
+  });
+
+  it('thanh máu nằm ngay trên đỉnh hình, cách 4 điểm', () => {
+    // Hình cao 10 điểm phóng ×2 → đỉnh hình ở y = 200 - 10.
+    const anchor = hpBarAnchor({ x: 50, y: 200 }, 10, 2);
+    expect(anchor.x).toBe(50);
+    expect(anchor.y + 8 + 4).toBe(190);
   });
 });

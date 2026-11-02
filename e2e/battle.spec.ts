@@ -1,6 +1,7 @@
 // F01–F06 — Trận đấu: mở game → đổi vũ khí → chạm sân để chém → thắng/thua → sang màn / chơi lại.
 // B4: mở game và mỗi lần hết màn là màn chuẩn bị trận (chọn đồ) trước, rồi mới vào trận.
 import { expect, test } from '@playwright/test';
+import type { BattleSnapshot } from '../src/features/battle';
 import {
   canBeHit,
   canCastSkill,
@@ -239,6 +240,24 @@ test('chạm sân chém đúng lát vùng xanh, bằng đúng vũ khí đang c�
   expect(after.battle.turnsLeft).toBe(before.battle.turnsLeft - 1);
   expect(after.battle.lastAttack?.aimSector).toBe(move.sector);
   expect(after.battle.lastAttack?.hits.map((hit) => hit.monsterId)).toEqual(expectedHitIds);
+});
+
+test('Đợt C (F18): mỗi quái có thanh máu ghi đúng máu hiện tại, kể cả sau khi trúng đòn', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.openBattle(SEED);
+  const hpOf = (snapshot: BattleSnapshot) =>
+    snapshot.battle.monsters.map((m) => ({ id: m.id, hp: m.hp })).sort((a, b) => a.id - b.id);
+  const barsOf = (snapshot: BattleSnapshot) => [...snapshot.hpBars].sort((a, b) => a.id - b.id);
+
+  const before = await game.snapshot();
+  expect(barsOf(before)).toEqual(hpOf(before));
+  await game.play(bestMove(before));
+  await game.advance(400); // quái bị hạ teo lại rồi biến mất
+  const after = await game.snapshot();
+  expect(barsOf(after)).toEqual(hpOf(after));
+  await page.screenshot({ path: test.info().outputPath('35-thanh-mau.png') });
 });
 
 test('F06: chơi giỏi thắng màn nào sang màn kế, hạ trùm ở màn cuối là phá đảo, rồi chơi lại từ màn 1', async ({

@@ -35,9 +35,9 @@ export function styleTierText(text: GameObjects.Text, tier: number): void {
 export function addLightning(scene: Scene, rect: Rect, depth = 0): void {
   const frame = (pad: number, color: PaletteColor) =>
     scene.add
-      .rectangle(rect.x - pad, rect.y - pad, rect.width + pad * 2, rect.height + pad * 2)
-      .setOrigin(0)
-      .setStrokeStyle(2, colorNumber(color))
+      .graphics()
+      .lineStyle(2, colorNumber(color))
+      .strokeRect(rect.x - pad, rect.y - pad, rect.width + pad * 2, rect.height + pad * 2)
       .setDepth(depth);
   const outer = frame(4, 'yellow');
   const inner = frame(1, 'white');
