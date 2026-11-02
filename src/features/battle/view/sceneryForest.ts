@@ -1,6 +1,8 @@
 // F18 đợt C: chủ đề Rừng rậm — bộ màu và bố cục khung cảnh màn trận đấu (khung 180×320, phóng ×2 thành
-// 360×640). Màu lấy đúng bản phác chủ dự án chọn (bản B, 32 màu). Bố cục bản đồ thêm ở đợt D.
+// 360×640). Màu lấy đúng bản phác chủ dự án chọn (bản B, 32 màu). Đợt D thêm bố cục màn Bản đồ.
 import { ARENA_LAYOUT } from './battleLayout';
+import type { Rect } from './battleLayout';
+import { LEVEL_COUNT_ON_MAP, levelNodeRect } from './mapLayout';
 import type { SceneryLayout, SceneryTheme } from './scenery';
 
 export const FOREST_THEME: SceneryTheme = {
@@ -63,5 +65,56 @@ export const FOREST_BATTLE_SCENERY: SceneryLayout = {
     { kind: 'bush', x: 40, y: 318, size: 8 },
     { kind: 'bush', x: 112, y: 320, size: 7, autumn: true },
     { kind: 'tree', x: 168, y: 332, size: 20 },
+  ],
+};
+
+/** Hình bao (ở khung cảnh 180×320, có lề 3 điểm) của nút màn `level` và nút kế — để cây không che đường đi. */
+function pathZone(level: number): Rect {
+  const a = levelNodeRect(level, true);
+  const b = levelNodeRect(Math.min(level + 1, LEVEL_COUNT_ON_MAP - 1), true);
+  const x = Math.min(a.x, b.x) / 2 - 3;
+  const y = Math.min(a.y, b.y) / 2 - 3;
+  return {
+    x,
+    y,
+    width: Math.max(a.x + a.width, b.x + b.width) / 2 + 3 - x,
+    height: Math.max(a.y + a.height, b.y + b.height) / 2 + 3 - y,
+  };
+}
+
+/**
+ * F18 đợt D — Bản đồ: cây viền hai mép và hai góc trên, bụi và đá giữa các hàng nút. Nút màn và đường nối để
+ * trống (vùng cấm). Băng rôn, thanh trên/dưới vẽ đè lên.
+ */
+export const FOREST_MAP_SCENERY: SceneryLayout = {
+  width: 180,
+  height: 320,
+  seed: 7,
+  keepClear: Array.from({ length: LEVEL_COUNT_ON_MAP }, (_, level) => ({ rect: pathZone(level) })),
+  items: [
+    { kind: 'tree', x: 6, y: 82, size: 12 },
+    { kind: 'tree', x: 174, y: 82, size: 12, autumn: true },
+    ...[250, 207, 165, 122].map((y, i) => ({
+      kind: 'tree' as const,
+      x: -8,
+      y,
+      size: 14,
+      autumn: i === 2,
+    })),
+    ...[244, 201, 160, 118].map((y, i) => ({
+      kind: 'tree' as const,
+      x: 188,
+      y,
+      size: 14,
+      autumn: i === 1,
+    })),
+    { kind: 'bush', x: 48, y: 256, size: 5 },
+    { kind: 'rock', x: 92, y: 255, size: 3 },
+    { kind: 'bush', x: 90, y: 213, size: 5, autumn: true },
+    { kind: 'bush', x: 128, y: 213, size: 5 },
+    { kind: 'bush', x: 48, y: 171, size: 5 },
+    { kind: 'rock', x: 92, y: 170, size: 3 },
+    { kind: 'bush', x: 90, y: 128, size: 5 },
+    { kind: 'rock', x: 126, y: 127, size: 3 },
   ],
 };

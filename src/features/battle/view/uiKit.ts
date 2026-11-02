@@ -4,6 +4,9 @@ import type { GameObjects, Scene } from 'phaser';
 import { colorNumber, PALETTE, type PaletteColor } from '../../../shared/palette';
 import type { Rect } from './battleLayout';
 
+/** Khóa trong registry của Phaser: đồ đang mang của phiên chơi (dạng lưu) — dùng khi bộ nhớ trình duyệt bị chặn. */
+export const SESSION_LOADOUT = 'battle.sessionLoadout';
+
 const TEXT = {
   fontFamily: 'monospace',
   fontStyle: 'bold',

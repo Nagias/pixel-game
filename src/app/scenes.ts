@@ -1,7 +1,12 @@
 // Danh sách scene của game. Scene đầu tiên chạy khi mở game. Thêm tính năng có scene mới → thêm vào đây.
 import type { Scene } from 'phaser';
-import { BattleScene, LoadoutScene, ShopScene, UpgradeScene } from '../features/battle';
+import { BattleScene, MapScene, ShopScene, UpgradeScene, WeaponsScene } from '../features/battle';
 
-// B4: mở game là màn chuẩn bị trận (chọn đồ), rồi mới vào trận.
-// Đợt 4: màn Nâng cấp mở từ màn chuẩn bị. Đợt 6: màn Cửa hàng cũng vậy.
-export const SCENES: (typeof Scene)[] = [LoadoutScene, BattleScene, UpgradeScene, ShopScene];
+// F18 đợt D: mở game là Bản đồ (thay màn chuẩn bị B4); đổi đồ ở màn Vũ khí. Nâng cấp, Cửa hàng mở từ thanh dưới.
+export const SCENES: (typeof Scene)[] = [
+  MapScene,
+  BattleScene,
+  WeaponsScene,
+  UpgradeScene,
+  ShopScene,
+];

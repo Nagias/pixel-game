@@ -1,5 +1,5 @@
 // F01–F06 — Trận đấu: mở game → đổi vũ khí → chạm sân để chém → thắng/thua → sang màn / chơi lại.
-// B4: mở game và mỗi lần hết màn là màn chuẩn bị trận (chọn đồ) trước, rồi mới vào trận.
+// F18 đợt D: mở game là Bản đồ; mỗi lần hết màn về Bản đồ với bảng trước trận của màn chơi tiếp mở sẵn.
 import { expect, test } from '@playwright/test';
 import type { BattleSnapshot } from '../src/features/battle';
 import {
@@ -22,7 +22,7 @@ import {
   WEAPON_BAR,
   weaponButtonRects,
 } from '../src/features/battle/view/battleLayout';
-import { LOADOUT_LAYOUT } from '../src/features/battle/view/loadoutLayout';
+import { PREBATTLE_LAYOUT } from '../src/features/battle/view/mapLayout';
 import { seedRng } from '../src/shared/random';
 import { BattleDriver, bestMove, hitIds, lookaheadTurn, missMove } from './support/battleDriver';
 
@@ -195,14 +195,14 @@ test('F02: ở màn kết quả, chạm vào chỗ khe giữa hai nút vẫn là
   if (!gap) throw new Error('Không có khe giữa hai nút');
   await game.tapAt(gap.x, gap.y);
   await game.waitSceneSwitch();
-  expect((await game.loadoutSnapshot()).level).toBe(0);
+  expect((await game.waitPrebattleReady()).level).toBe(0);
 });
 
 test('B2: mang Rìu vào trận thì cầm Rìu (không tốn lượt), chém bằng Rìu đúng vùng hai nêm', async ({
   page,
 }) => {
   const game = new BattleDriver(page);
-  await game.openLoadout(SEED);
+  await game.openPrebattle(SEED);
   const axeIndex = BATTLE_CONFIG.weapons.findIndex((w) => w.twoSided);
   expect(axeIndex).toBeGreaterThanOrEqual(0);
   await game.chooseWeapon(axeIndex);
@@ -464,26 +464,24 @@ test('F05: Cung bắn trúng quái ở rìa sân thì kéo nó vào gần đúng
   await page.screenshot({ path: test.info().outputPath('5-cung-keo.png') });
 });
 
-test('B4: mở game là màn chuẩn bị màn 1 — chọn Rìu thay Kiếm, vào trận mang đúng bộ đó, sang màn sau vẫn chọn sẵn', async ({
+test('B4/F18: mở game, bảng trước trận màn 1 — chọn Rìu thay Kiếm, vào trận mang đúng bộ đó, sang màn sau vẫn chọn sẵn', async ({
   page,
 }) => {
   const game = new BattleDriver(page);
-  await game.openLoadout(SEED);
+  await game.openPrebattle(SEED);
   const axeIndex = BATTLE_CONFIG.weapons.findIndex((w) => w.twoSided);
-  const prep = await game.loadoutSnapshot();
+  const prep = await game.prebattleSnapshot();
   expect(prep.level).toBe(0);
   expect(prep.loadout).toEqual({ weapons: [0, 1, 2] });
-  // Ô gần có hai món để chọn (Kiếm, Rìu); ô vừa và ô xa mỗi ô một món.
-  expect(prep.rows.map((row) => [row.slot, row.weapons.length])).toEqual([
-    ['near', 2],
-    ['mid', 1],
-    ['far', 1],
-  ]);
+  // Màn Vũ khí: lưới có đủ 4 vũ khí (Kiếm, Giáo, Cung, Rìu); màn 1 chưa có skill.
+  const weapons = await game.openWeapons();
+  expect(weapons.cards).toEqual([0, 1, 2, 3].map((weapon) => ({ kind: 'weapon', weapon })));
+  await game.backToPrebattle();
   await game.advance(50);
   await page.screenshot({ path: test.info().outputPath('12-chuan-bi.png') });
 
   await game.chooseWeapon(axeIndex);
-  expect((await game.loadoutSnapshot()).loadout).toEqual({ weapons: [axeIndex, 1, 2] });
+  expect((await game.waitPrebattleReady()).loadout).toEqual({ weapons: [axeIndex, 1, 2] });
   await game.advance(50);
   await page.screenshot({ path: test.info().outputPath('13-chon-riu.png') });
 
@@ -503,23 +501,23 @@ test('B4: mở game là màn chuẩn bị màn 1 — chọn Rìu thay Kiếm, v�
   await game.advance(RESULT_SCREEN_WAIT_MS);
   await game.tap();
   await game.waitSceneSwitch();
-  const next = await game.loadoutSnapshot();
+  const next = await game.prebattleSnapshot();
   expect(next).toMatchObject({ level: 1, loadout: { weapons: [axeIndex, 1, 2] }, canTap: false });
 
-  // Chạm đúp ở màn kết quả: chạm thứ hai rơi đúng chỗ nút "VÀO TRẬN" lúc màn chuẩn bị vừa mở — không
-  // được vào trận (chống chạm nhầm).
-  const { start } = LOADOUT_LAYOUT;
-  await game.tapAt(start.x + start.width / 2, start.y + start.height / 2);
+  // Chạm đúp ở màn kết quả: chạm thứ hai rơi đúng chỗ nút chơi của bảng trước trận lúc Bản đồ vừa mở —
+  // không được vào trận (chống chạm nhầm).
+  const { play } = PREBATTLE_LAYOUT;
+  await game.tapAt(play.x + play.width / 2, play.y + play.height / 2);
   await game.waitSceneSwitch();
-  expect((await game.loadoutSnapshot()).level).toBe(1);
+  expect((await game.prebattleSnapshot()).level).toBe(1);
 });
 
-test('B4: ?level=4 mở thẳng màn chuẩn bị màn 4 (thử tay / E2E nhanh), vào trận đúng màn 4', async ({
+test('B4/F18: ?level=4 mở thẳng bảng trước trận màn 4 (thử tay / E2E nhanh), vào trận đúng màn 4', async ({
   page,
 }) => {
   const game = new BattleDriver(page);
-  await game.openLoadout(SEED, 4);
-  expect((await game.loadoutSnapshot()).level).toBe(3);
+  await game.openPrebattle(SEED, 4);
+  expect((await game.waitPrebattleReady()).level).toBe(3);
   await game.startBattle();
   const { battle } = await game.snapshot();
   expect(battle.level).toBe(3);
@@ -531,8 +529,8 @@ test('Đợt 4: màn Nâng cấp — mua bằng vàng, giá tăng theo cấp, th
 }) => {
   const game = new BattleDriver(page);
   await game.seedProfile({ gold: 35 });
-  await game.openLoadout(SEED);
-  expect(await game.loadoutSnapshot()).toMatchObject({ level: 0, gold: 35 });
+  await game.openPrebattle(SEED);
+  expect(await game.waitPrebattleReady()).toMatchObject({ level: 0, gold: 35 });
 
   expect(await game.openUpgrade()).toMatchObject({ gold: 35, upgrades: {} });
   await game.buyUpgrade('hp'); // cấp 1: 10 vàng
@@ -547,7 +545,7 @@ test('Đợt 4: màn Nâng cấp — mua bằng vàng, giá tăng theo cấp, th
 
   // "XONG" về màn chuẩn bị đúng màn; vào trận thì máu tối đa +2 mỗi cấp.
   await game.closeUpgrade();
-  expect(await game.loadoutSnapshot()).toMatchObject({ level: 0, gold: 5 });
+  expect(await game.waitPrebattleReady()).toMatchObject({ level: 0, gold: 5 });
   await game.startBattle();
   const hp = BATTLE_CONFIG.hero.hp + 2 * 2;
   expect((await game.snapshot()).battle.heroHp).toBe(hp);
@@ -562,7 +560,7 @@ test('Đợt 3: vàng và màn đã mở khóa được lưu — mở lại game
   const game = new BattleDriver(page);
   // Người chơi mới: ?level=5 chưa mở khóa nên vẫn vào màn 1, chưa có vàng (DEBT-011 đã trả).
   await game.open(`/?seed=${SEED}&level=5`);
-  expect(await game.loadoutSnapshot()).toMatchObject({ level: 0, gold: 0 });
+  expect(await game.waitPrebattleReady()).toMatchObject({ level: 0, gold: 0 });
   await game.startBattle();
 
   await playBestUntilOver(game);
@@ -577,13 +575,13 @@ test('Đợt 3: vàng và màn đã mở khóa được lưu — mở lại game
   await game.advance(RESULT_SCREEN_WAIT_MS);
   await game.tap();
   await game.waitSceneSwitch();
-  expect(await game.loadoutSnapshot()).toMatchObject({ level: 1, gold: won.gold });
+  expect(await game.waitPrebattleReady()).toMatchObject({ level: 1, gold: won.gold });
 
   // Mở lại game (trang mới, cùng trình duyệt): vào thẳng màn 2 với đúng số vàng.
   const page2 = await context.newPage();
   const reopened = new BattleDriver(page2);
   await reopened.open(`/?seed=${SEED}`);
-  expect(await reopened.loadoutSnapshot()).toMatchObject({ level: 1, gold: won.gold });
+  expect(await reopened.waitPrebattleReady()).toMatchObject({ level: 1, gold: won.gold });
   await reopened.advance(50);
   await page2.screenshot({ path: test.info().outputPath('22-mo-lai-con-tien-trinh.png') });
 });
@@ -593,7 +591,7 @@ test('Đợt B (F18): đồ đang mang được lưu — chọn Rìu, mở lại
   context,
 }) => {
   const game = new BattleDriver(page);
-  await game.openLoadout(SEED);
+  await game.openPrebattle(SEED);
   const axeIndex = BATTLE_CONFIG.weapons.findIndex((w) => w.twoSided);
   await game.chooseWeapon(axeIndex);
   expect((await game.storedProfile())?.loadout).toEqual({
@@ -604,7 +602,7 @@ test('Đợt B (F18): đồ đang mang được lưu — chọn Rìu, mở lại
   // Mở lại game (trang mới, cùng trình duyệt): Rìu vẫn được chọn, vào trận cầm Rìu.
   const reopened = new BattleDriver(await context.newPage());
   await reopened.open(`/?seed=${SEED}`);
-  expect((await reopened.waitLoadoutReady()).loadout).toEqual({ weapons: [axeIndex, 1, 2] });
+  expect((await reopened.waitPrebattleReady()).loadout).toEqual({ weapons: [axeIndex, 1, 2] });
   await reopened.startBattle();
   expect((await reopened.snapshot()).battle.weaponIndex).toBe(axeIndex);
 });
@@ -615,7 +613,7 @@ test('Đợt B (F18): chơi lại màn đã qua không nhận vàng — đã m�
   const game = new BattleDriver(page);
   await game.seedProfile({ gold: 30, unlockedLevel: 2 });
   await game.open(`/?seed=${SEED}&level=1`);
-  expect(await game.waitLoadoutReady()).toMatchObject({ level: 0, gold: 30 });
+  expect(await game.waitPrebattleReady()).toMatchObject({ level: 0, gold: 30 });
   await game.startBattle();
   expect((await game.snapshot()).replay).toBe(true);
   await playBestUntilOver(game);
@@ -627,20 +625,115 @@ test('Đợt B (F18): chơi lại màn đã qua không nhận vàng — đã m�
   await page.screenshot({ path: test.info().outputPath('34-choi-lai-khong-vang.png') });
 });
 
+test('Đợt D (F18): mở game là Bản đồ — 20 nút, màn 1 đang tới, còn lại chưa mở; chạm màn chưa mở không có gì', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.open(`/?seed=${SEED}`);
+  const map = await game.waitMapReady();
+  expect(map.popup).toBeNull();
+  expect(map.levels).toEqual(['current', ...Array.from({ length: 19 }, () => 'locked')]);
+  await page.screenshot({ path: test.info().outputPath('36-ban-do.png') });
+  await game.tapLevel(2);
+  expect((await game.mapSnapshot()).popup).toBeNull();
+});
+
+test('Đợt D (F18): CHƠI mở bảng trước trận màn đang tới — đúng nhiệm vụ, số lượt, quái sẽ gặp; X đóng bảng', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.open(`/?seed=${SEED}`);
+  const prep = await game.waitPrebattleReady();
+  expect(prep).toMatchObject({
+    level: 0,
+    replay: false,
+    turns: LEVEL_1.turnLimit,
+    quest: LEVEL_1.quest ?? null,
+    monsterKinds: [...new Set([...LEVEL_1.monsters, ...(LEVEL_1.waves ?? []).flat()])],
+  });
+  await game.advance(50);
+  await page.screenshot({ path: test.info().outputPath('37-bang-truoc-tran.png') });
+  await game.closePrebattle();
+  expect((await game.mapSnapshot()).popup).toBeNull();
+});
+
+test('Đợt D (F18): thắng màn 1 → về Bản đồ, bảng màn 2 mở sẵn; màn 1 hiện đã qua, chạm màn 1 thì bảng ghi chơi lại', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.openBattle(SEED);
+  await playBestUntilOver(game);
+  expect((await game.snapshot()).battle.phase).toBe('won');
+  await game.advance(RESULT_SCREEN_WAIT_MS);
+  await page.screenshot({ path: test.info().outputPath('38-ket-qua.png') });
+  await game.tap();
+  await game.waitSceneSwitch();
+  const map = await game.waitMapReady();
+  expect(map.popup?.level).toBe(1);
+  expect(map.levels.slice(0, 3)).toEqual(['cleared', 'current', 'locked']);
+  await game.closePrebattle();
+  await game.tapLevel(0);
+  expect(await game.prebattleSnapshot()).toMatchObject({ level: 0, replay: true });
+  await page.screenshot({ path: test.info().outputPath('39-choi-lai.png') });
+});
+
+test('Đợt D (F18): chạm đúp nút chơi của bảng trước trận chỉ vào một trận', async ({ page }) => {
+  const game = new BattleDriver(page);
+  await game.openPrebattle(SEED);
+  const { play } = PREBATTLE_LAYOUT;
+  await game.tapAt(play.x + play.width / 2, play.y + play.height / 2);
+  await game.tapAt(play.x + play.width / 2, play.y + play.height / 2);
+  await game.waitSceneSwitch();
+  const { battle } = await game.snapshot();
+  expect(battle).toMatchObject({ level: 0, turnsLeft: LEVEL_1.turnLimit });
+  expect(battle.lastAttack).toBeNull();
+});
+
+test('Đợt D (F18): bộ nhớ trình duyệt bị chặn — chọn Rìu ở màn Vũ khí vẫn mang Rìu vào trận', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem = () => {
+      throw new Error('bộ nhớ bị chặn');
+    };
+  });
+  const game = new BattleDriver(page);
+  await game.openPrebattle(SEED);
+  const axeIndex = BATTLE_CONFIG.weapons.findIndex((w) => w.twoSided);
+  await game.chooseWeapon(axeIndex);
+  expect((await game.prebattleSnapshot()).loadout.weapons).toContain(axeIndex);
+  await game.startBattle();
+  expect((await game.snapshot()).battle.weaponIndex).toBe(axeIndex);
+});
+
+test('Đợt D (F18): màn Vũ khí chỉ có thẻ skill từ màn mở skill', async ({ page }) => {
+  const game = new BattleDriver(page);
+  await game.openPrebattle(SEED);
+  expect((await game.openWeapons()).cards.some((c) => c.kind === 'skill')).toBe(false);
+  await game.openPrebattle(SEED, BATTLE_CONFIG.skillUnlockLevel + 1);
+  const weapons = await game.openWeapons();
+  expect(weapons.cards.filter((c) => c.kind === 'skill')).toEqual([
+    { kind: 'skill', skill: 'iceRain' },
+    { kind: 'skill', skill: 'fireball' },
+  ]);
+  await game.advance(50);
+  await page.screenshot({ path: test.info().outputPath('40-man-vu-khi.png') });
+});
+
 test('B6: màn chuẩn bị từ màn 3 có hàng skill (Mưa băng chọn sẵn), chọn Cầu lửa thì mang Cầu lửa vào trận', async ({
   page,
 }) => {
   const game = new BattleDriver(page);
   // Màn 1–2 chưa có skill.
-  await game.openLoadout(SEED);
-  expect(await game.waitLoadoutReady()).toMatchObject({
+  await game.openPrebattle(SEED);
+  expect(await game.waitPrebattleReady()).toMatchObject({
     skills: [],
     loadout: { weapons: [0, 1, 2] },
   });
 
   const unlock = BATTLE_CONFIG.skillUnlockLevel + 1;
-  await game.openLoadout(SEED, unlock);
-  const prep = await game.waitLoadoutReady();
+  await game.openPrebattle(SEED, unlock);
+  const prep = await game.waitPrebattleReady();
   expect(prep).toMatchObject({
     level: unlock - 1,
     skills: ['iceRain', 'fireball'],
@@ -649,7 +742,7 @@ test('B6: màn chuẩn bị từ màn 3 có hàng skill (Mưa băng chọn sẵn
   await page.screenshot({ path: test.info().outputPath('15-chuan-bi-skill.png') });
 
   await game.chooseSkill('fireball');
-  expect((await game.loadoutSnapshot()).loadout.skill).toBe('fireball');
+  expect((await game.waitPrebattleReady()).loadout.skill).toBe('fireball');
   await game.startBattle();
   const { battle } = await game.snapshot();
   expect(battle).toMatchObject({ skillCharge: 0, loadout: { skill: 'fireball' } });
@@ -659,7 +752,7 @@ test('B6: skill nạp theo nhát chém, đầy thì bấm — mọi quái mất 
   page,
 }) => {
   const game = new BattleDriver(page);
-  await game.openLoadout(SEED, BATTLE_CONFIG.skillUnlockLevel + 1);
+  await game.openPrebattle(SEED, BATTLE_CONFIG.skillUnlockLevel + 1);
   await game.startBattle();
   const { chargeTurns, damage } = BATTLE_CONFIG.skills.iceRain;
 
@@ -710,7 +803,7 @@ test('B6: màn chuẩn bị nhớ skill đã chọn qua các màn chưa có skil
     unlockedLevel: BATTLE_CONFIG.levels.length - 1,
     upgrades: FULL_RUN_UPGRADES,
   });
-  await game.openLoadout(FULL_RUN_SEED, BATTLE_CONFIG.levels.length);
+  await game.openPrebattle(FULL_RUN_SEED, BATTLE_CONFIG.levels.length);
   await game.chooseSkill('fireball');
   await game.startBattle();
   await playBestUntilOver(game, undefined, FULL_RUN_SEED);
@@ -729,7 +822,7 @@ test('B6: màn chuẩn bị nhớ skill đã chọn qua các màn chưa có skil
   await game.advance(RESULT_SCREEN_WAIT_MS);
   await game.tap();
   await game.waitSceneSwitch();
-  const prep = await game.waitLoadoutReady();
+  const prep = await game.waitPrebattleReady();
   expect(prep).toMatchObject({
     level: BATTLE_CONFIG.skillUnlockLevel,
     loadout: { skill: 'fireball' },
@@ -755,7 +848,7 @@ test('Đợt 5: quái hiếm sáng lên, máu ×2; hạ nó thì (bảo hiểm) 
     upgrades: FULL_RUN_UPGRADES,
     lootPity: pity,
   });
-  await game.openLoadout(RARE_SEED, RARE_LEVEL);
+  await game.openPrebattle(RARE_SEED, RARE_LEVEL);
   await game.startBattle();
   const start = (await game.snapshot()).battle;
   const rares = start.monsters.filter((m) => m.rare);
@@ -787,7 +880,7 @@ test('Đợt 5: quái hiếm sáng lên, máu ×2; hạ nó thì (bảo hiểm) 
   await game.advance(RESULT_SCREEN_WAIT_MS);
   await game.tap();
   await game.waitSceneSwitch();
-  const prep = await game.waitLoadoutReady();
+  const prep = await game.waitPrebattleReady();
   expect(prep.tiers[drop.weapon]).toBe(drop.tier);
   await page.screenshot({ path: test.info().outputPath('29-tui-do.png') });
 });
@@ -798,8 +891,8 @@ test('Đợt 5: vũ khí có cấp màu — màn chuẩn bị và thanh vũ khí
   const game = new BattleDriver(page);
   // Kiếm Thần, Giáo Sử thi, Cung Hiếm, Rìu chưa rơi.
   await game.seedProfile({ unlockedLevel: 2, weaponTiers: { 0: 5, 1: 3, 2: 2 } });
-  await game.openLoadout(SEED, 3);
-  const prep = await game.waitLoadoutReady();
+  await game.openPrebattle(SEED, 3);
+  const prep = await game.waitPrebattleReady();
   expect(prep.tiers).toEqual([5, 3, 2, 0]);
   await game.advance(300);
   await page.screenshot({ path: test.info().outputPath('30-cap-vu-khi.png') });
@@ -813,7 +906,7 @@ test('Đợt 6: cửa hàng — mua Giáo Hiếm 25 vàng (mua thêm thì cộng
 }) => {
   const game = new BattleDriver(page);
   await game.seedProfile({ gold: 60, unlockedLevel: 2 });
-  await game.openLoadout(SEED, 3);
+  await game.openPrebattle(SEED, 3);
   expect(await game.openShop()).toMatchObject({ gold: 60, rentals: {} });
 
   const spear = 1;
@@ -830,7 +923,7 @@ test('Đợt 6: cửa hàng — mua Giáo Hiếm 25 vàng (mua thêm thì cộng
 
   // "XONG" về màn chuẩn bị: Giáo dùng cấp Hiếm.
   await game.closeUpgrade();
-  const prep = await game.waitLoadoutReady();
+  const prep = await game.waitPrebattleReady();
   expect(prep.tiers[spear]).toBe(SHOP_CONFIG.tier);
   await game.advance(300);
   await page.screenshot({ path: test.info().outputPath('33-mon-thue.png') });

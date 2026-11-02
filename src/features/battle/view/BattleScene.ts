@@ -1,6 +1,6 @@
 // Scene trận đấu: VỎ hiển thị. Chỉ vẽ state và chuyển cú chạm thành selectWeapon()/playTurn() —
 // không chứa luật chơi. Game chỉ cho mobile: mọi thao tác là chạm, không có bàn phím.
-// B4: mở từ màn chuẩn bị (LoadoutScene) với màn + bộ đồ; hết màn thì quay về màn chuẩn bị màn kế.
+// F18 đợt D: mở từ bảng trước trận (MapScene) với màn + bộ đồ; hết màn thì về Bản đồ, mở sẵn bảng màn chơi tiếp.
 import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
 import { registerPixelSprites } from '../../../app/pixelSprites';
 import { registerSceneryTexture } from '../../../app/sceneryTexture';
@@ -69,8 +69,14 @@ import { paintScenery } from './scenery';
 import { FOREST_BATTLE_SCENERY, FOREST_THEME } from './sceneryForest';
 import { drawPanel, goldPill, HpBar } from './uiKit';
 import { UI_SPRITES, WEAPON_ICON, type UiSprite } from './uiSprites';
-import type { LoadoutSceneData } from './LoadoutScene';
+import type { MapSceneData } from './MapScene';
 import { addLightning, styleTierText } from './weaponTierStyle';
+
+/** Dữ liệu mở trận: màn (đếm từ 0) và bộ đồ mang vào. */
+export interface BattleSceneData {
+  readonly level: number;
+  readonly loadout: Loadout;
+}
 
 /** Thứ test E2E đọc được qua window.__PIXEL_GAME__.snapshot(). */
 export interface BattleSnapshot {
@@ -199,7 +205,7 @@ export class BattleScene extends Scene {
   }
 
   /** Màn chuẩn bị gửi màn + bộ đồ. Không có (chỉ khi mở thẳng scene này) thì màn 1, bộ mặc định. */
-  init(data: Partial<LoadoutSceneData>): void {
+  init(data: Partial<BattleSceneData>): void {
     const profile = loadProfile();
     // Đợt 6: món thuê ở cửa hàng còn hạn thì dùng cấp của cửa hàng.
     this.config = withWeaponTiers(
@@ -282,17 +288,14 @@ export class BattleScene extends Scene {
 
   /**
    * Chạm vào nút vũ khí thì đổi vũ khí; chạm ô skill (B6) thì bấm skill nếu đã đầy; chạm vào chỗ khác
-   * là chém. Màn kết quả: chạm để sang màn
-   * chuẩn bị của màn sau hoặc của màn vừa thua — màn nào do luật quyết (nextLevelIndex).
+   * là chém. Màn kết quả: chạm để về Bản đồ với bảng trước trận của màn sau hoặc của màn vừa thua mở sẵn —
+   * màn nào do luật quyết (nextLevelIndex).
    */
   private handleTap(x: number, y: number): void {
     if (this.battle.phase !== 'playing') {
       if (this.canRestart()) {
-        const data: LoadoutSceneData = {
-          level: nextLevelIndex(this.battle, this.config),
-          loadout: this.battle.loadout,
-        };
-        this.scene.start('loadout', data);
+        const data: MapSceneData = { popupLevel: nextLevelIndex(this.battle, this.config) };
+        this.scene.start('map', data);
       }
       return;
     }
