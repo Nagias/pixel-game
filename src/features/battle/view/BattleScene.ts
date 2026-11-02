@@ -367,10 +367,22 @@ export class BattleScene extends Scene {
    * sáng, viền ngoài mờ. Không còn đĩa xanh đặc.
    */
   private drawArena(): void {
+    // Vẽ 144 ô một lần thành ảnh rồi dùng lại: Graphics vẽ lại mọi đường cong ở mỗi khung hình — máy không có
+    // card đồ họa (Chromium chạy E2E trên CI) chậm gấp đôi cả bộ test (đo 02/11/2026).
+    const key = 'battle.arena';
+    if (!this.textures.exists(key)) {
+      const g = this.make.graphics({}, false);
+      this.paintArena(g);
+      g.generateTexture(key, GAME_WIDTH, GAME_HEIGHT);
+      g.destroy();
+    }
+    this.add.image(0, 0, key).setOrigin(0).setDepth(DEPTH.arena);
+  }
+
+  private paintArena(g: GameObjects.Graphics): void {
     const { centerX, centerY, heroRadius } = ARENA_LAYOUT;
     const { ringCount, sectorCount } = this.config;
     const outer = ringInnerRadius(ringCount, ARENA_LAYOUT);
-    const g = this.add.graphics().setDepth(DEPTH.arena);
     for (let ring = 0; ring < ringCount; ring++) {
       const inner = ringInnerRadius(ring, ARENA_LAYOUT);
       const outerR = ringInnerRadius(ring + 1, ARENA_LAYOUT);
