@@ -89,12 +89,12 @@ export class UpgradeScene extends Scene {
     this.openElapsedMs = 0;
     this.leaving = false;
 
-    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, colorNumber('teal')).setOrigin(0);
+    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, colorNumber('forest')).setOrigin(0);
     this.add
-      .text(GAME_WIDTH / 2, 40, 'NÂNG CẤP', { ...TEXT, fontSize: '32px', color: PALETTE.sand })
+      .text(GAME_WIDTH / 2, 40, 'NÂNG CẤP', { ...TEXT, fontSize: '32px', color: PALETTE.yellow })
       .setOrigin(0.5);
     this.goldText = this.add
-      .text(GAME_WIDTH / 2, 82, '', { ...TEXT, fontSize: '18px', color: PALETTE.sand })
+      .text(GAME_WIDTH / 2, 82, '', { ...TEXT, fontSize: '18px', color: PALETTE.yellow })
       .setOrigin(0.5);
     UPGRADE_KINDS.forEach((kind, row) => this.createRow(kind, row));
     this.notice = this.add
@@ -162,7 +162,7 @@ export class UpgradeScene extends Scene {
     const level = this.add.text(L.left, top + 30, '', {
       ...TEXT,
       fontSize: '14px',
-      color: PALETTE.sand,
+      color: PALETTE.yellow,
     });
     const effect = this.add.text(L.left, top + 52, '', {
       ...TEXT,
@@ -171,7 +171,7 @@ export class UpgradeScene extends Scene {
     });
     const rect = buyButtonRect(row, L);
     const frame = this.add
-      .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('navy'))
+      .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('dusk'))
       .setOrigin(0);
     const price = this.add
       .text(rect.x + rect.width / 2, rect.y + rect.height / 2, '', {
@@ -188,7 +188,7 @@ export class UpgradeScene extends Scene {
     this.add
       .rectangle(back.x, back.y, back.width, back.height, colorNumber('grass'))
       .setOrigin(0)
-      .setStrokeStyle(3, colorNumber('lime'));
+      .setStrokeStyle(3, colorNumber('leaf'));
     this.add
       .text(back.x + back.width / 2, back.y + back.height / 2, 'XONG', {
         ...TEXT,
@@ -214,7 +214,7 @@ export class UpgradeScene extends Scene {
           : `${now} → ${effectValue(row.kind, { ...upgrades, [row.kind]: level + 1 })}${unit}`,
       );
       const affordable = cost !== null && cost <= gold;
-      row.frame.setStrokeStyle(affordable ? 3 : 1, colorNumber(affordable ? 'lime' : 'slate'));
+      row.frame.setStrokeStyle(affordable ? 3 : 1, colorNumber(affordable ? 'leaf' : 'slate'));
       row.price
         .setText(cost === null ? 'TỐI ĐA' : `MUA\n${cost} vàng`)
         .setColor(affordable ? PALETTE.white : PALETTE.mist);

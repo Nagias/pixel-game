@@ -164,12 +164,12 @@ export class LoadoutScene extends Scene {
 
     // Đợt 7: số màn đếm trong chương (chủ đề), kèm tên chương.
     const chapter = chapterOf(this.level, CHAPTERS);
-    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, colorNumber('teal')).setOrigin(0);
+    this.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, colorNumber('forest')).setOrigin(0);
     this.add
       .text(GAME_WIDTH / 2, 30, `MÀN ${chapter.number}/${chapter.levelCount}`, {
         ...TEXT,
         fontSize: '32px',
-        color: PALETTE.sand,
+        color: PALETTE.yellow,
       })
       .setOrigin(0.5);
     // Đợt 3: tổng vàng trong hồ sơ, góc trên bên phải (chữ nhỏ, không đè tiêu đề ở giữa).
@@ -177,7 +177,7 @@ export class LoadoutScene extends Scene {
       .text(GAME_WIDTH - 12, 8, `Vàng: ${this.gold}`, {
         ...TEXT,
         fontSize: '14px',
-        color: PALETTE.sand,
+        color: PALETTE.yellow,
       })
       .setOrigin(1, 0);
     // F11: báo nhiệm vụ trước trận để người chơi chọn đồ theo nó.
@@ -189,7 +189,7 @@ export class LoadoutScene extends Scene {
         quest
           ? `Nhiệm vụ: hạ ${quest.count} ${this.config.monsterKinds[quest.kind].name}`
           : 'Nhiệm vụ: diệt sạch quái',
-        { ...TEXT, fontSize: '16px', color: PALETTE.lime },
+        { ...TEXT, fontSize: '16px', color: PALETTE.leaf },
       )
       .setOrigin(0.5);
     this.add
@@ -275,7 +275,7 @@ export class LoadoutScene extends Scene {
       .text(L.left, rowTop(rowIndex, L) + L.buttonHeight / 2, label, {
         ...TEXT,
         fontSize: '18px',
-        color: PALETTE.sand,
+        color: PALETTE.yellow,
       })
       .setOrigin(0, 0.5);
     this.descriptions[rowIndex] = this.add.text(L.left, descriptionY(rowIndex, L), '', {
@@ -302,7 +302,7 @@ export class LoadoutScene extends Scene {
       if (!rect) return;
       const centerX = rect.x + rect.width / 2;
       const frame = this.add
-        .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('navy'))
+        .rectangle(rect.x, rect.y, rect.width, rect.height, colorNumber('dusk'))
         .setOrigin(0);
       const name = this.add
         .text(centerX, rect.y + 18, option.name, { ...TEXT, fontSize: '17px' })
@@ -378,14 +378,14 @@ export class LoadoutScene extends Scene {
   private createShopButton(): void {
     const { shop } = LOADOUT_LAYOUT;
     this.add
-      .rectangle(shop.x, shop.y, shop.width, shop.height, colorNumber('navy'))
+      .rectangle(shop.x, shop.y, shop.width, shop.height, colorNumber('dusk'))
       .setOrigin(0)
-      .setStrokeStyle(2, colorNumber('sand'));
+      .setStrokeStyle(2, colorNumber('yellow'));
     this.add
       .text(shop.x + shop.width / 2, shop.y + shop.height / 2, 'CỬA HÀNG', {
         ...TEXT,
         fontSize: '18px',
-        color: PALETTE.sand,
+        color: PALETTE.yellow,
       })
       .setOrigin(0.5);
   }
@@ -394,14 +394,14 @@ export class LoadoutScene extends Scene {
   private createUpgradeButton(): void {
     const { upgrade } = LOADOUT_LAYOUT;
     this.add
-      .rectangle(upgrade.x, upgrade.y, upgrade.width, upgrade.height, colorNumber('navy'))
+      .rectangle(upgrade.x, upgrade.y, upgrade.width, upgrade.height, colorNumber('dusk'))
       .setOrigin(0)
-      .setStrokeStyle(2, colorNumber('sand'));
+      .setStrokeStyle(2, colorNumber('yellow'));
     this.add
       .text(upgrade.x + upgrade.width / 2, upgrade.y + upgrade.height / 2, 'NÂNG CẤP', {
         ...TEXT,
         fontSize: '18px',
-        color: PALETTE.sand,
+        color: PALETTE.yellow,
       })
       .setOrigin(0.5);
   }
@@ -411,7 +411,7 @@ export class LoadoutScene extends Scene {
     this.add
       .rectangle(start.x, start.y, start.width, start.height, colorNumber('grass'))
       .setOrigin(0)
-      .setStrokeStyle(3, colorNumber('lime'));
+      .setStrokeStyle(3, colorNumber('leaf'));
     this.add
       .text(start.x + start.width / 2, start.y + start.height / 2, 'VÀO TRẬN', {
         ...TEXT,
@@ -424,9 +424,9 @@ export class LoadoutScene extends Scene {
   private sync(): void {
     for (const button of this.buttons) {
       const selected = button.isSelected(this.loadout);
-      button.frame.setStrokeStyle(selected ? 3 : 1, colorNumber(selected ? 'lime' : 'slate'));
+      button.frame.setStrokeStyle(selected ? 3 : 1, colorNumber(selected ? 'leaf' : 'slate'));
       button.name.setColor(selected ? PALETTE.white : PALETTE.mist);
-      button.sub.setColor(selected ? PALETTE.sand : PALETTE.mist);
+      button.sub.setColor(selected ? PALETTE.yellow : PALETTE.mist);
       if (button.tier > 0) styleTierText(button.sub, button.tier);
     }
     this.rows.forEach((row, rowIndex) => {

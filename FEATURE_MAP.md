@@ -5,26 +5,27 @@
 
 ## Tổng quan
 
-| Mã   | Tính năng                                          | Trạng thái | Code                                                           | Test                                                     |
-| ---- | -------------------------------------------------- | ---------- | -------------------------------------------------------------- | -------------------------------------------------------- |
-| F01  | Trận đấu tối thiểu (walking skeleton, khuôn mẫu)   | ✅ Xong    | `src/features/battle/`                                         | `src/features/battle/**/*.test.ts`, `e2e/battle.spec.ts` |
-| F02  | Thanh 3 nút vũ khí theo tầm (gần / vừa / xa)       | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
-| F03  | Combo gom cụm 100% / 200% / 300%                   | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
-| F04  | Máu nhân vật + dấu "!" báo quái sắp đánh           | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
-| F05  | Đẩy quái theo vũ khí (knockback)                   | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
-| F06  | Màn chơi nối tiếp + trùm Slime Vua                 | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
-| F07a | Rìu chém hai phía + màn 4 quái tới từ hai phía     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
-| F07  | Màn chuẩn bị trận: chọn mỗi tầm một vũ khí         | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
-| F08  | Skill bấm đánh cả sân + máu, hồi máu, chí mạng     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
-| F09  | Quái bắn xa Slime Pháo + màn 5                     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                  |
-| F10  | Tự động cân bằng (mục tiêu, bot nhìn trước, dò số) | ✅ Xong    | `scripts/`, `logic/autoPlay.ts`, `logic/battleConfig.ts`       | `scripts/tuneCore.test.ts`, `logic/balance.test.ts`      |
-| F11  | Thắng bằng nhiệm vụ + quái ra theo đợt             | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | `logic/quest.test.ts`, như F01                           |
-| F12  | Thêm Slime Con, Slime Lao, Slime Ma + màn 6–7      | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | `logic/monsters.test.ts`, như F01                        |
-| F13  | Lưu tiến trình + vàng                              | ✅ Xong    | `src/features/profile/`, `battle/logic/battle.ts`              | `profile/logic/profile.test.ts`, `logic/gold.test.ts`    |
-| F14  | Nâng cấp nhân vật bằng vàng                        | ✅ Xong    | `battle/logic/upgrades.ts`, `battle/view/UpgradeScene.ts`      | `logic/upgrades.test.ts`, `view/upgradeLayout.test.ts`   |
-| F15  | Chủ đề Rừng rậm: 20 màn, 5 quái mới, bộ sinh màn   | ✅ Xong    | `logic/chapters.ts`, `battleConfig.ts`, `scripts/levelGen*.ts` | `logic/chapters.test.ts`, `scripts/levelGenCore.test.ts` |
-| F16  | Quái hiếm, may mắn, rơi vũ khí 6 cấp màu, túi đồ   | ✅ Xong    | `logic/loot.ts`, `logic/battle.ts`, `view/weaponTierStyle.ts`  | `logic/loot.test.ts`, `logic/rare.test.ts`               |
-| F17  | Cửa hàng: vũ khí cấp Hiếm dùng có hạn              | ✅ Xong    | `logic/shop.ts`, `view/ShopScene.ts`                           | `logic/shop.test.ts`                                     |
+| Mã   | Tính năng                                          | Trạng thái | Code                                                           | Test                                                       |
+| ---- | -------------------------------------------------- | ---------- | -------------------------------------------------------------- | ---------------------------------------------------------- |
+| F01  | Trận đấu tối thiểu (walking skeleton, khuôn mẫu)   | ✅ Xong    | `src/features/battle/`                                         | `src/features/battle/**/*.test.ts`, `e2e/battle.spec.ts`   |
+| F02  | Thanh 3 nút vũ khí theo tầm (gần / vừa / xa)       | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
+| F03  | Combo gom cụm 100% / 200% / 300%                   | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
+| F04  | Máu nhân vật + dấu "!" báo quái sắp đánh           | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
+| F05  | Đẩy quái theo vũ khí (knockback)                   | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
+| F06  | Màn chơi nối tiếp + trùm Slime Vua                 | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
+| F07a | Rìu chém hai phía + màn 4 quái tới từ hai phía     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
+| F07  | Màn chuẩn bị trận: chọn mỗi tầm một vũ khí         | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
+| F08  | Skill bấm đánh cả sân + máu, hồi máu, chí mạng     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
+| F09  | Quái bắn xa Slime Pháo + màn 5                     | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | như F01                                                    |
+| F10  | Tự động cân bằng (mục tiêu, bot nhìn trước, dò số) | ✅ Xong    | `scripts/`, `logic/autoPlay.ts`, `logic/battleConfig.ts`       | `scripts/tuneCore.test.ts`, `logic/balance.test.ts`        |
+| F11  | Thắng bằng nhiệm vụ + quái ra theo đợt             | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | `logic/quest.test.ts`, như F01                             |
+| F12  | Thêm Slime Con, Slime Lao, Slime Ma + màn 6–7      | ✅ Xong    | `src/features/battle/` (mở rộng F01)                           | `logic/monsters.test.ts`, như F01                          |
+| F13  | Lưu tiến trình + vàng                              | ✅ Xong    | `src/features/profile/`, `battle/logic/battle.ts`              | `profile/logic/profile.test.ts`, `logic/gold.test.ts`      |
+| F14  | Nâng cấp nhân vật bằng vàng                        | ✅ Xong    | `battle/logic/upgrades.ts`, `battle/view/UpgradeScene.ts`      | `logic/upgrades.test.ts`, `view/upgradeLayout.test.ts`     |
+| F15  | Chủ đề Rừng rậm: 20 màn, 5 quái mới, bộ sinh màn   | ✅ Xong    | `logic/chapters.ts`, `battleConfig.ts`, `scripts/levelGen*.ts` | `logic/chapters.test.ts`, `scripts/levelGenCore.test.ts`   |
+| F16  | Quái hiếm, may mắn, rơi vũ khí 6 cấp màu, túi đồ   | ✅ Xong    | `logic/loot.ts`, `logic/battle.ts`, `view/weaponTierStyle.ts`  | `logic/loot.test.ts`, `logic/rare.test.ts`                 |
+| F17  | Cửa hàng: vũ khí cấp Hiếm dùng có hạn              | ✅ Xong    | `logic/shop.ts`, `view/ShopScene.ts`                           | `logic/shop.test.ts`                                       |
+| F18  | Giao diện mobile kiểu Micro RPG (5 đợt)            | 🚧 Đợt A   | `src/shared/palette.ts`, `view/battleSprites.ts`               | `src/shared/palette.test.ts`, `view/battleSprites.test.ts` |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -938,8 +939,8 @@ vẫn đạt.
 
 **Giới hạn đã biết:** món rơi không cao hơn món đang có là phí (40% là cấp Thường — trùng vũ khí gốc; chủ dự
 án duyệt giữ nguyên 28/10/2026, chưa đổi món trùng ra vàng). Sét và
-ánh sáng là hình khối tạm; máy không có WebGL thì quái hiếm chỉ phập phồng, không phát sáng. Bảng Sweetie 16
-không có tím sáng nên Sử thi dùng tím đậm + viền trắng.
+ánh sáng là hình khối tạm; máy không có WebGL thì quái hiếm chỉ phập phồng, không phát sáng. Sử thi dùng tím
+đậm (`plum`) + viền trắng.
 
 **Nợ liên quan:** DEBT-007 (hình tạm), DEBT-009 (số chưa qua chơi thử).
 
@@ -990,6 +991,22 @@ chạm đầu tiên sau khi tải trang có thể bị bỏ qua nếu khung đan
 nhầm) — trên điện thoại thật không gặp.
 
 **Nợ liên quan:** DEBT-009 (giá và hạn chưa qua chơi thử).
+
+## F18 — Giao diện mobile kiểu Micro RPG (đang làm)
+
+**Vì sao:** chủ dự án chơi thử và thấy giao diện "không giống game mobile chút nào" (02/11/2026). Thiết kế đã
+duyệt: `docs/superpowers/specs/2026-11-02-giao-dien-mobile-design.md`; kế hoạch 5 đợt:
+`docs/plans/2026-11-02-giao-dien-mobile.md`.
+
+**Đợt A — bảng màu 32 màu (xong):** cả game đổi từ Sweetie 16 sang **Endesga 32** (`src/shared/palette.ts`,
+ký tự sprite `0`–`9`, `A`–`V`). Hình hiệp sĩ và 11 loại quái tô lại có sắc sáng/tối, giữ nguyên hình dáng và
+kích thước. Bố cục các màn chưa đổi. Tên màu cũ đổi sang màu gần nhất (ví dụ `lime` → `leaf`, `sand` →
+`yellow`, `teal` → `forest`).
+
+**Kiểm chứng tự động:** `src/shared/palette.test.ts` (đủ 32 màu, không trùng, thứ tự ký tự);
+`view/battleSprites.test.ts` (ký tự thuộc bảng, viền mực ở mép mỗi hàng, giữ kích thước 12 hình).
+
+**Nợ liên quan:** DEBT-007 (hình vẫn là lưới ký tự).
 
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 

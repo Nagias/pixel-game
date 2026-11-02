@@ -6,16 +6,16 @@ import type { Rect } from './battleLayout';
 
 /**
  * Màu chữ theo cấp (chỉ số trong LOOT_CONFIG.tiers), chủ dự án duyệt: trắng, xanh lá, xanh dương, tím, cam,
- * đỏ. Bảng Sweetie 16 không có tím sáng — dùng `plum` (tím đậm) kèm viền trắng cho dễ đọc.
+ * đỏ. Tím dùng `plum` (tím đậm) kèm viền trắng cho dễ đọc.
  */
-const TIER_COLORS: readonly PaletteColor[] = ['white', 'lime', 'sky', 'plum', 'orange', 'crimson'];
+const TIER_COLORS: readonly PaletteColor[] = ['white', 'leaf', 'blue', 'plum', 'orange', 'red'];
 
 export function tierColor(tier: number): PaletteColor {
   return TIER_COLORS[Math.min(Math.max(tier, 0), TIER_COLORS.length - 1)] ?? 'white';
 }
 
 /** Màu cấp quá tối trên nền xanh đậm — đổi viền chữ sang trắng mới đọc được. */
-const DARK_TIER_COLORS: readonly PaletteColor[] = ['plum', 'crimson'];
+const DARK_TIER_COLORS: readonly PaletteColor[] = ['plum', 'red'];
 
 /** Tô chữ theo màu cấp; màu tối (tím, đỏ) đổi viền sang trắng mới đọc được trên nền xanh đậm. */
 export function styleTierText(text: GameObjects.Text, tier: number): void {
@@ -39,7 +39,7 @@ export function addLightning(scene: Scene, rect: Rect, depth = 0): void {
       .setOrigin(0)
       .setStrokeStyle(2, colorNumber(color))
       .setDepth(depth);
-  const outer = frame(4, 'sand');
+  const outer = frame(4, 'yellow');
   const inner = frame(1, 'white');
   scene.tweens.add({
     targets: outer,

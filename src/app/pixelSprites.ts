@@ -1,5 +1,5 @@
 // Nạp sprite vẽ bằng lưới ký tự (pixel art dạng code) thành texture của Phaser.
-// Mỗi ký tự 0–F là một màu Sweetie 16 (xem SPRITE_PALETTE), '.' là trong suốt.
+// Mỗi ký tự 0–9, A–V là một màu Endesga 32 (xem SPRITE_PALETTE), '.' là trong suốt.
 import type { Scene } from 'phaser';
 import { SPRITE_PALETTE } from '../shared/palette';
 
