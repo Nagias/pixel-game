@@ -6,7 +6,7 @@ import { registerPixelSprites } from '../../../app/pixelSprites';
 import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE, type PaletteColor } from '../../../shared/palette';
 import { parseSeedParam } from '../../../shared/seedParam';
-import { applyBattleResult, loadProfile, saveProfile } from '../../profile';
+import { applyBattleResult, isReplay, loadProfile, saveProfile } from '../../profile';
 import { arcSectorAt } from '../logic/arena';
 import {
   canBeHit,
@@ -79,6 +79,8 @@ export interface BattleSnapshot {
   readonly config: BattleConfig;
   /** Đợt 5: món rơi lúc hết trận (null nếu không hạ quái hiếm hoặc hạ mà không rơi; chưa hết trận cũng null). */
   readonly drop: Drop | null;
+  /** F18 đợt B: trận chơi lại màn đã qua — không nhận vàng, không rơi đồ. */
+  readonly replay: boolean;
 }
 
 const GAME_WIDTH = 360;
@@ -135,6 +137,8 @@ export class BattleScene extends Scene {
   private resultHint!: GameObjects.Text;
   /** Đợt 5: món rơi của trận vừa hết (cho E2E đọc). */
   private drop: Drop | null = null;
+  /** F18 đợt B: màn này đã qua trước khi vào trận — chơi lại không nhận vàng, không rơi đồ. */
+  private replay = false;
   private readonly monsterSprites = new Map<number, GameObjects.Image>();
   private spriteKeys!: Record<keyof typeof BATTLE_SPRITES, string>;
   private weaponButtons: {
@@ -167,6 +171,7 @@ export class BattleScene extends Scene {
     );
     this.level = data.level ?? 0;
     this.loadout = data.loadout ?? defaultLoadout(this.config);
+    this.replay = isReplay(profile, this.level, this.config.levels.length);
   }
 
   create(): void {
@@ -295,6 +300,7 @@ export class BattleScene extends Scene {
       battle: this.battle,
       config: this.config,
       drop: this.drop,
+      replay: this.replay,
     };
   }
 
@@ -720,6 +726,27 @@ export class BattleScene extends Scene {
    */
   private saveRewards(state: BattleState): void {
     const before = loadProfile();
+    if (this.replay) {
+      // F18 đợt B: chơi lại chỉ trừ món thuê (luật ở profile.applyBattleResult); không tung rơi đồ.
+      const saved = saveProfile(
+        applyBattleResult(
+          before,
+          {
+            level: state.level,
+            won: state.phase === 'won',
+            gold: state.gold,
+            rentals: rentalsAfterBattle(before.rentals, state.loadout),
+          },
+          this.config.levels.length,
+        ),
+      );
+      this.drop = null;
+      this.resultGold.setText(
+        saved ? 'Chơi lại: không nhận vàng' : 'Chơi lại: không nhận vàng (không lưu được)',
+      );
+      this.showDrop(state, null, before.weaponTiers);
+      return;
+    }
     const { drop, pity } = lootAfterBattle(
       state,
       readPity(before.lootPity),
@@ -759,7 +786,7 @@ export class BattleScene extends Scene {
     owned: Readonly<Record<string, number>>,
   ): void {
     this.resultLoot.setText('').setColor(PALETTE.white).setStroke(PALETTE.ink, 4);
-    if (!state.rareKilled) return;
+    if (!state.rareKilled || this.replay) return;
     if (!drop) {
       this.resultLoot.setText('Quái hiếm không rơi đồ lần này').setColor(PALETTE.mist);
       return;

@@ -25,7 +25,7 @@
 | F15  | Chủ đề Rừng rậm: 20 màn, 5 quái mới, bộ sinh màn   | ✅ Xong    | `logic/chapters.ts`, `battleConfig.ts`, `scripts/levelGen*.ts` | `logic/chapters.test.ts`, `scripts/levelGenCore.test.ts`   |
 | F16  | Quái hiếm, may mắn, rơi vũ khí 6 cấp màu, túi đồ   | ✅ Xong    | `logic/loot.ts`, `logic/battle.ts`, `view/weaponTierStyle.ts`  | `logic/loot.test.ts`, `logic/rare.test.ts`                 |
 | F17  | Cửa hàng: vũ khí cấp Hiếm dùng có hạn              | ✅ Xong    | `logic/shop.ts`, `view/ShopScene.ts`                           | `logic/shop.test.ts`                                       |
-| F18  | Giao diện mobile kiểu Micro RPG (5 đợt)            | 🚧 Đợt A   | `src/shared/palette.ts`, `view/battleSprites.ts`               | `src/shared/palette.test.ts`, `view/battleSprites.test.ts` |
+| F18  | Giao diện mobile kiểu Micro RPG (5 đợt)            | 🚧 Đợt B   | `src/shared/palette.ts`, `view/battleSprites.ts`               | `src/shared/palette.test.ts`, `view/battleSprites.test.ts` |
 
 ## F01 — Trận đấu tối thiểu
 
@@ -1003,8 +1003,23 @@ ký tự sprite `0`–`9`, `A`–`V`). Hình hiệp sĩ và 11 loại quái tô 
 kích thước. Bố cục các màn chưa đổi. Tên màu cũ đổi sang màu gần nhất (ví dụ `lime` → `leaf`, `sand` →
 `yellow`, `teal` → `forest`).
 
+**Đợt B — lưu đồ đang mang, chơi lại không nhận vàng (xong):**
+
+1. **Chơi lại** (chủ dự án quyết 02/11/2026: "Cho chơi lại không có vàng"; nguồn sự thật
+   `profile/logic/profile.ts` `levelStatus`, `isReplay`, `applyBattleResult` + test cạnh bên): màn có số
+   thứ tự nhỏ hơn màn cao nhất đã mở là **đã qua**; màn cuối là đã qua khi đã phá đảo. Chơi lại màn đã qua
+   **không cộng vàng, không rơi đồ, không đổi màn đã mở**; món thuê mang vào vẫn bị trừ 1 trận. Màn kết quả ghi
+   "Chơi lại: không nhận vàng". Hiện chỉ vào được bằng `?level=N` hoặc sau phá đảo; đợt D thêm bản đồ.
+2. **Hồ sơ phiên bản 5**: thêm `clearedAll` (đã thắng màn cuối) và `loadout` (đồ đang mang: tên vũ khí gần →
+   xa + tên skill). Hồ sơ 1–4 tự chuyển lên, không mất gì. Đồ đang mang lưu mỗi lần chọn và lúc vào trận; tắt
+   game mở lại vẫn còn; hồ sơ trỏ tới món không còn trong cấu hình thì về bộ mặc định
+   (`logic/loadout.ts` `toSavedLoadout` / `fromSavedLoadout`). Skill nhớ qua hồ sơ thay cho biến trong scene.
+
 **Kiểm chứng tự động:** `src/shared/palette.test.ts` (đủ 32 màu, không trùng, thứ tự ký tự);
-`view/battleSprites.test.ts` (ký tự thuộc bảng, viền mực ở mép mỗi hàng, giữ kích thước 12 hình).
+`view/battleSprites.test.ts` (ký tự thuộc bảng, viền mực ở mép mỗi hàng, giữ kích thước 12 hình);
+`profile/logic/profile.test.ts` (trạng thái màn, chơi lại, phá đảo, phiên bản 5, dữ liệu lạ);
+`logic/loadout.test.ts` (đồ đang mang ↔ dạng lưu); E2E "Đợt B (F18)…" (lưu đồ qua lần mở lại, chơi lại
+không nhận vàng).
 
 **Nợ liên quan:** DEBT-007 (hình vẫn là lưới ký tự).
 

@@ -9,10 +9,12 @@ import {
   defaultLoadout,
   describeSkill,
   describeWeapon,
+  fromSavedLoadout,
   isSkillUnlocked,
   loadoutForLevel,
   skillOptions,
   slotOptions,
+  toSavedLoadout,
   validateLoadout,
 } from './loadout';
 
@@ -191,5 +193,31 @@ describe('B6 — skill mang vào trận', () => {
       'Băng thử: mọi quái mất 1 máu, đứng im 1 lượt; nạp 2 nhát',
     );
     expect(describeSkill(CONFIG.skills.fireball)).toBe('Lửa thử: mọi quái mất 2 máu; nạp 3 nhát');
+  });
+});
+
+// F18 đợt B: đồ đang mang lưu vào hồ sơ bằng tên (đổi thứ tự cấu hình không lệch đồ). Hồ sơ cũ có thể trỏ
+// tới món đã bỏ hoặc sai luật — khi đó về bộ mặc định (null), không bao giờ làm sập trận.
+describe('đồ đang mang ↔ dạng lưu', () => {
+  it('đi rồi về giữ nguyên bộ đồ, kể cả skill', () => {
+    const withAxe = chooseSkill(chooseWeapon(defaultLoadout(CONFIG), 3, CONFIG), 'fireball');
+    expect(toSavedLoadout(withAxe, CONFIG)).toEqual({
+      weapons: ['Rìu', 'Giáo', 'Cung'],
+      skill: 'fireball',
+    });
+    expect(fromSavedLoadout(toSavedLoadout(withAxe, CONFIG), CONFIG)).toEqual(withAxe);
+    const plain = defaultLoadout(CONFIG);
+    expect(fromSavedLoadout(toSavedLoadout(plain, CONFIG), CONFIG)).toEqual(plain);
+  });
+
+  it.each([
+    ['chưa lưu', null],
+    ['tên vũ khí lạ', { weapons: ['Kiếm', 'Giáo', 'Nỏ'], skill: null }],
+    ['hai món cùng tầm gần', { weapons: ['Kiếm', 'Rìu', 'Cung'], skill: null }],
+    ['thiếu một tầm', { weapons: ['Kiếm', 'Giáo'], skill: null }],
+    ['sai thứ tự tầm', { weapons: ['Giáo', 'Kiếm', 'Cung'], skill: null }],
+    ['skill lạ', { weapons: ['Kiếm', 'Giáo', 'Cung'], skill: 'lightning' }],
+  ])('dạng lưu không dùng được (%s) → null', (_name, saved) => {
+    expect(fromSavedLoadout(saved, CONFIG)).toBeNull();
   });
 });
