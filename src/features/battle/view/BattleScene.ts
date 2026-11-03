@@ -33,6 +33,7 @@ import {
   LOOT_CONFIG,
   SHOP_CONFIG,
   UPGRADE_CONFIG,
+  WEAPON_UPGRADE_CONFIG,
 } from '../logic/battleConfig';
 import { chapterOf } from '../logic/chapters';
 import {
@@ -44,7 +45,7 @@ import {
   type Inventory,
 } from '../logic/loot';
 import { effectiveTiers, rentalsAfterBattle } from '../logic/shop';
-import { withUpgrades } from '../logic/upgrades';
+import { withUpgrades, withWeaponLevels } from '../logic/upgrades';
 import type {
   BattleConfig,
   BattleState,
@@ -221,10 +222,14 @@ export class BattleScene extends Scene {
   init(data: Partial<BattleSceneData>): void {
     const profile = loadProfile();
     // Đợt 6: món thuê ở cửa hàng còn hạn thì dùng cấp của cửa hàng.
-    this.config = withWeaponTiers(
-      withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
-      effectiveTiers(profile.weaponTiers, profile.rentals, profile.rentalTiers, SHOP_CONFIG),
-      LOOT_CONFIG,
+    this.config = withWeaponLevels(
+      withWeaponTiers(
+        withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
+        effectiveTiers(profile.weaponTiers, profile.rentals, profile.rentalTiers, SHOP_CONFIG),
+        LOOT_CONFIG,
+      ),
+      profile.weaponLevels,
+      WEAPON_UPGRADE_CONFIG,
     );
     this.level = data.level ?? 0;
     this.loadout = data.loadout ?? defaultLoadout(this.config);

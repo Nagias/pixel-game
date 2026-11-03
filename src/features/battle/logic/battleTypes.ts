@@ -210,6 +210,19 @@ export type UpgradeConfig = Readonly<Record<UpgradeKind, UpgradeStat>>;
 export type UpgradeLevels = Readonly<Record<string, number>>;
 
 /**
+ * F19: nâng cấp từng vũ khí bằng vàng — mỗi cấp cộng `critPerLevel` chí mạng; từ cấp `damageAtLevel` thêm 1 sát
+ * thương; `costs` là giá từng cấp (số phần tử = cấp tối đa).
+ */
+export interface WeaponUpgradeConfig {
+  readonly critPerLevel: number;
+  readonly damageAtLevel: number;
+  readonly costs: readonly number[];
+}
+
+/** F19: cấp đã nâng của từng vũ khí (khóa = chỉ số vũ khí) — dữ liệu hồ sơ, có thể lạ. */
+export type WeaponLevels = Readonly<Record<string, number>>;
+
+/**
  * Bot đo mục tiêu độ khó của màn (tên kiểu chơi trong scripts/simCore.ts). "Ngắm chuẩn" chém đúng chỗ tốt
  * nhất mọi nhát; "Người mới" (chủ dự án duyệt 28/10/2026) nửa chuẩn nửa chém bừa — gần người thật hơn.
  */

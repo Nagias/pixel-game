@@ -46,6 +46,7 @@ describe('đọc / ghi hồ sơ', () => {
       lootPity: {},
       rentals: {},
       rentalTiers: {},
+      weaponLevels: {},
       clearedAll: false,
       loadout: null,
     });
@@ -61,6 +62,7 @@ describe('đọc / ghi hồ sơ', () => {
       lootPity: { dryRareKills: 2, dropsSinceHighTier: 11 },
       rentals: { 1: 4 },
       rentalTiers: { 1: 3 },
+      weaponLevels: { 0: 2, 4: 1 },
       clearedAll: true,
       loadout: { weapons: ['Rìu', 'Giáo', 'Cung'], skill: 'fireball' },
     });
@@ -111,9 +113,29 @@ describe('đọc / ghi hồ sơ', () => {
       ...v4,
       version: PROFILE_VERSION,
       rentalTiers: {},
+      weaponLevels: {},
       clearedAll: false,
       loadout: null,
     });
+    expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
+  });
+
+  // F19 PR C: phiên bản 7 thêm cấp nâng của từng vũ khí. Bản 6 tự chuyển lên, chưa nâng vũ khí nào.
+  it('hồ sơ phiên bản 6 chuyển lên phiên bản 7: giữ mọi thứ, chưa nâng vũ khí nào', () => {
+    const v6 = {
+      version: 6,
+      gold: 30,
+      unlockedLevel: 8,
+      upgrades: { hp: 1 },
+      weaponTiers: { 2: 3 },
+      lootPity: {},
+      rentals: { 5: 7 },
+      rentalTiers: { 5: 1 },
+      clearedAll: false,
+      loadout: null,
+    };
+    const { store, data } = memoryStore({ [PROFILE_KEY]: JSON.stringify(v6) });
+    expect(readProfile(store)).toEqual({ ...v6, version: 7, weaponLevels: {} });
     expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
   });
 
@@ -132,7 +154,12 @@ describe('đọc / ghi hồ sơ', () => {
       loadout: { weapons: ['Rìu', 'Giáo', 'Cung'], skill: 'iceRain' },
     };
     const { store, data } = memoryStore({ [PROFILE_KEY]: JSON.stringify(v5) });
-    expect(readProfile(store)).toEqual({ ...v5, version: 6, rentalTiers: {} });
+    expect(readProfile(store)).toEqual({
+      ...v5,
+      version: PROFILE_VERSION,
+      rentalTiers: {},
+      weaponLevels: {},
+    });
     expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
   });
 

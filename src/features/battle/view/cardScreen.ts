@@ -46,17 +46,18 @@ export function drawCardScreen(
     })
     .setOrigin(0.5)
     .setDepth(5);
+  // F19: dòng báo ở đáy (trên thanh nút) — phía trên đã có nút thẻ chọn của màn Nâng cấp.
   const notice = scene.add
-    .text(GAME_WIDTH / 2, 74, '', { ...CARD_TEXT, fontSize: '14px', color: PALETTE.orange })
+    .text(GAME_WIDTH / 2, 563, '', { ...CARD_TEXT, fontSize: '13px', color: PALETTE.orange })
     .setOrigin(0.5)
     .setDepth(5);
   drawNavBar(scene, uiKeys, active, 5);
   return { gold, notice };
 }
 
-/** Thẻ: viền 3 điểm, nền xanh đậm. */
-export function drawCardFrame(scene: Scene, rect: Rect): void {
-  drawPanel(scene, rect, 'navy', 5, 4);
+/** Thẻ: viền 3 điểm, nền xanh đậm. Trả về hình để màn có thể xóa khi vẽ lại (thẻ chọn của Nâng cấp). */
+export function drawCardFrame(scene: Scene, rect: Rect): GameObjects.Graphics {
+  return drawPanel(scene, rect, 'navy', 5, 4);
 }
 
 /** Nút mua (vẽ lại theo hồ sơ): mua được thì sáng viền xanh lá, không thì tối. */
