@@ -34,9 +34,11 @@ const SEED = 42;
  * tiêu vàng): seed 1 là seed nhỏ nhất mà bot "Nhìn trước" thắng đủ 20 màn với Mưa băng và màn cuối với Cầu
  * lửa (script dò tạm 27/10/2026). Đợt 5: dò lại khi có quái hiếm — đồ rơi giữa ván nâng cấp vũ khí cho các
  * màn sau, bot tính theo cấu hình thật của trận (`snapshot.config`); seed 1 vẫn thắng đủ. Đổi cân bằng mà
- * không còn thắng đủ thì dò lại seed và ghi lý do trong PR.
+ * không còn thắng đủ thì dò lại seed và ghi lý do trong PR. F19 PR D (03/11/2026): trùm Người Cây có vỏ cứng — seed 1
+ * thua màn 20 với Cầu lửa; seed 6 là seed nhỏ nhất thắng đủ cả hai ván (script dò tạm `.cache/f19-seed-search.ts`,
+ * chơi y như game: đồ rơi theo loài, món có hạn).
  */
-const FULL_RUN_SEED = 1;
+const FULL_RUN_SEED = 6;
 const FULL_RUN_UPGRADES = { hp: 3, crit: 3, heal: 3 };
 const FULL_RUN_CONFIG = withUpgrades(BATTLE_CONFIG, FULL_RUN_UPGRADES, UPGRADE_CONFIG);
 /** 20 màn qua màn chuẩn bị mất vài phút trên máy CI chậm. */
@@ -89,7 +91,15 @@ async function playBestUntilOver(
     // Đợt 5: sát thương vũ khí theo cấu hình thật của trận (vũ khí cấp cao có thể +1 sát thương).
     const multiplier = lastAttack?.crit ? before.config.critMultiplier : 1;
     const weaponDamage = (before.config.weapons[move.weaponIndex]?.damage ?? 0) * multiplier;
-    expect(hits.map((hit) => hit.damage)).toEqual(hits.map((_, i) => weaponDamage * (i + 1)));
+    // F19: quái vỏ cứng (trùm) đứng trước thứ tự combo tối thiểu thì không mất máu.
+    const kindOf = (id: number) => before.battle.monsters.find((m) => m.id === id)?.kind;
+    const minOrder = (id: number) => {
+      const kind = kindOf(id);
+      return kind ? (before.config.monsterKinds[kind].minComboOrder ?? 1) : 1;
+    };
+    expect(hits.map((hit) => hit.damage)).toEqual(
+      hits.map((hit, i) => (i + 1 < minOrder(hit.monsterId) ? 0 : weaponDamage * (i + 1))),
+    );
     mostHitsInOneStrike = Math.max(mostHitsInOneStrike, hits.length);
   }
   return mostHitsInOneStrike;
@@ -1144,4 +1154,42 @@ test('F19: nâng cấp từng vũ khí — thẻ chọn "Vũ khí" ở màn Nân
   expect(config.weapons[0]?.damage).toBe((base?.damage ?? 0) + 1);
   expect(config.weapons[0]?.critChance).toBeCloseTo((base?.critChance ?? 0) + 0.15);
   expect(config.weapons[1]).toEqual(BATTLE_CONFIG.weapons[1]);
+});
+
+test('F19: trùm Người Cây — bắn trúng mình nó thì bị vỏ cứng chặn (không mất máu); hết lượt thứ 3 nó gọi Yêu tinh ra sát bên', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.openPrebattle(SEED, 10);
+  await game.startBattle();
+  const start = await game.snapshot();
+  const treant = start.battle.monsters.find((m) => m.kind === 'treant');
+  if (!treant) throw new Error('Màn 10 phải có Người Cây');
+  await game.advance(LEVEL_DRAWN_MS);
+  await page.screenshot({ path: test.info().outputPath('48-trum-vo-cung.png') });
+
+  // Cung rộng 1 lát: bắn đúng lát của trùm khi chỉ mình nó ở đó — nó là con thứ 1 của combo.
+  const bow = BATTLE_CONFIG.weapons.findIndex((w) => w.name === 'Cung');
+  const move = { weaponIndex: bow, sector: treant.sector };
+  expect(hitIds(start, move)).toEqual([treant.id]);
+  await game.play(move);
+  const blocked = await game.snapshot();
+  expect(blocked.battle.lastAttack?.hits).toEqual([
+    { monsterId: treant.id, damage: 0, killed: false },
+  ]);
+  expect(blocked.battle.monsters.find((m) => m.id === treant.id)?.hp).toBe(treant.hp);
+  await page.screenshot({ path: test.info().outputPath('49-trum-chan.png') });
+
+  // Thêm 2 nhát trượt: hết lượt thứ 3 trùm gọi Yêu tinh (id mới) ra ô trống sát bên.
+  for (let i = 0; i < 2; i++) await game.play(missMove(await game.snapshot()));
+  const after = await game.snapshot();
+  const boss = after.battle.monsters.find((m) => m.id === treant.id);
+  const summoned = after.battle.monsters.filter((m) => m.id >= (start.battle.nextId ?? 0));
+  expect(summoned.length).toBeGreaterThan(0);
+  for (const goblin of summoned) {
+    expect(goblin.kind).toBe('goblin');
+    expect(Math.abs(goblin.ring - (boss?.ring ?? 0))).toBeLessThanOrEqual(1);
+  }
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('50-trum-goi-quai.png') });
 });

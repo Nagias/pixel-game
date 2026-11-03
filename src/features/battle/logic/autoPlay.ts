@@ -9,6 +9,7 @@ import {
   castSkill,
   levelAt,
   playTurn,
+  previewHits,
   selectWeapon,
   willAttack,
 } from './battle';
@@ -54,9 +55,15 @@ export function bestMove(state: BattleState, config: BattleConfig): Move {
   for (const weaponIndex of state.loadout.weapons) {
     for (let sector = 0; sector < config.sectorCount; sector++) {
       const ids = hitIds(state, { weaponIndex, sector }, config);
+      // F19: chỉ tính con nhiệm vụ thật sự mất máu (trùm vỏ cứng đứng đầu combo thì không).
+      const hurt = new Set(
+        previewHits(state, weaponIndex, sector, config)
+          .filter((hit) => hit.damage > 0)
+          .map((hit) => hit.monsterId),
+      );
       const score = [
         ids.filter((id) => aimingShooters.has(id)).length,
-        ids.filter((id) => byId.get(id)?.kind === questKind).length,
+        ids.filter((id) => byId.get(id)?.kind === questKind && hurt.has(id)).length,
         ids.length,
         ids.reduce((sum, id) => sum + (config.ringCount - (byId.get(id)?.ring ?? 0)), 0),
       ];

@@ -762,13 +762,13 @@ không chập chờn). Chưa nâng cấp riêng từng vũ khí (có thể ở �
 rừng (không còn chỉ là slime), màn 10 và 20 là trùm **Người Cây**. Màn 1–7 giữ quái cũ nhưng số đã sinh
 lại theo đường độ khó mới.
 
-| Quái      | Máu | Đánh | Vàng | Đặc tính (dùng lại luật sẵn có)           | Hình                      |
-| --------- | --- | ---- | ---- | ----------------------------------------- | ------------------------- |
-| Yêu tinh  | 4   | 2    | 2    | —                                         | người lùn da xanh lá      |
-| Sói rừng  | 4   | 3    | 3    | lao 2 vòng (`step: 2`, như Slime Lao)     | sói xám mắt đỏ            |
-| Cung thủ  | 3   | 2    | 3    | bắn từ vòng 4 (`shootRing: 4`, như Pháo)  | yêu tinh đội mũ, cầm cung |
-| Dơi đêm   | 3   | 2    | 3    | vô hình lượt chẵn (`ghost`, như Slime Ma) | dơi tím sải cánh          |
-| Người Cây | 14  | 5    | 10   | trùm, tiến chậm (40%)                     | gốc cây có tán lá, 16×16  |
+| Quái      | Máu               | Đánh | Vàng | Đặc tính (dùng lại luật sẵn có)                                  | Hình                      |
+| --------- | ----------------- | ---- | ---- | ---------------------------------------------------------------- | ------------------------- |
+| Yêu tinh  | 4                 | 2    | 2    | —                                                                | người lùn da xanh lá      |
+| Sói rừng  | 4                 | 3    | 3    | lao 2 vòng (`step: 2`, như Slime Lao)                            | sói xám mắt đỏ            |
+| Cung thủ  | 3                 | 2    | 3    | bắn từ vòng 4 (`shootRing: 4`, như Pháo)                         | yêu tinh đội mũ, cầm cung |
+| Dơi đêm   | 3                 | 2    | 3    | vô hình lượt chẵn (`ghost`, như Slime Ma)                        | dơi tím sải cánh          |
+| Người Cây | 9 (F19, trước 14) | 5    | 10   | trùm, tiến chậm (40%); F19: vỏ cứng 2, gọi 2 Yêu tinh mỗi 3 lượt | gốc cây có tán lá, 16×16  |
 
 **Luật** (chủ dự án duyệt 27/10/2026 — lượt duyệt chung "A–E", `docs/plans/2026-10-27-ke-hoach-sau-b6.md`
 mục 1b): không thêm cơ chế mới — 5 loại quái chỉ là con số trong `monsterKinds`. Slime không bao giờ là quái
@@ -1172,6 +1172,34 @@ duyệt mục 6):
 vàng / tối đa / vũ khí chưa có; hồ sơ bản 6 → 7; bố cục hai nút thẻ chọn và chạm theo thẻ chọn đang mở. E2E — mua đủ 3
 cấp Kiếm (110 → 5 vàng), tối đa và thiếu vàng không trừ gì, vào trận Kiếm +1 sát thương và +15% chí mạng, Giáo giữ
 nguyên (ảnh `46-nang-vu-khi.png`, `47-kiem-toi-da.png`).
+
+### PR D — Trùm Người Cây có luật riêng
+
+**Người chơi thấy và làm gì:** Người Cây (màn 10, 20) có ô số **"2"** cạnh thanh máu. Chém trúng mình nó thì hiện chữ
+**"chặn"**, máu không giảm; phải chém trúng nó cùng ít nhất một con khác (nó là con thứ 2 trở lên trong combo). Cứ 3
+lượt nó gọi 2 Yêu tinh ra ô trống sát bên — luôn có mồi để combo.
+
+**Luật** (nguồn sự thật: `logic/battle.ts` `strikeHits` / `summonMonsters` / `castSkill` + `logic/boss.test.ts`; chủ dự
+án duyệt mục 5):
+
+1. **Vỏ cứng** (`minComboOrder`): con thứ n trong combo của nhát chém chỉ mất máu khi n ≥ số này. Skill (không combo)
+   không làm mất máu nhưng vẫn đóng băng (agent chọn). Đòn bị chặn vẫn tính là trúng (đẩy, choáng như thường).
+2. **Gọi quái** (`summon`): sau lượt thứ 3, 6, 9… con trùm còn sống và không bị đóng băng gọi tối đa 2 Yêu tinh ra ô
+   trống sát bên theo thứ tự cố định (vào trong, hai bên, chéo trong, ra ngoài, chéo ngoài — không tung số ngẫu
+   nhiên); hết ô thì gọi ít hơn. Quái mới đầy máu, lượt sau mới đi; nhát vừa xong nhiệm vụ thì thắng, không gọi.
+3. Id quái mới nối tiếp (`nextId` trong trạng thái trận) — đợt quái ra sau cũng không trùng id.
+4. Bot "Ngắm chuẩn" chỉ tính trúng con nhiệm vụ khi nó thật sự mất máu (`previewHits` — cùng phép tính với luật).
+
+**Con số** (agent dò bằng mô phỏng, 500 ván mỗi bộ đồ): Người Cây máu **14 → 9** (vỏ cứng chặn phần lớn đòn — giữ 14
+thì người mới chỉ thắng màn 10 ~25%); màn 10: 13 → **14 lượt**, đo 45% / 4,5 lượt dư (mục tiêu 45%); màn 20: 9 →
+**12 lượt**, đo ~70% / 4,75 (mục tiêu 72%). Lượt dư mục tiêu ghi lại theo số đo (chủ dự án chỉ chốt % thắng). Sức
+đánh của trùm gần như không ảnh hưởng (trùm hiếm khi áp sát) — giữ 5.
+
+**Kiểm chứng tự động:** unit (`boss.test.ts`, 17 test) — chém mình trùm 0 sát thương, cùng con khác thì mất 2×, trùm
+yếu hơn (đứng đầu combo) vẫn không mất, skill không mất máu nhưng đóng băng, gọi đúng lượt / đúng ô / hết ô gọi ít,
+id không trùng, trùm đóng băng không gọi, nhát thắng không gọi, cấu hình sai, bot không chém mình trùm;
+`balance.test.ts` màn 10, 20 trong dung sai. E2E — bắn Cung vào mình trùm: "chặn", máu giữ nguyên; sau lượt 3 có Yêu
+tinh mới sát bên (ảnh `48-trum-vo-cung.png`, `49-trum-chan.png`, `50-trum-goi-quai.png`).
 
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 

@@ -480,6 +480,53 @@ export function canBeHit(monster: Monster, state: BattleState, config: BattleCon
   return strike % 2 === 1;
 }
 
+/**
+ * F03 — combo gom cụm: các con trúng nhát chém theo thứ tự combo. Con ít máu bị chém trước để nhát mạnh nhất dồn
+ * vào con trâu nhất; bằng máu thì con gần nhân vật hơn trước, rồi theo id.
+ */
+function strikeTargets(
+  state: BattleState,
+  aimSector: number,
+  weapon: WeaponConfig,
+  config: BattleConfig,
+): Monster[] {
+  return state.monsters
+    .filter(
+      (monster) =>
+        canBeHit(monster, state, config) &&
+        isInZone(monster, aimSector, weapon, config.sectorCount),
+    )
+    .sort((a, b) => a.hp - b.hp || a.ring - b.ring || a.id - b.id);
+}
+
+/** Con thứ n ăn n × sát thương vũ khí × hệ số chí mạng. F19: vỏ cứng — đứng trước thứ tự tối thiểu thì 0. */
+function strikeHits(
+  targets: readonly Monster[],
+  weapon: WeaponConfig,
+  multiplier: number,
+  config: BattleConfig,
+): Hit[] {
+  return targets.map((monster, order) => {
+    const armored = order + 1 < (config.monsterKinds[monster.kind].minComboOrder ?? 1);
+    const damage = armored ? 0 : weapon.damage * (order + 1) * multiplier;
+    return { monsterId: monster.id, damage, killed: monster.hp - damage <= 0 };
+  });
+}
+
+/**
+ * F19: nhát chém bằng vũ khí `weaponIndex` vào `aimSector` sẽ trúng ai, mỗi con bao nhiêu (chưa tính chí mạng) —
+ * cùng phép tính với playTurn, cho bot và hình vẽ dùng chung.
+ */
+export function previewHits(
+  state: BattleState,
+  weaponIndex: number,
+  aimSector: number,
+  config: BattleConfig,
+): Hit[] {
+  const weapon = weaponAt(weaponIndex, config);
+  return strikeHits(strikeTargets(state, aimSector, weapon, config), weapon, 1, config);
+}
+
 /** Một lượt: người chơi đánh vào `aimSector` bằng vũ khí đang cầm, rồi quái còn sống di chuyển. */
 export function playTurn(state: BattleState, aimSector: number, config: BattleConfig): BattleState {
   if (state.phase !== 'playing') {
@@ -490,15 +537,7 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
   }
 
   const weapon = weaponAt(state.weaponIndex, config);
-  // F03 — combo gom cụm: con thứ n bị chém ăn n × sát thương vũ khí. Con ít máu bị chém trước để
-  // nhát mạnh nhất dồn vào con trâu nhất; bằng máu thì con gần nhân vật hơn trước, rồi theo id.
-  const targets = state.monsters
-    .filter(
-      (monster) =>
-        canBeHit(monster, state, config) &&
-        isInZone(monster, aimSector, weapon, config.sectorCount),
-    )
-    .sort((a, b) => a.hp - b.hp || a.ring - b.ring || a.id - b.id);
+  const targets = strikeTargets(state, aimSector, weapon, config);
 
   // B6 — chí mạng: tung một lần cho cả nhát, chỉ khi có trúng và vũ khí có % chí mạng (0% không tung
   // số, để ván không chí mạng y như trước).
@@ -510,13 +549,7 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
     [roll, rng] = nextFloat(rng);
     crit = roll < critChance;
   }
-  const multiplier = crit ? config.critMultiplier : 1;
-  const hits: Hit[] = targets.map((monster, order) => {
-    // F19: vỏ cứng — đứng trước thứ tự combo tối thiểu thì không mất máu.
-    const armored = order + 1 < (config.monsterKinds[monster.kind].minComboOrder ?? 1);
-    const damage = armored ? 0 : weapon.damage * (order + 1) * multiplier;
-    return { monsterId: monster.id, damage, killed: monster.hp - damage <= 0 };
-  });
+  const hits = strikeHits(targets, weapon, crit ? config.critMultiplier : 1, config);
 
   const damageById = new Map(hits.map((hit) => [hit.monsterId, hit.damage]));
   // F19: vũ khí choáng (Búa) — con trúng mà còn sống đứng im như bị đóng băng (không đi, không đánh).

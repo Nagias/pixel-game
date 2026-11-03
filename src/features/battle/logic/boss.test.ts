@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { seedRng } from '../../../shared/random';
+import { bestMove } from './autoPlay';
 import { castSkill, createBattle, playTurn } from './battle';
 import { BATTLE_CONFIG } from './battleConfig';
 import type { BattleConfig, BattleState, Monster, MonsterKind, WeaponConfig } from './battleTypes';
@@ -213,5 +214,18 @@ describe('cấu hình trùm sai bị từ chối', () => {
       minComboOrder: 2,
       summon: { kind: 'goblin', count: 2, every: 3 },
     });
+  });
+});
+
+describe('bot ngắm chuẩn hiểu vỏ cứng', () => {
+  it('không chém mình trùm (vô ích) mà chém cụm quái khác', () => {
+    const state = stateWith([monster(1, 5, 3, 'treant'), monster(2, 15, 3), monster(3, 16, 3)]);
+    const move = bestMove(state, CONFIG);
+    expect([14, 15, 16, 17]).toContain(move.sector);
+  });
+
+  it('trùm đứng cạnh quái khác thì chém cả hai (trùm là con thứ 2, mất máu)', () => {
+    const state = stateWith([monster(1, 5, 3, 'treant'), monster(2, 6, 3), monster(3, 15, 3)]);
+    expect([5, 6]).toContain(bestMove(state, CONFIG).sector);
   });
 });
