@@ -1074,8 +1074,14 @@ theo màn) và mọi E2E cũ chạy theo luồng mới.
 
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
-Trống — đã làm hết kế hoạch sau B6 (`docs/plans/2026-10-27-ke-hoach-sau-b6.md`). Việc kế tiếp chờ chủ dự án
-chốt: bảng rơi theo loài, chủ đề Băng / Núi lửa, quảng cáo (giai đoạn D).
+Đã làm hết kế hoạch sau B6 (`docs/plans/2026-10-27-ke-hoach-sau-b6.md`). Chủ dự án chốt 03/11/2026: làm sâu
+cơ chế chơi trước, chủ đề mới / âm thanh / phát hành để sau.
+
+1. **Làm trước:** hoàn thiện cơ chế cũ còn dở — rơi vũ khí theo loài quái, đồ rơi có hạn hoặc vĩnh viễn, vũ khí
+   mới, quái có hành vi riêng, trùm có cơ chế riêng, nâng cấp từng vũ khí (chờ chủ dự án duyệt danh sách).
+2. **Tạm lưu, chưa chốt:** va chạm khi đẩy, địa hình sân, nhiệm vụ phụ 3 sao, vũ khí mạnh / yếu theo loài —
+   `docs/plans/2026-11-03-de-xuat-loi-choi-moi.md`.
+3. **Để sau:** chủ đề Băng / Núi lửa, quảng cáo (giai đoạn D).
 
 ## Mẫu cho tính năng mới (copy khối này)
 
