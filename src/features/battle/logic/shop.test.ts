@@ -28,40 +28,55 @@ describe('cửa hàng', () => {
   });
 
   it('mua: trừ đúng giá, vũ khí dùng được cấp Hiếm trong 5 trận', () => {
-    expect(buyRental({ gold: 30, rentals: {} }, 1, {}, SHOP)).toEqual({
+    expect(buyRental({ gold: 30, rentals: {}, rentalTiers: {} }, 1, {}, SHOP)).toEqual({
       gold: 5,
       rentals: { 1: 5 },
+      rentalTiers: { 1: 2 },
     });
   });
 
   it('mua thêm khi còn hạn: cộng dồn số trận', () => {
-    expect(buyRental({ gold: 25, rentals: { 1: 2 } }, 1, {}, SHOP).rentals).toEqual({ 1: 7 });
+    expect(
+      buyRental({ gold: 25, rentals: { 1: 2 }, rentalTiers: {} }, 1, {}, SHOP).rentals,
+    ).toEqual({
+      1: 7,
+    });
   });
 
   it.each<[string, Parameters<typeof buyRental>]>([
-    ['thiếu vàng', [{ gold: 24, rentals: {} }, 1, {}, SHOP]],
-    ['vũ khí cửa hàng không bán', [{ gold: 99, rentals: {} }, 7, {}, SHOP]],
+    ['thiếu vàng', [{ gold: 24, rentals: {}, rentalTiers: {} }, 1, {}, SHOP]],
+    ['vũ khí cửa hàng không bán', [{ gold: 99, rentals: {}, rentalTiers: {} }, 9, {}, SHOP]],
     [
       'đã có vĩnh viễn từ cấp Hiếm trở lên (mua là phí)',
-      [{ gold: 99, rentals: {} }, 1, { 1: 2 }, SHOP],
+      [{ gold: 99, rentals: {}, rentalTiers: {} }, 1, { 1: 2 }, SHOP],
     ],
   ])('không mua được (%s): từ chối, không trừ gì', (_, args) => {
     expect(() => buyRental(...args)).toThrow(RangeError);
   });
 
   it('cấp dùng trong trận: món thuê còn hạn lên cấp Hiếm, nhưng không làm tụt món vĩnh viễn cao hơn', () => {
-    expect(effectiveTiers({ 0: 1, 2: 4 }, { 0: 3, 2: 1, 3: 0 }, SHOP)).toEqual({ 0: 2, 2: 4 });
-    expect(effectiveTiers({}, {}, SHOP)).toEqual({});
+    expect(effectiveTiers({ 0: 1, 2: 4 }, { 0: 3, 2: 1, 3: 0 }, {}, SHOP)).toEqual({ 0: 2, 2: 4 });
+    expect(effectiveTiers({}, {}, {}, SHOP)).toEqual({});
   });
 
   it('hết trận (thắng hay thua): món thuê có mang vào trận bớt 1 trận, hết hạn thì bỏ; món không mang giữ nguyên', () => {
-    expect(rentalsAfterBattle({ 0: 5, 1: 1, 2: 3 }, { weapons: [0, 1] })).toEqual({ 0: 4, 2: 3 });
-    expect(rentalsAfterBattle({}, { weapons: [0, 1, 2] })).toEqual({});
+    expect(
+      rentalsAfterBattle(
+        { rentals: { 0: 5, 1: 1, 2: 3 }, rentalTiers: { 1: 4 } },
+        { weapons: [0, 1] },
+      ),
+    ).toEqual({ rentals: { 0: 4, 2: 3 }, rentalTiers: {} });
+    expect(rentalsAfterBattle({ rentals: {}, rentalTiers: {} }, { weapons: [0, 1, 2] })).toEqual({
+      rentals: {},
+      rentalTiers: {},
+    });
   });
 
   it('dữ liệu hồ sơ lạ (số trận âm / lẻ) coi như hết hạn', () => {
-    expect(effectiveTiers({}, { 0: -2, 1: 1.5 }, SHOP)).toEqual({});
-    expect(rentalsAfterBattle({ 0: -2, 1: 1.5 }, { weapons: [0, 1] })).toEqual({});
+    expect(effectiveTiers({}, { 0: -2, 1: 1.5 }, {}, SHOP)).toEqual({});
+    expect(
+      rentalsAfterBattle({ rentals: { 0: -2, 1: 1.5 }, rentalTiers: {} }, { weapons: [0, 1] }),
+    ).toEqual({ rentals: {}, rentalTiers: {} });
   });
 
   it.each<[string, Partial<ShopConfig>]>([
@@ -74,5 +89,26 @@ describe('cửa hàng', () => {
     expect(() => validateShopConfig({ ...SHOP, ...patch }, BATTLE_CONFIG, LOOT_CONFIG)).toThrow(
       RangeError,
     );
+  });
+});
+
+// F19 PR B: món rơi có hạn mang cấp riêng (không chỉ cấp Hiếm của cửa hàng). Một vũ khí một món có hạn.
+describe('món có hạn có cấp (đồ rơi có hạn + cửa hàng)', () => {
+  it('cấp dùng trong trận theo cấp của món có hạn; không ghi cấp thì là cấp cửa hàng', () => {
+    expect(effectiveTiers({ 0: 1 }, { 0: 2, 1: 3 }, { 0: 5 }, SHOP)).toEqual({ 0: 5, 1: 2 });
+  });
+
+  it('đang có món có hạn cấp cao hơn cấp cửa hàng: không mua được (mua là phí)', () => {
+    expect(() =>
+      buyRental({ gold: 99, rentals: { 1: 3 }, rentalTiers: { 1: 4 } }, 1, {}, SHOP),
+    ).toThrow(RangeError);
+  });
+
+  it('đang có món có hạn cấp thấp hơn cấp cửa hàng: mua thì thay bằng món cửa hàng (cấp Hiếm, 5 trận)', () => {
+    expect(buyRental({ gold: 25, rentals: { 1: 8 }, rentalTiers: { 1: 1 } }, 1, {}, SHOP)).toEqual({
+      gold: 0,
+      rentals: { 1: 5 },
+      rentalTiers: { 1: 2 },
+    });
   });
 });

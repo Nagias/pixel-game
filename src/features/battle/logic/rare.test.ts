@@ -34,8 +34,24 @@ const CONFIG: BattleConfig = {
     slimeMini: { name: 'Con thử', hp: 1, advanceChance: 1, attack: 1 },
     slimeCharger: { name: 'Lao thử', hp: 2, advanceChance: 1, attack: 1, step: 2 },
     slimeGhost: { name: 'Ma thử', hp: 2, advanceChance: 1, attack: 1, ghost: true },
-    goblin: { name: 'Yêu tinh thử', hp: 4, advanceChance: 1, attack: 2, gold: 2, canBeRare: true },
-    wolf: { name: 'Sói thử', hp: 4, advanceChance: 1, attack: 3, step: 2, canBeRare: true },
+    goblin: {
+      name: 'Yêu tinh thử',
+      hp: 4,
+      advanceChance: 1,
+      attack: 2,
+      gold: 2,
+      canBeRare: true,
+      drop: 'Kiếm thử',
+    },
+    wolf: {
+      name: 'Sói thử',
+      hp: 4,
+      advanceChance: 1,
+      attack: 3,
+      step: 2,
+      canBeRare: true,
+      drop: 'Kiếm thử',
+    },
     goblinArcher: { name: 'Cung thủ thử', hp: 3, advanceChance: 1, attack: 2, shootRing: 4 },
     bat: { name: 'Dơi thử', hp: 3, advanceChance: 1, attack: 1, ghost: true },
     treant: { name: 'Cây thử', hp: 14, advanceChance: 1, attack: 5 },
@@ -200,7 +216,7 @@ describe('hạ quái hiếm', () => {
     const before = stateWith([monster(1, 3, 'goblin', 1, true), monster(2, 12, 'slime', 1)]);
     const after = playTurn(before, 3, CONFIG);
     expect(after.gold).toBe(2 * 3);
-    expect(after.rareKilled).toBe(true);
+    expect(after.rareKilled).toBe('goblin');
   });
 
   it('quái hiếm chỉ bị thương: chưa tính đã hạ', () => {
@@ -219,7 +235,7 @@ describe('hạ quái hiếm', () => {
     };
     const after = castSkill(before, CONFIG);
     expect(after.gold).toBe(2 * 3);
-    expect(after.rareKilled).toBe(true);
+    expect(after.rareKilled).toBe('goblin');
   });
 
   it('quái thường cùng loại vẫn cho vàng thường', () => {
@@ -230,5 +246,29 @@ describe('hạ quái hiếm', () => {
     );
     expect(after.gold).toBe(2);
     expect(after.rareKilled).toBeUndefined();
+  });
+});
+
+// F19 PR B (chủ dự án duyệt 03/11/2026, mục 1): mỗi loài hóa hiếm được rơi đúng một loại vũ khí.
+describe('món rơi theo loài', () => {
+  const withGoblin = (patch: Partial<BattleConfig['monsterKinds']['goblin']>): BattleConfig => ({
+    ...CONFIG,
+    monsterKinds: { ...CONFIG.monsterKinds, goblin: { ...CONFIG.monsterKinds.goblin, ...patch } },
+  });
+
+  it('loài hóa hiếm được mà không có món rơi, hoặc món rơi không phải vũ khí trong game: từ chối', () => {
+    expect(() => createBattle(1, withGoblin({ drop: undefined }), 0)).toThrow(/món rơi/);
+    expect(() => createBattle(1, withGoblin({ drop: 'Không có' }), 0)).toThrow(/món rơi/);
+  });
+
+  it('cấu hình thật: mọi loài hóa hiếm được đều rơi một vũ khí có trong game, đúng bảng chủ dự án duyệt', () => {
+    const names = BATTLE_CONFIG.weapons.map((w) => w.name);
+    const drops = Object.fromEntries(
+      Object.entries(BATTLE_CONFIG.monsterKinds)
+        .filter(([, rule]) => rule.canBeRare)
+        .map(([kind, rule]) => [kind, rule.drop]),
+    );
+    expect(drops).toEqual({ goblin: 'Kiếm', wolf: 'Rìu', goblinArcher: 'Cung', bat: 'Lưỡi hái' });
+    for (const drop of Object.values(drops)) expect(names).toContain(drop);
   });
 });

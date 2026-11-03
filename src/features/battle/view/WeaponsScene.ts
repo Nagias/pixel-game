@@ -99,7 +99,7 @@ export class WeaponsScene extends Scene {
     const profile = loadProfile();
     this.config = withWeaponTiers(
       withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
-      effectiveTiers(profile.weaponTiers, profile.rentals, SHOP_CONFIG),
+      effectiveTiers(profile.weaponTiers, profile.rentals, profile.rentalTiers, SHOP_CONFIG),
       LOOT_CONFIG,
     );
     this.returnTo = data.returnTo ?? {};
@@ -334,37 +334,49 @@ export class WeaponsScene extends Scene {
         .fillRect(rect.x + 6, rect.y + 6, rect.width - 12, 4)
         .setDepth(DEPTH.ui),
     );
+    // F19: món có hạn thêm dòng "n trận" dưới tên cấp — hình và chữ dời lên cho đủ ba dòng.
+    const rental = this.rentals[String(weaponIndex)] ?? 0;
+    const timed = rental > 0;
+    const cx = rect.x + rect.width / 2;
     const icon = WEAPON_ICON[weapon.name];
     if (icon) {
       add(
         this.add
-          .image(rect.x + rect.width / 2, rect.y + 32, this.uiKeys[icon])
+          .image(cx, rect.y + (timed ? 26 : 32), this.uiKeys[icon])
           .setScale(3)
           .setDepth(DEPTH.ui),
       );
     }
     add(
       this.add
-        .text(rect.x + rect.width / 2, rect.y + 64, weapon.name, { ...TEXT, fontSize: '13px' })
+        .text(cx, rect.y + (timed ? 53 : 64), weapon.name, { ...TEXT, fontSize: '13px' })
         .setOrigin(0.5)
         .setDepth(DEPTH.ui),
     );
-    const rental = this.rentals[String(weaponIndex)] ?? 0;
     const sub = add(
       this.add
         .text(
-          rect.x + rect.width / 2,
-          rect.y + 80,
-          rental > 0
-            ? `${LOOT_CONFIG.tiers[SHOP_CONFIG.tier]?.name ?? ''} · ${rental} trận`
-            : tier > 0
-              ? (LOOT_CONFIG.tiers[tier]?.name ?? '')
-              : weapon.rangeLabel,
+          cx,
+          rect.y + (timed ? 68 : 80),
+          tier > 0 ? (LOOT_CONFIG.tiers[tier]?.name ?? '') : weapon.rangeLabel,
           { ...TEXT, fontSize: '11px', color: PALETTE.yellow, strokeThickness: 3 },
         )
         .setOrigin(0.5)
         .setDepth(DEPTH.ui),
     );
     if (tier > 0) styleTierText(sub, tier);
+    if (timed) {
+      add(
+        this.add
+          .text(cx, rect.y + 82, `${rental} trận`, {
+            ...TEXT,
+            fontSize: '10px',
+            color: PALETTE.mist,
+            strokeThickness: 3,
+          })
+          .setOrigin(0.5)
+          .setDepth(DEPTH.ui),
+      );
+    }
   }
 }

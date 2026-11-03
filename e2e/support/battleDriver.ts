@@ -52,6 +52,7 @@ interface StoredProfile {
   readonly weaponTiers: Record<string, number>;
   readonly lootPity: Record<string, number>;
   readonly rentals: Record<string, number>;
+  readonly rentalTiers: Record<string, number>;
   readonly clearedAll: boolean;
   readonly loadout: { readonly weapons: readonly string[]; readonly skill: string | null } | null;
 }
@@ -78,6 +79,7 @@ export class BattleDriver extends GameDriver {
     weaponTiers?: Record<string, number>;
     lootPity?: Record<string, number>;
     rentals?: Record<string, number>;
+    rentalTiers?: Record<string, number>;
     clearedAll?: boolean;
     loadout?: { weapons: string[]; skill: string | null } | null;
   }): Promise<void> {
@@ -89,6 +91,7 @@ export class BattleDriver extends GameDriver {
       weaponTiers: {},
       lootPity: {},
       rentals: {},
+      rentalTiers: {},
       clearedAll: false,
       loadout: null,
       ...patch,

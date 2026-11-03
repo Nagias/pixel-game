@@ -898,13 +898,17 @@ test('Đợt 5: quái hiếm sáng lên, máu ×2; hạ nó thì (bảo hiểm) 
 
   await playBestUntilOver(game, undefined, RARE_SEED);
   const end = await game.snapshot();
-  expect(end.battle).toMatchObject({ phase: 'won', rareKilled: true });
+  // F19: trận ghi loài quái hiếm đã hạ — món rơi theo loài.
+  expect(end.battle).toMatchObject({ phase: 'won', rareKilled: rare.kind });
   // Món rơi đúng luật (logic/loot.ts) và từ Sử thi trở lên nhờ bảo hiểm cấp cao.
   const expected = lootAfterBattle(end.battle, pity, FULL_RUN_CONFIG, LOOT_CONFIG).drop;
   expect(end.drop).toEqual(expected);
   const drop = end.drop;
   if (!drop) throw new Error('Bảo hiểm phải làm rơi đồ');
   expect(drop.tier).toBeGreaterThanOrEqual(LOOT_CONFIG.highTier);
+  // F19: đúng vũ khí của loài; món bảo hiểm cấp cao luôn vĩnh viễn.
+  expect(BATTLE_CONFIG.weapons[drop.weapon]?.name).toBe(BATTLE_CONFIG.monsterKinds[rare.kind].drop);
+  expect(drop.battles).toBeUndefined();
   await game.advance(300);
   await page.screenshot({ path: test.info().outputPath('28-roi-do.png') });
   expect(await game.storedProfile()).toMatchObject({
@@ -1025,4 +1029,84 @@ test('F19: vũ khí mới — đã qua màn 12 thì màn Vũ khí có Búa, Lư�
     return;
   }
   throw new Error('Không có lúc nào quái đứng một mình ở mép vùng Lưỡi hái');
+});
+
+/**
+ * F19 PR B: seed 36 ở màn 16 — quái hiếm là Cung thủ, bot "Nhìn trước" hạ được rồi thắng; bảo hiểm chắc rơi
+ * (không ép cấp cao) ra Cung Tốt có hạn 10 trận (script dò tạm 03/11/2026, `.cache/f19-rare-seed.ts`).
+ */
+const TIMED_DROP_SEED = 36;
+
+test('F19: quái hiếm rơi đúng vũ khí của loài; món có hạn ghi số trận ở màn kết quả và màn Vũ khí, chưa bị trừ trận vừa đánh', async ({
+  page,
+}) => {
+  test.slow();
+  const game = new BattleDriver(page);
+  // Đã hụt 3 lần liền: lần này chắc rơi; không ép cấp cao nên dạng món tung theo tỉ lệ 30% / 70%.
+  const pity = { dryRareKills: 3, dropsSinceHighTier: 0 };
+  await game.seedProfile({
+    unlockedLevel: RARE_LEVEL - 1,
+    upgrades: FULL_RUN_UPGRADES,
+    lootPity: pity,
+  });
+  await game.openPrebattle(TIMED_DROP_SEED, RARE_LEVEL);
+  await game.startBattle();
+  const rare = (await game.snapshot()).battle.monsters.find((m) => m.rare);
+  if (!rare) throw new Error('Thiếu quái hiếm');
+  await playBestUntilOver(game, undefined, TIMED_DROP_SEED);
+  const end = await game.snapshot();
+  expect(end.battle).toMatchObject({ phase: 'won', rareKilled: rare.kind });
+  const drop = end.drop;
+  expect(drop).toEqual(lootAfterBattle(end.battle, pity, FULL_RUN_CONFIG, LOOT_CONFIG).drop);
+  if (!drop?.battles) throw new Error('Seed này phải rơi món có hạn');
+  expect(BATTLE_CONFIG.weapons[drop.weapon]?.name).toBe(BATTLE_CONFIG.monsterKinds[rare.kind].drop);
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('43-roi-mon-co-han.png') });
+  // Món có hạn mới đủ 10 trận (trận vừa đánh trừ trước khi nhận món), ghi cấp riêng; không thành vĩnh viễn.
+  const stored = await game.storedProfile();
+  expect(stored).toMatchObject({
+    rentals: { [drop.weapon]: drop.battles },
+    rentalTiers: { [drop.weapon]: drop.tier },
+  });
+  expect(stored?.weaponTiers[drop.weapon]).toBeUndefined();
+
+  // Màn Vũ khí: thẻ món đó mang cấp của món có hạn.
+  await game.advance(RESULT_SCREEN_WAIT_MS);
+  await game.tap();
+  await game.waitSceneSwitch();
+  const weapons = await game.openWeapons();
+  expect(weapons.tiers[drop.weapon]).toBe(drop.tier);
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('44-the-mon-co-han.png') });
+});
+
+test('F19: món rơi không mạnh hơn đồ đang có thì đổi vàng — màn kết quả ghi "đã có", vàng cộng thêm', async ({
+  page,
+}) => {
+  test.slow();
+  const game = new BattleDriver(page);
+  // Seed 34 với bảo hiểm chắc rơi (không ép cấp cao): Lưỡi hái Thường — món Thường của vũ khí đã mở khóa là thừa.
+  const pity = { dryRareKills: 3, dropsSinceHighTier: 0 };
+  await game.seedProfile({
+    unlockedLevel: RARE_LEVEL - 1,
+    upgrades: FULL_RUN_UPGRADES,
+    lootPity: pity,
+  });
+  await game.openPrebattle(RARE_SEED, RARE_LEVEL);
+  await game.startBattle();
+  await playBestUntilOver(game, undefined, RARE_SEED);
+  const end = await game.snapshot();
+  const drop = end.drop;
+  expect(drop).toEqual(lootAfterBattle(end.battle, pity, FULL_RUN_CONFIG, LOOT_CONFIG).drop);
+  if (!drop) throw new Error('Bảo hiểm phải làm rơi đồ');
+  expect(drop.tier).toBe(0);
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('45-mon-thua-doi-vang.png') });
+  const salvage = LOOT_CONFIG.salvageGold[drop.tier] ?? 0;
+  expect(salvage).toBeGreaterThan(0);
+  expect(await game.storedProfile()).toMatchObject({
+    gold: end.battle.gold + salvage,
+    weaponTiers: {},
+    rentals: {},
+  });
 });

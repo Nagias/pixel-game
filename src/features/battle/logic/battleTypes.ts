@@ -98,6 +98,8 @@ export interface MonsterConfig {
   readonly gold?: number;
   /** Đợt 5: loại này có thể hóa quái hiếm (slime và trùm thì không). Không có = không. */
   readonly canBeRare?: boolean;
+  /** F19: quái hiếm loài này rơi vũ khí tên này (bắt buộc với loài `canBeRare`). */
+  readonly drop?: string;
 }
 
 /**
@@ -130,6 +132,11 @@ export interface LootConfig {
   readonly highTier: number;
   readonly highPity: number;
   readonly tiers: readonly WeaponTier[];
+  /** F19: xác suất món rơi là vĩnh viễn; còn lại là món có hạn dùng `rentalBattles` trận. */
+  readonly permanentChance: number;
+  readonly rentalBattles: number;
+  /** F19: vàng đổi được từ món rơi thừa (không mạnh hơn đồ đang có), theo cấp của món — mỗi cấp một số. */
+  readonly salvageGold: readonly number[];
 }
 
 /** Đợt 5: bộ đếm bảo hiểm rơi đồ (lưu trong hồ sơ). */
@@ -140,10 +147,12 @@ export interface LootPity {
   readonly dropsSinceHighTier: number;
 }
 
-/** Đợt 5: một món rơi — vũ khí (chỉ số trong config.weapons) ở cấp nào. */
+/** Đợt 5: một món rơi — vũ khí (chỉ số trong config.weapons) ở cấp nào. F19: `battles` = món có hạn. */
 export interface Drop {
   readonly weapon: number;
   readonly tier: number;
+  /** F19: món có hạn dùng ngần này trận (chỉ trừ trận có mang). Không có = vĩnh viễn. */
+  readonly battles?: number;
 }
 
 /** Đợt 5: cấp cao nhất đã có của từng vũ khí (khóa = chỉ số vũ khí) — dữ liệu hồ sơ, có thể lạ. */
@@ -342,6 +351,6 @@ export interface BattleState {
   readonly nextWave: number;
   /** Đợt 3: vàng nhặt được trong trận này (thắng hay thua đều giữ — cộng vào hồ sơ ở tính năng profile). */
   readonly gold: number;
-  /** Đợt 5: đã hạ quái hiếm của trận (tung rơi đồ lúc hết trận). Không có = chưa. */
-  readonly rareKilled?: boolean;
+  /** Đợt 5: đã hạ quái hiếm của trận (tung rơi đồ lúc hết trận). F19: ghi loài của nó (món rơi theo loài). */
+  readonly rareKilled?: MonsterKind;
 }

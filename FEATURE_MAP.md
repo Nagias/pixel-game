@@ -886,8 +886,8 @@ nguồn sự thật: `logic/battle.ts` `withRare` / `rewardsAfter`, `logic/loot.
    không có quái hiếm. Chọn quái hiếm bằng dòng ngẫu nhiên riêng tính từ seed: có hay không thì ván vẫn như
    nhau.
 2. **May mắn** (nâng cấp): +5% xác suất quái hiếm mỗi cấp, 3 cấp, 10 / 20 / 40 vàng.
-3. **Rơi đồ** (`LOOT_CONFIG`): hạ quái hiếm → 50% rơi một vũ khí, loại **tạm ngẫu nhiên đều** trong 4 vũ khí
-   (bảng rơi theo loài chủ dự án chốt sau — chỉ sửa dữ liệu). Cấp theo tỉ lệ:
+3. **Rơi đồ** (`LOOT_CONFIG`): hạ quái hiếm → 50% rơi một vũ khí. Loại vũ khí: lúc đầu tạm ngẫu nhiên đều —
+   **từ F19 PR B theo loài quái hiếm** (xem F19). Cấp theo tỉ lệ:
 
    | Cấp         | Màu chữ               | Cộng thêm so với vũ khí gốc                   | Tỉ lệ |
    | ----------- | --------------------- | --------------------------------------------- | ----- |
@@ -902,7 +902,7 @@ nguồn sự thật: `logic/battle.ts` `withRare` / `rewardsAfter`, `logic/loot.
    thi trở lên (tung trong nhóm cao theo tỉ lệ 10 : 4 : 1). Bộ đếm lưu trong hồ sơ, rơi lúc hết trận (thắng hay
    thua đều tính).
 5. **Túi đồ:** mỗi vũ khí giữ **cấp cao nhất đã rơi** (cấp cao hơn luôn mạnh hơn nên không cần chọn cấp); món
-   rơi thấp hơn hoặc bằng thì ghi "(đã có)". `withWeaponTiers` trả cấu hình trận đã cộng chỉ số (như
+   rơi thấp hơn hoặc bằng thì ghi "(đã có)" — từ F19 PR B món thừa đổi vàng, và có thêm món có hạn (xem F19). `withWeaponTiers` trả cấu hình trận đã cộng chỉ số (như
    `withUpgrades`), trận chạy y như cũ.
 6. Hồ sơ lên **phiên bản 3** (`weaponTiers`, `lootPity`); hồ sơ bản 1 và 2 tự chuyển lên, không mất gì.
 7. Cấu hình sai bị từ chối: xác suất ngoài [0, 1], hệ số máu / vàng không nguyên hoặc < 1; bảng rơi không có
@@ -1098,7 +1098,7 @@ Cửa hàng bày thêm bản Hiếm của ba món (khi đã mở), dạng lướ
    viễn / món thuê còn hạn. Lưỡi hái sau màn 12 (Dơi đêm — loài rơi Lưỡi hái — ra lần đầu). Búa sau màn 10 và Nỏ
    sau màn 14 là mốc tạm: PR E đặt đúng màn Rùa gai / Tổ nhện ra lần đầu.
 5. Bộ mặc định vẫn Kiếm + Giáo + Cung. Đồ đã lưu có món không còn có thì về bộ mặc định.
-6. Tạm tới PR B: quái hiếm chỉ rơi 4 món có sẵn từ đầu (PR B thay bằng bảng rơi theo loài).
+6. Tạm tới PR B: quái hiếm chỉ rơi 4 món có sẵn từ đầu (PR B đã thay bằng bảng rơi theo loài).
 7. Sửa lỗi gặp khi thử tay: đổi vũ khí ở màn Vũ khí không còn làm mất skill đã chọn.
 
 **Con số** (`battleConfig.ts`, agent chọn trong phạm vi duyệt): Búa vòng 0–1, rộng 1, 2 sát thương, choáng 1 lượt;
@@ -1118,6 +1118,40 @@ xuống hai dòng); Búa chém Sói hiện "choáng", Sói đứng im, máu nhâ
 vào lát 20; Cửa hàng 7 thẻ, mua Lưỡi hái trừ 25 vàng, "Còn 5 trận".
 
 **Nợ liên quan:** DEBT-007 (hình 3 vũ khí vẽ tạm bằng lưới ký tự), DEBT-009.
+
+### PR B — Rơi theo loài, món có hạn / vĩnh viễn, món thừa đổi vàng
+
+**Người chơi thấy và làm gì:** hạ quái hiếm thì món rơi luôn là vũ khí của loài đó (Yêu tinh rơi Kiếm, Sói rừng
+rơi Rìu, Cung thủ rơi Cung, Dơi đêm rơi Lưỡi hái). Màn kết quả ghi dạng món: "Rơi: Cung Tốt · 10 trận!", "…
+· vĩnh viễn!", "… · thêm 10 trận!", hoặc "Rơi: Lưỡi hái Thường · đã có · +1 vàng". Màn Vũ khí: thẻ món có hạn
+có thêm dòng "n trận". Cửa hàng: đang có món có hạn cấp cao hơn Hiếm thì ghi "Đã có …", không bán.
+
+**Luật** (nguồn sự thật: `logic/loot.ts` `rollLoot` / `lootAfterBattle` / `applyDrop`, `logic/shop.ts`,
+`logic/battle.ts` `rewardsAfter` + `loot.test.ts`, `shop.test.ts`, `rare.test.ts`; chủ dự án duyệt mục 1, 2, 6):
+
+1. **Theo loài:** `drop` ở `monsterKinds` — loài hóa hiếm được phải có món rơi là vũ khí trong game (sai thì từ
+   chối cấu hình). Trận ghi loài quái hiếm đã hạ (`rareKilled`).
+2. **Dạng món:** 30% vĩnh viễn, 70% có hạn 10 trận, mọi cấp như nhau; món bảo hiểm cấp cao luôn vĩnh viễn.
+3. **Túi đồ** (`applyDrop`): mỗi vũ khí một cấp vĩnh viễn và tối đa một món có hạn (cấp + số trận). Vĩnh viễn cao
+   hơn cấp vĩnh viễn → lên cấp. Có hạn cao hơn cấp vĩnh viễn: chưa có món có hạn hoặc món đang có thấp hơn →
+   thay (10 trận); cùng cấp → cộng dồn trận. Còn lại là **món thừa → đổi vàng** theo cấp món rơi (sửa điều duyệt
+   28/10 "không đổi ra gì"). Vũ khí chưa mở khóa theo màn: món Thường vẫn nhận (ghi cấp 0 — vẫn tính là có).
+4. Hết trận: món có hạn mang vào trận bớt 1 trận **trước**, rồi mới nhận món mới rơi (món mới đủ 10 trận).
+5. **Cửa hàng:** món thuê là món có hạn cấp Hiếm. Đang có món có hạn cấp cao hơn → không bán; thấp hơn → mua là
+   thay hẳn (5 trận Hiếm); bằng → cộng dồn.
+6. Hồ sơ **phiên bản 6** thêm `rentalTiers` (cấp của món có hạn). Bản 5 tự chuyển lên; món thuê cũ chưa ghi cấp
+   coi là cấp cửa hàng — không mất gì.
+
+**Con số** (`LOOT_CONFIG`): `permanentChance` 0,3; `rentalBattles` 10; vàng đổi món thừa Thường 1 · Tốt 2 · Hiếm 4
+· Sử thi 8 · Huyền thoại 15 · Thần 30 (agent chọn: dưới giá một cấp nâng cấp nhân với cấp — không thành nguồn
+vàng chính).
+
+**Kiểm chứng tự động:** unit — món luôn là vũ khí của loài; 10 000 lần tung ra ~30% vĩnh viễn; món bảo hiểm cấp
+cao vĩnh viễn; 4 loài ra đúng 4 vũ khí; mọi ca nhận món (lên cấp, thay, cộng dồn, đổi vàng, món thuê cũ không ghi
+cấp, món hết hạn, vũ khí chưa mở khóa); cửa hàng với món có hạn có cấp; hồ sơ bản 5 → 6; loài hóa hiếm thiếu món
+rơi bị từ chối. E2E — quái hiếm (bảo hiểm cấp cao) rơi đúng vũ khí của loài, vĩnh viễn; seed 36 màn 16 rơi Cung
+Tốt 10 trận, hồ sơ ghi 10 trận + cấp, màn Vũ khí hiện cấp đó (ảnh `43-roi-mon-co-han.png`,
+`44-the-mon-co-han.png`); seed 34 rơi Lưỡi hái Thường (đã có) → vàng cộng thêm 1 (ảnh `45-mon-thua-doi-vang.png`).
 
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
