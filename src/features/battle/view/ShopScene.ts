@@ -185,8 +185,6 @@ export class ShopScene extends Scene {
         fontSize: '10px',
         strokeThickness: 3,
         color: PALETTE.mist,
-        align: 'center',
-        wordWrap: { width: card.width - 16 },
       })
       .setOrigin(0.5)
       .setDepth(5);
@@ -224,6 +222,10 @@ export class ShopScene extends Scene {
             ? `Còn ${left} trận (+${SHOP_CONFIG.battles})`
             : `Dùng ${SHOP_CONFIG.battles} trận`,
       );
+      // Một dòng, thu nhỏ nếu dài hơn thẻ ("Đã có Huyền thoại") — xuống dòng sẽ lấp sau nút mua.
+      const room = smallCardRect(index).width - 10;
+      card.status.setScale(1);
+      if (card.status.width > room) card.status.setScale(room / card.status.width);
       const rect = smallBuyRect(index);
       const affordable = this.canBuy(card.weapon);
       drawBuyButton(card.buy, rect, affordable);

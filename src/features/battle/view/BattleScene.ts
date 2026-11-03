@@ -869,11 +869,11 @@ export class BattleScene extends Scene {
       .text(GAME_WIDTH / 2, 342, '', { ...TEXT, fontSize: '16px', color: PALETTE.yellow })
       .setOrigin(0.5);
     this.resultLoot = this.add
-      .text(GAME_WIDTH / 2, 370, '', {
+      .text(GAME_WIDTH / 2, 375, '', {
         ...TEXT,
         fontSize: '15px',
         align: 'center',
-        wordWrap: { width: 320 },
+        wordWrap: { width: 280 },
       })
       .setOrigin(0.5);
     this.resultHint = this.add
