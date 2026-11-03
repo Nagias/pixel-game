@@ -23,6 +23,7 @@ import {
   LOOT_CONFIG,
   SHOP_CONFIG,
   UPGRADE_CONFIG,
+  WEAPON_UPGRADE_CONFIG,
 } from '../logic/battleConfig';
 import type { Loadout, MonsterKind, QuestConfig, SkillKind } from '../logic/battleTypes';
 import { chapterOf } from '../logic/chapters';
@@ -37,7 +38,7 @@ import {
 } from '../logic/loadout';
 import { withWeaponTiers } from '../logic/loot';
 import { effectiveTiers } from '../logic/shop';
-import { withUpgrades } from '../logic/upgrades';
+import { withUpgrades, withWeaponLevels } from '../logic/upgrades';
 import type { BattleSceneData } from './BattleScene';
 import { BATTLE_SPRITES } from './battleSprites';
 import {
@@ -130,10 +131,14 @@ export class MapScene extends Scene {
   init(data: Partial<MapSceneData>): void {
     const profile = loadProfile();
     // Đợt 6: món thuê ở cửa hàng còn hạn thì dùng cấp của cửa hàng (không hạ món vĩnh viễn cao hơn).
-    this.config = withWeaponTiers(
-      withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
-      effectiveTiers(profile.weaponTiers, profile.rentals, profile.rentalTiers, SHOP_CONFIG),
-      LOOT_CONFIG,
+    this.config = withWeaponLevels(
+      withWeaponTiers(
+        withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
+        effectiveTiers(profile.weaponTiers, profile.rentals, profile.rentalTiers, SHOP_CONFIG),
+        LOOT_CONFIG,
+      ),
+      profile.weaponLevels,
+      WEAPON_UPGRADE_CONFIG,
     );
     const count = Math.min(this.config.levels.length, LEVEL_COUNT_ON_MAP);
     this.gold = profile.gold;

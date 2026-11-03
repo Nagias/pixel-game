@@ -18,6 +18,8 @@ export interface Profile {
    * trước phiên bản 6) — tính năng battle coi là cấp cửa hàng.
    */
   readonly rentalTiers: Readonly<Record<string, number>>;
+  /** F19 (phiên bản 7): cấp đã nâng của từng vũ khí (luật nâng cấp nằm ở tính năng battle). */
+  readonly weaponLevels: Readonly<Record<string, number>>;
   /** F18 (phiên bản 5): đã thắng màn cuối — để màn cuối hiện "đã qua" và chơi lại không nhận vàng. */
   readonly clearedAll: boolean;
   /** F18 (phiên bản 5): đồ đang mang, lưu để tắt game mở lại vẫn còn. Chưa chọn lần nào = null. */

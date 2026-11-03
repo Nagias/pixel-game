@@ -1110,3 +1110,38 @@ test('F19: món rơi không mạnh hơn đồ đang có thì đổi vàng — m�
     rentals: {},
   });
 });
+
+test('F19: nâng cấp từng vũ khí — thẻ chọn "Vũ khí" ở màn Nâng cấp, mua đủ 3 cấp Kiếm (15 + 30 + 60 vàng), vào trận Kiếm +1 sát thương, +15% chí mạng', async ({
+  page,
+}) => {
+  const game = new BattleDriver(page);
+  await game.seedProfile({ gold: 110, unlockedLevel: 2 });
+  await game.openPrebattle(SEED, 3);
+  await game.openUpgrade();
+  const tab = await game.openUpgradeTab('weapons');
+  expect(tab).toMatchObject({ tab: 'weapons', weapons: [0, 1, 2, 3], weaponLevels: {} });
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('46-nang-vu-khi.png') });
+
+  for (const gold of [95, 65, 5]) {
+    await game.buyWeaponUpgrade(0);
+    expect(await game.upgradeSnapshot()).toMatchObject({ gold });
+  }
+  // Đã tối đa: chạm nữa không trừ gì.
+  await game.buyWeaponUpgrade(0);
+  expect(await game.upgradeSnapshot()).toMatchObject({ gold: 5, weaponLevels: { 0: 3 } });
+  // Thiếu vàng (Giáo cấp 1 cần 15): không mua được.
+  await game.buyWeaponUpgrade(1);
+  expect(await game.upgradeSnapshot()).toMatchObject({ gold: 5, weaponLevels: { 0: 3 } });
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('47-kiem-toi-da.png') });
+  expect(await game.storedProfile()).toMatchObject({ gold: 5, weaponLevels: { 0: 3 } });
+
+  await game.closeUpgrade();
+  await game.startBattle();
+  const { config } = await game.snapshot();
+  const base = BATTLE_CONFIG.weapons[0];
+  expect(config.weapons[0]?.damage).toBe((base?.damage ?? 0) + 1);
+  expect(config.weapons[0]?.critChance).toBeCloseTo((base?.critChance ?? 0) + 0.15);
+  expect(config.weapons[1]).toEqual(BATTLE_CONFIG.weapons[1]);
+});

@@ -68,3 +68,30 @@ export function smallCardTapAt(x: number, y: number, count: number): UpgradeTap 
   const target = navTapAt(x, y);
   return target ? { kind: 'nav', target } : null;
 }
+
+// ---------- F19 PR C: hai thẻ chọn của màn Nâng cấp ----------
+
+/** Thẻ đang mở của màn Nâng cấp: nâng nhân vật (lưới 2×2) hay nâng từng vũ khí (lưới thẻ nhỏ). */
+export type UpgradeTab = 'character' | 'weapons';
+
+/** Hai nút thẻ chọn dưới thanh trên, trên lưới thẻ. */
+export const UPGRADE_TABS: readonly { readonly tab: UpgradeTab; readonly rect: Rect }[] = [
+  { tab: 'character', rect: { x: 18, y: 50, width: 156, height: 42 } },
+  { tab: 'weapons', rect: { x: 186, y: 50, width: 156, height: 42 } },
+];
+
+export type UpgradeScreenTap = UpgradeTap | { kind: 'tab'; tab: UpgradeTab };
+
+/** Chạm trên màn Nâng cấp: nút thẻ chọn, nút mua theo bố cục của thẻ đang mở (`count` thẻ), thanh dưới, hoặc null. */
+export function upgradeScreenTapAt(
+  x: number,
+  y: number,
+  tab: UpgradeTab,
+  count: number,
+): UpgradeScreenTap | null {
+  for (const { tab: target, rect } of UPGRADE_TABS) {
+    if (x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height)
+      return { kind: 'tab', tab: target };
+  }
+  return tab === 'character' ? upgradeTapAt(x, y, count) : smallCardTapAt(x, y, count);
+}

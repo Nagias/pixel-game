@@ -1153,6 +1153,26 @@ rơi bị từ chối. E2E — quái hiếm (bảo hiểm cấp cao) rơi đúng
 Tốt 10 trận, hồ sơ ghi 10 trận + cấp, màn Vũ khí hiện cấp đó (ảnh `43-roi-mon-co-han.png`,
 `44-the-mon-co-han.png`); seed 34 rơi Lưỡi hái Thường (đã có) → vàng cộng thêm 1 (ảnh `45-mon-thua-doi-vang.png`).
 
+### PR C — Nâng cấp từng vũ khí
+
+**Người chơi thấy và làm gì:** màn Nâng cấp có hai nút thẻ chọn **Nhân vật** (4 chỉ số như cũ) và **Vũ khí**. Thẻ chọn
+Vũ khí bày mỗi vũ khí đang có một thẻ nhỏ: hình, tên, "Cấp n/3", phần tăng ở cấp kế ("+5% chí mạng", cấp 3 thêm
+"+1 sát thương"), nút mua có giá. Dòng báo "Không lưu được" dời xuống đáy (trên thanh nút).
+
+**Luật** (nguồn sự thật: `logic/upgrades.ts` `withWeaponLevels` / `buyWeaponUpgrade` + `upgrades.test.ts`; chủ dự án
+duyệt mục 6):
+
+1. Mỗi vũ khí 3 cấp, giá 15 / 30 / 60 vàng (`WEAPON_UPGRADE_CONFIG`). Mỗi cấp +5% chí mạng; cấp 3 thêm +1 sát thương.
+2. Chỉ nâng vũ khí đang có (`ownedWeapons`); đã tối đa hoặc thiếu vàng thì không mua, không trừ gì.
+3. Cộng vào cấu hình trận cùng nâng cấp nhân vật và cấp màu (`withWeaponLevels`), trận chạy như cũ.
+4. Không tính vào nâng cấp dự kiến khi đo độ khó (như cấp màu đồ rơi) — người chơi nâng vũ khí thì màn dễ hơn số đo.
+5. Hồ sơ **phiên bản 7** thêm `weaponLevels`; bản 6 tự chuyển lên, chưa nâng gì.
+
+**Kiểm chứng tự động:** unit — bảng thật, cộng đúng theo cấp, dữ liệu lạ, bảng sai bị từ chối, giá theo cấp, mua / thiếu
+vàng / tối đa / vũ khí chưa có; hồ sơ bản 6 → 7; bố cục hai nút thẻ chọn và chạm theo thẻ chọn đang mở. E2E — mua đủ 3
+cấp Kiếm (110 → 5 vàng), tối đa và thiếu vàng không trừ gì, vào trận Kiếm +1 sát thương và +15% chí mạng, Giáo giữ
+nguyên (ảnh `46-nang-vu-khi.png`, `47-kiem-toi-da.png`).
+
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
 Đã làm hết kế hoạch sau B6 (`docs/plans/2026-10-27-ke-hoach-sau-b6.md`). Chủ dự án chốt 03/11/2026: làm sâu

@@ -6,6 +6,7 @@ import type {
   LootConfig,
   ShopConfig,
   UpgradeConfig,
+  WeaponUpgradeConfig,
 } from './battleTypes';
 import type { Chapter } from './chapters';
 
@@ -506,6 +507,16 @@ export const UPGRADE_CONFIG: UpgradeConfig = {
   heal: { name: 'Hồi máu', perLevel: 1, costs: [10, 20, 40] },
   // Đợt 5 (chủ dự án duyệt 27/10/2026): may mắn +5% xác suất có quái hiếm mỗi cấp.
   luck: { name: 'May mắn', perLevel: 0.05, costs: [10, 20, 40] },
+};
+
+/**
+ * F19 (chủ dự án duyệt 03/11/2026, mục 6): nâng cấp từng vũ khí đang có — 3 cấp, mỗi cấp +5% chí mạng, cấp 3 thêm
+ * +1 sát thương, giá 15 / 30 / 60 vàng. Không tính vào nâng cấp dự kiến khi đo độ khó (như cấp màu đồ rơi).
+ */
+export const WEAPON_UPGRADE_CONFIG: WeaponUpgradeConfig = {
+  critPerLevel: 0.05,
+  damageAtLevel: 3,
+  costs: [15, 30, 60],
 };
 
 /**

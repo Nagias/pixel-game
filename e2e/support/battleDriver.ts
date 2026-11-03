@@ -25,7 +25,12 @@ import {
 import { levelNodeRect, PREBATTLE_LAYOUT } from '../../src/features/battle/view/mapLayout';
 import { navButtonRect, type NavTarget } from '../../src/features/battle/view/navLayout';
 import { gridCardRect } from '../../src/features/battle/view/weaponsLayout';
-import { buyButtonRect, smallBuyRect } from '../../src/features/battle/view/upgradeLayout';
+import {
+  buyButtonRect,
+  smallBuyRect,
+  UPGRADE_TABS,
+  type UpgradeTab,
+} from '../../src/features/battle/view/upgradeLayout';
 import { PROFILE_KEY, PROFILE_VERSION } from '../../src/features/profile/logic/profileConfig';
 import type { RngState } from '../../src/shared/random';
 import { GameDriver } from './gameDriver';
@@ -53,6 +58,7 @@ interface StoredProfile {
   readonly lootPity: Record<string, number>;
   readonly rentals: Record<string, number>;
   readonly rentalTiers: Record<string, number>;
+  readonly weaponLevels: Record<string, number>;
   readonly clearedAll: boolean;
   readonly loadout: { readonly weapons: readonly string[]; readonly skill: string | null } | null;
 }
@@ -80,6 +86,7 @@ export class BattleDriver extends GameDriver {
     lootPity?: Record<string, number>;
     rentals?: Record<string, number>;
     rentalTiers?: Record<string, number>;
+    weaponLevels?: Record<string, number>;
     clearedAll?: boolean;
     loadout?: { weapons: string[]; skill: string | null } | null;
   }): Promise<void> {
@@ -92,6 +99,7 @@ export class BattleDriver extends GameDriver {
       lootPity: {},
       rentals: {},
       rentalTiers: {},
+      weaponLevels: {},
       clearedAll: false,
       loadout: null,
       ...patch,
@@ -123,6 +131,23 @@ export class BattleDriver extends GameDriver {
   async buyUpgrade(kind: UpgradeKind): Promise<void> {
     const rect = buyButtonRect(UPGRADE_KINDS.indexOf(kind));
     await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
+  }
+
+  /** F19: màn Nâng cấp — chạm nút thẻ chọn ("Nhân vật" / "Vũ khí"). */
+  async openUpgradeTab(tab: UpgradeTab): Promise<UpgradeSnapshot> {
+    const button = UPGRADE_TABS.find((t) => t.tab === tab);
+    if (!button) throw new Error(`Không có thẻ chọn ${tab}`);
+    await this.tapAt(...center(button.rect));
+    await this.advance(FRAME_MS * 2);
+    return this.upgradeSnapshot();
+  }
+
+  /** F19: thẻ chọn "Vũ khí" của màn Nâng cấp — chạm nút mua của vũ khí `weaponIndex`. */
+  async buyWeaponUpgrade(weaponIndex: number): Promise<void> {
+    const index = (await this.upgradeSnapshot()).weapons.indexOf(weaponIndex);
+    if (index === -1) throw new Error(`Chưa có vũ khí số ${weaponIndex}`);
+    await this.tapAt(...center(smallBuyRect(index)));
+    await this.advance(FRAME_MS * 2);
   }
 
   /** Màn Nâng cấp / Cửa hàng (F18 đợt E: không còn "XONG") — chạm CHƠI ở thanh dưới, về bảng trước trận. */

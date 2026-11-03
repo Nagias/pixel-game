@@ -19,6 +19,7 @@ export function emptyProfile(): Profile {
     lootPity: {},
     rentals: {},
     rentalTiers: {},
+    weaponLevels: {},
     clearedAll: false,
     loadout: null,
   };
@@ -45,13 +46,14 @@ function parseProfile(raw: string): Profile | null {
     lootPity,
     rentals,
     rentalTiers,
+    weaponLevels,
     clearedAll,
     loadout,
   } = data as Record<string, unknown>;
   if (!isCount(gold) || !isCount(unlockedLevel)) return null;
   // Bước chuyển từ phiên bản cũ: 1 → 2 thêm cấp nâng cấp (chưa nâng gì); 2 → 3 thêm đồ rơi (chưa có gì);
   // 3 → 4 thêm món thuê (chưa thuê gì); 4 → 5 thêm đã phá đảo (chưa) và đồ đang mang (chưa lưu); 5 → 6 thêm
-  // cấp của món có hạn (chưa ghi — món thuê cũ là cấp cửa hàng).
+  // cấp của món có hạn (chưa ghi — món thuê cũ là cấp cửa hàng); 6 → 7 thêm cấp nâng từng vũ khí (chưa nâng).
   if (version === 1) return { ...emptyProfile(), gold, unlockedLevel };
   if (!isLevels(upgrades)) return null;
   if (version === 2) return { ...emptyProfile(), gold, unlockedLevel, upgrades };
@@ -64,8 +66,10 @@ function parseProfile(raw: string): Profile | null {
   if (loadout !== null && !isSavedLoadout(loadout)) return null;
   const rest = { gold, unlockedLevel, upgrades, ...loot, rentals, clearedAll, loadout };
   if (version === 5) return { ...emptyProfile(), ...rest };
-  if (version !== PROFILE_VERSION || !isLevels(rentalTiers)) return null;
-  return { version, ...rest, rentalTiers };
+  if (!isLevels(rentalTiers)) return null;
+  if (version === 6) return { ...emptyProfile(), ...rest, rentalTiers };
+  if (version !== PROFILE_VERSION || !isLevels(weaponLevels)) return null;
+  return { version, ...rest, rentalTiers, weaponLevels };
 }
 
 const isSavedLoadout = (value: unknown): value is SavedLoadout => {

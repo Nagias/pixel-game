@@ -9,6 +9,8 @@ import {
   smallBuyRect,
   smallCardRect,
   smallCardTapAt,
+  UPGRADE_TABS,
+  upgradeScreenTapAt,
   upgradeTapAt,
 } from './upgradeLayout';
 
@@ -93,6 +95,40 @@ describe('bố cục thẻ nhỏ (Cửa hàng 7 món)', () => {
     expect(smallCardTapAt(...mid(navButtonRect('shop')), 7)).toEqual({
       kind: 'nav',
       target: 'shop',
+    });
+  });
+});
+
+// F19 PR C: màn Nâng cấp có hai thẻ chọn "Nhân vật" / "Vũ khí" dưới băng rôn; thẻ Vũ khí dùng lưới thẻ nhỏ.
+describe('màn Nâng cấp hai thẻ chọn', () => {
+  it('hai nút thẻ chọn nằm dưới thanh trên, trên lưới thẻ, không đè nhau, đủ cao cho ngón tay', () => {
+    const [character, weapons] = UPGRADE_TABS;
+    if (!character || !weapons) throw new Error('thiếu nút thẻ chọn');
+    for (const tab of UPGRADE_TABS) {
+      expect(tab.rect.y).toBeGreaterThanOrEqual(46);
+      expect(tab.rect.y + tab.rect.height).toBeLessThanOrEqual(cardRect(0).y);
+      expect(tab.rect.y + tab.rect.height).toBeLessThanOrEqual(smallCardRect(0).y);
+      expect(tab.rect.height).toBeGreaterThanOrEqual(40);
+    }
+    expect(overlap(character.rect, weapons.rect)).toBe(false);
+    expect(UPGRADE_TABS.map((t) => t.tab)).toEqual(['character', 'weapons']);
+  });
+
+  it('chạm nút thẻ chọn ra thẻ đó; chạm nút mua theo đúng bố cục của thẻ đang mở', () => {
+    for (const { tab, rect } of UPGRADE_TABS) {
+      expect(upgradeScreenTapAt(...mid(rect), 'character', 4)).toEqual({ kind: 'tab', tab });
+    }
+    expect(upgradeScreenTapAt(...mid(buyButtonRect(1)), 'character', 4)).toEqual({
+      kind: 'buy',
+      index: 1,
+    });
+    expect(upgradeScreenTapAt(...mid(smallBuyRect(5)), 'weapons', 7)).toEqual({
+      kind: 'buy',
+      index: 5,
+    });
+    expect(upgradeScreenTapAt(...mid(navButtonRect('play')), 'weapons', 7)).toEqual({
+      kind: 'nav',
+      target: 'play',
     });
   });
 });

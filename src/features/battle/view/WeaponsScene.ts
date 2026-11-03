@@ -13,7 +13,13 @@ import {
   withSavedLoadout,
   type SavedLoadout,
 } from '../../profile';
-import { BATTLE_CONFIG, LOOT_CONFIG, SHOP_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
+import {
+  BATTLE_CONFIG,
+  LOOT_CONFIG,
+  SHOP_CONFIG,
+  UPGRADE_CONFIG,
+  WEAPON_UPGRADE_CONFIG,
+} from '../logic/battleConfig';
 import type { Loadout, SkillKind } from '../logic/battleTypes';
 import {
   chooseSkill,
@@ -29,7 +35,7 @@ import {
 } from '../logic/loadout';
 import { withWeaponTiers } from '../logic/loot';
 import { effectiveTiers } from '../logic/shop';
-import { withUpgrades } from '../logic/upgrades';
+import { withUpgrades, withWeaponLevels } from '../logic/upgrades';
 import type { MapSceneData } from './MapScene';
 import { MAP_GOLD_PILL } from './mapLayout';
 import { goFromNav } from './cardScreen';
@@ -97,10 +103,14 @@ export class WeaponsScene extends Scene {
 
   init(data: Partial<WeaponsSceneData>): void {
     const profile = loadProfile();
-    this.config = withWeaponTiers(
-      withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
-      effectiveTiers(profile.weaponTiers, profile.rentals, profile.rentalTiers, SHOP_CONFIG),
-      LOOT_CONFIG,
+    this.config = withWeaponLevels(
+      withWeaponTiers(
+        withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
+        effectiveTiers(profile.weaponTiers, profile.rentals, profile.rentalTiers, SHOP_CONFIG),
+        LOOT_CONFIG,
+      ),
+      profile.weaponLevels,
+      WEAPON_UPGRADE_CONFIG,
     );
     this.returnTo = data.returnTo ?? {};
     this.gold = profile.gold;

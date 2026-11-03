@@ -3,8 +3,8 @@
 /** Phiên bản cấu trúc dữ liệu hiện tại. Đổi cấu trúc → tăng số này + thêm bước chuyển trong profile.ts. */
 // Lịch sử: 1 — vàng + màn đã mở khóa (đợt 3); 2 — thêm cấp nâng cấp (đợt 4); 3 — thêm cấp vũ khí đã rơi và
 // bộ đếm bảo hiểm rơi đồ (đợt 5); 4 — thêm món thuê ở cửa hàng (đợt 6); 5 — thêm đã phá đảo và đồ đang mang
-// (F18 đợt B); 6 — thêm cấp của món có hạn (F19 PR B).
-export const PROFILE_VERSION = 6;
+// (F18 đợt B); 6 — thêm cấp của món có hạn (F19 PR B); 7 — thêm cấp nâng của từng vũ khí (F19 PR C).
+export const PROFILE_VERSION = 7;
 
 /** Khóa lưu hồ sơ trong localStorage. */
 export const PROFILE_KEY = 'pixelGame.profile';
