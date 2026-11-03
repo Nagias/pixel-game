@@ -93,6 +93,18 @@ function validateBattleConfig(config: BattleConfig): void {
     if (rule.step !== undefined && (!Number.isInteger(rule.step) || rule.step < 1)) {
       problems.push(`${label}: số vòng lao ${rule.step} phải là số nguyên ≥ 1`);
     }
+    const order = rule.minComboOrder;
+    if (order !== undefined && (!Number.isInteger(order) || order < 1)) {
+      problems.push(`${label}: thứ tự combo tối thiểu ${order} phải là số nguyên ≥ 1`);
+    }
+    if (rule.summon) {
+      const { kind: summoned, count, every } = rule.summon;
+      if (!Object.hasOwn(monsterKinds, summoned)) {
+        problems.push(`${label}: gọi loài quái "${String(summoned)}" không có`);
+      }
+      if (!Number.isInteger(count) || count < 1) problems.push(`${label}: số quái gọi phải ≥ 1`);
+      if (!Number.isInteger(every) || every < 1) problems.push(`${label}: gọi mỗi số lượt ≥ 1`);
+    }
     // F19: quái hiếm rơi vũ khí theo loài — loài hóa hiếm được phải có món rơi là vũ khí trong game.
     if (rule.canBeRare && !weapons.some((weapon) => weapon.name === rule.drop)) {
       problems.push(`${label}: hóa hiếm được nhưng món rơi "${String(rule.drop)}" không có`);
@@ -306,7 +318,20 @@ export function createBattle(
     questProgress: 0,
     nextWave: 0,
     gold: 0,
+    nextId: monsters.length + 1,
   };
+}
+
+/**
+ * F19: id cho con quái ra tiếp theo. Trạng thái cũ chưa ghi thì tính như trước: sau đội hình mở màn và mọi đợt đã
+ * ra (chưa từng có quái được gọi).
+ */
+function nextIdOf(state: BattleState, level: LevelConfig): number {
+  if (state.nextId !== undefined) return state.nextId;
+  const spawned = (level.waves ?? [])
+    .slice(0, state.nextWave)
+    .reduce((sum, wave) => sum + wave.length, 0);
+  return level.monsters.length + spawned + 1;
 }
 
 /** F11: tiến độ nhiệm vụ sau khi các quái trong `hits` trúng đòn (đếm con chết đúng loại nhiệm vụ). */
@@ -395,14 +420,14 @@ function spawnWave(state: BattleState, config: BattleConfig): BattleState {
   const outer = config.ringCount - 1;
   const taken = new Set(state.monsters.filter((m) => m.ring === outer).map((m) => m.sector));
   if (config.sectorCount - taken.size < lineup.length) return state;
-  const spawned = waves.slice(0, state.nextWave).reduce((sum, wave) => sum + wave.length, 0);
-  const firstId = level.monsters.length + spawned + 1;
+  const firstId = nextIdOf(state, level);
   const [monsters, rng] = placeLineup(state.rng, lineup, firstId, level, taken, config);
   return {
     ...state,
     rng,
     monsters: [...state.monsters, ...monsters],
     nextWave: state.nextWave + 1,
+    nextId: firstId + monsters.length,
   };
 }
 
@@ -455,6 +480,53 @@ export function canBeHit(monster: Monster, state: BattleState, config: BattleCon
   return strike % 2 === 1;
 }
 
+/**
+ * F03 — combo gom cụm: các con trúng nhát chém theo thứ tự combo. Con ít máu bị chém trước để nhát mạnh nhất dồn
+ * vào con trâu nhất; bằng máu thì con gần nhân vật hơn trước, rồi theo id.
+ */
+function strikeTargets(
+  state: BattleState,
+  aimSector: number,
+  weapon: WeaponConfig,
+  config: BattleConfig,
+): Monster[] {
+  return state.monsters
+    .filter(
+      (monster) =>
+        canBeHit(monster, state, config) &&
+        isInZone(monster, aimSector, weapon, config.sectorCount),
+    )
+    .sort((a, b) => a.hp - b.hp || a.ring - b.ring || a.id - b.id);
+}
+
+/** Con thứ n ăn n × sát thương vũ khí × hệ số chí mạng. F19: vỏ cứng — đứng trước thứ tự tối thiểu thì 0. */
+function strikeHits(
+  targets: readonly Monster[],
+  weapon: WeaponConfig,
+  multiplier: number,
+  config: BattleConfig,
+): Hit[] {
+  return targets.map((monster, order) => {
+    const armored = order + 1 < (config.monsterKinds[monster.kind].minComboOrder ?? 1);
+    const damage = armored ? 0 : weapon.damage * (order + 1) * multiplier;
+    return { monsterId: monster.id, damage, killed: monster.hp - damage <= 0 };
+  });
+}
+
+/**
+ * F19: nhát chém bằng vũ khí `weaponIndex` vào `aimSector` sẽ trúng ai, mỗi con bao nhiêu (chưa tính chí mạng) —
+ * cùng phép tính với playTurn, cho bot và hình vẽ dùng chung.
+ */
+export function previewHits(
+  state: BattleState,
+  weaponIndex: number,
+  aimSector: number,
+  config: BattleConfig,
+): Hit[] {
+  const weapon = weaponAt(weaponIndex, config);
+  return strikeHits(strikeTargets(state, aimSector, weapon, config), weapon, 1, config);
+}
+
 /** Một lượt: người chơi đánh vào `aimSector` bằng vũ khí đang cầm, rồi quái còn sống di chuyển. */
 export function playTurn(state: BattleState, aimSector: number, config: BattleConfig): BattleState {
   if (state.phase !== 'playing') {
@@ -465,15 +537,7 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
   }
 
   const weapon = weaponAt(state.weaponIndex, config);
-  // F03 — combo gom cụm: con thứ n bị chém ăn n × sát thương vũ khí. Con ít máu bị chém trước để
-  // nhát mạnh nhất dồn vào con trâu nhất; bằng máu thì con gần nhân vật hơn trước, rồi theo id.
-  const targets = state.monsters
-    .filter(
-      (monster) =>
-        canBeHit(monster, state, config) &&
-        isInZone(monster, aimSector, weapon, config.sectorCount),
-    )
-    .sort((a, b) => a.hp - b.hp || a.ring - b.ring || a.id - b.id);
+  const targets = strikeTargets(state, aimSector, weapon, config);
 
   // B6 — chí mạng: tung một lần cho cả nhát, chỉ khi có trúng và vũ khí có % chí mạng (0% không tung
   // số, để ván không chí mạng y như trước).
@@ -485,11 +549,7 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
     [roll, rng] = nextFloat(rng);
     crit = roll < critChance;
   }
-  const multiplier = crit ? config.critMultiplier : 1;
-  const hits: Hit[] = targets.map((monster, order) => {
-    const damage = weapon.damage * (order + 1) * multiplier;
-    return { monsterId: monster.id, damage, killed: monster.hp - damage <= 0 };
-  });
+  const hits = strikeHits(targets, weapon, crit ? config.critMultiplier : 1, config);
 
   const damageById = new Map(hits.map((hit) => [hit.monsterId, hit.damage]));
   // F19: vũ khí choáng (Búa) — con trúng mà còn sống đứng im như bị đóng băng (không đi, không đánh).
@@ -558,13 +618,17 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
   const heroHp = Math.max(0, state.heroHp + healed - damageTaken);
 
   const moved = moveMonsters(knocked.monsters, rng, config, knocked.pushedIds);
+  // F19: quái gọi quái (trùm) — sau khi quái đi, trước khi hết đóng băng (con đang bị băng không gọi).
+  const strikes = level.turnLimit - turnsLeft;
+  const summoned = summonMonsters(moved.monsters, strikes, nextIdOf(state, level), config);
   const base = {
     ...state,
     ...common,
     heroHp,
     // B6: hết lượt này thì bớt một lượt đóng băng.
-    monsters: moved.monsters.map(thaw),
+    monsters: summoned.monsters.map(thaw),
     rng: moved.rng,
+    nextId: summoned.nextId,
   };
 
   if (heroHp <= 0) {
@@ -674,17 +738,20 @@ export function castSkill(state: BattleState, config: BattleConfig): BattleState
     throw new Error(`Skill mới nạp ${state.skillCharge}/${skill.chargeTurns}, chưa bấm được`);
   }
 
-  // F12: quái ma đang vô hình thì skill đi xuyên qua — không mất máu, không bị đóng băng.
+  // F12: quái ma đang vô hình thì skill đi xuyên qua — không mất máu, không bị đóng băng. F19: quái vỏ cứng
+  // (trùm) không mất máu vì skill không phải combo, nhưng vẫn bị đóng băng.
+  const damageOf = (m: Monster) =>
+    (config.monsterKinds[m.kind].minComboOrder ?? 1) > 1 ? 0 : skill.damage;
   const hits: Hit[] = [...state.monsters]
     .filter((m) => canBeHit(m, state, config))
     .sort((a, b) => a.id - b.id)
-    .map((m) => ({ monsterId: m.id, damage: skill.damage, killed: m.hp - skill.damage <= 0 }));
+    .map((m) => ({ monsterId: m.id, damage: damageOf(m), killed: m.hp - damageOf(m) <= 0 }));
   const struck = new Set(hits.map((hit) => hit.monsterId));
   const monsters: Monster[] = state.monsters
-    .filter((m) => !struck.has(m.id) || m.hp - skill.damage > 0)
+    .filter((m) => !struck.has(m.id) || m.hp - damageOf(m) > 0)
     .map((m) => {
       if (!struck.has(m.id)) return m;
-      const hp = m.hp - skill.damage;
+      const hp = m.hp - damageOf(m);
       if (skill.freezeTurns === 0) return { ...m, hp };
       return { ...m, hp, frozenTurns: Math.max(m.frozenTurns ?? 0, skill.freezeTurns) };
     });
@@ -698,6 +765,59 @@ export function castSkill(state: BattleState, config: BattleConfig): BattleState
     return { ...after, phase: 'won', lossReason: null };
   }
   return spawnWave(after, config);
+}
+
+/**
+ * F19: thứ tự ô sát bên để đặt quái được gọi — vào trong, hai bên, chéo trong, ra ngoài, chéo ngoài. Cố định để
+ * không tung số ngẫu nhiên (ván lặp lại được, người chơi đoán trước được).
+ */
+const NEIGHBOR_ORDER: readonly (readonly [ring: number, sector: number])[] = [
+  [-1, 0],
+  [0, -1],
+  [0, 1],
+  [-1, -1],
+  [-1, 1],
+  [1, 0],
+  [1, -1],
+  [1, 1],
+];
+
+/**
+ * F19: sau lượt thứ every, 2·every… mỗi con quái có `summon`, còn sống và không bị đóng băng, gọi tối đa `count`
+ * con ra ô trống sát bên (theo NEIGHBOR_ORDER, trong sân); hết ô thì gọi ít hơn. Xét theo id; quái mới đầy máu,
+ * id nối tiếp `firstId`, lượt sau mới đi.
+ */
+function summonMonsters(
+  monsters: readonly Monster[],
+  strikes: number,
+  firstId: number,
+  config: BattleConfig,
+): { monsters: Monster[]; nextId: number } {
+  const key = (sector: number, ring: number) => `${sector}:${ring}`;
+  const occupied = new Set(monsters.map((m) => key(m.sector, m.ring)));
+  const added: Monster[] = [];
+  let nextId = firstId;
+  for (const caller of [...monsters].sort((a, b) => a.id - b.id)) {
+    const summon = config.monsterKinds[caller.kind].summon;
+    if (!summon || strikes === 0 || strikes % summon.every !== 0 || isFrozen(caller)) continue;
+    let left = summon.count;
+    for (const [dRing, dSector] of NEIGHBOR_ORDER) {
+      if (left === 0) break;
+      const ring = caller.ring + dRing;
+      const sector = wrapSector(caller.sector + dSector, config.sectorCount);
+      if (ring < 0 || ring >= config.ringCount || occupied.has(key(sector, ring))) continue;
+      occupied.add(key(sector, ring));
+      added.push({
+        id: nextId++,
+        kind: summon.kind,
+        sector,
+        ring,
+        hp: config.monsterKinds[summon.kind].hp,
+      });
+      left--;
+    }
+  }
+  return { monsters: [...monsters, ...added], nextId };
 }
 
 /**

@@ -176,7 +176,14 @@ export class BattleScene extends Scene {
   /** F18 đợt C: bóng và thanh máu của từng quái, theo id; `max` = máu lúc quái xuất hiện. */
   private readonly monsterUnits = new Map<
     number,
-    { shadow: GameObjects.Graphics; hp: HpBar; max: number; shown: number }
+    {
+      shadow: GameObjects.Graphics;
+      hp: HpBar;
+      max: number;
+      shown: number;
+      /** F19: trùm vỏ cứng — ô số "n" bên trái thanh máu (phải là con thứ ≥ n trong combo mới mất máu). */
+      armor?: GameObjects.Text;
+    }
   >();
   private uiKeys!: Record<UiSprite, string>;
   /** F04: dấu "!" trên đầu quái sắp đánh, theo id quái. */
@@ -483,9 +490,14 @@ export class BattleScene extends Scene {
     for (const [id, unit] of this.monsterUnits) {
       if (present.has(id)) continue;
       this.monsterUnits.delete(id);
-      this.tweens.killTweensOf([unit.shadow, ...unit.hp.parts]);
+      this.tweens.killTweensOf([
+        unit.shadow,
+        ...unit.hp.parts,
+        ...(unit.armor ? [unit.armor] : []),
+      ]);
       unit.shadow.destroy();
       unit.hp.destroy();
+      unit.armor?.destroy();
     }
     for (const [id, sprite] of this.monsterSprites) {
       if (present.has(id)) continue;
@@ -553,12 +565,29 @@ export class BattleScene extends Scene {
     const anchor = hpBarAnchor(point, rows.length, scale);
     const shadowY = point.y + (rows.length * scale) / 2;
     let unit = this.monsterUnits.get(monster.id);
+    const armorX = anchor.x - HpBar.WIDTH / 2 - 9;
     if (!unit) {
+      const order = this.config.monsterKinds[monster.kind].minComboOrder ?? 1;
       unit = {
         shadow: this.addShadow(point, rows.length, scale, rows[0]?.length ?? 12),
         hp: new HpBar(this, DEPTH.hpBar),
         max: monster.hp,
         shown: monster.hp,
+        ...(order > 1
+          ? {
+              armor: this.add
+                .text(armorX, anchor.y + 4, String(order), {
+                  ...TEXT,
+                  fontSize: '12px',
+                  color: PALETTE.yellow,
+                  backgroundColor: PALETTE.slate,
+                  padding: { x: 2, y: 0 },
+                  strokeThickness: 3,
+                })
+                .setOrigin(0.5)
+                .setDepth(DEPTH.hpBar),
+            }
+          : {}),
       };
       unit.hp.moveTo(anchor.x, anchor.y);
       this.monsterUnits.set(monster.id, unit);
@@ -567,6 +596,14 @@ export class BattleScene extends Scene {
       const [bar, label] = unit.hp.parts;
       this.tweens.add({ targets: bar, x: anchor.x, y: anchor.y, duration: MOVE_TWEEN_MS });
       this.tweens.add({ targets: label, x: anchor.x, y: anchor.y - 1, duration: MOVE_TWEEN_MS });
+      if (unit.armor) {
+        this.tweens.add({
+          targets: unit.armor,
+          x: armorX,
+          y: anchor.y + 4,
+          duration: MOVE_TWEEN_MS,
+        });
+      }
     }
     unit.hp.draw(monster.hp, unit.max);
     unit.shown = monster.hp;
@@ -601,11 +638,12 @@ export class BattleScene extends Scene {
     for (const hit of hits) {
       const sprite = this.monsterSprites.get(hit.monsterId);
       if (!sprite) continue;
+      // F19: đòn bị vỏ cứng chặn (0 sát thương) hiện "chặn".
       const label = this.add
-        .text(sprite.x, sprite.y - 10, `-${hit.damage}`, {
+        .text(sprite.x, sprite.y - 10, hit.damage === 0 ? 'chặn' : `-${hit.damage}`, {
           ...TEXT,
-          fontSize: '18px',
-          color: hit.killed ? PALETTE.orange : PALETTE.yellow,
+          fontSize: hit.damage === 0 ? '14px' : '18px',
+          color: hit.damage === 0 ? PALETTE.mist : hit.killed ? PALETTE.orange : PALETTE.yellow,
         })
         .setOrigin(0.5)
         .setDepth(DEPTH.popup);

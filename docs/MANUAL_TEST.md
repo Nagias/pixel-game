@@ -28,6 +28,8 @@ Unit test và E2E điều khiển game qua cầu nối `window.__PIXEL_GAME__` v
    Pane vẫn ẩn sau khi mở lại (chủ dự án không xem pane) thì game đứng hẳn — trình duyệt dừng vẽ trang ẩn,
    cú bấm không có tác dụng. Khi đó thử tay bằng trình duyệt Playwright riêng (công cụ `mcp__playwright__*`):
    khung 375×760, chụp ảnh rồi bấm chuột (`page.mouse.click`) vào đúng chỗ thấy trên ảnh (gặp 03/11/2026).
+   Cửa sổ trình duyệt Playwright nằm khuất thì cũng bị hạ còn ~4 khung hình/giây (cú bấm lúc được lúc không, canh
+   vùng xanh lệch vài lát): gọi `page.bringToFront()` trước khi thử, đo lại thấy ~60 khung hình/giây.
    **Cần hồ sơ giả** (vd. đã qua màn 12): nạp trong trình duyệt Playwright riêng — bộ nhớ của nó tách khỏi
    preview nên không đè hồ sơ chủ dự án đang chơi dở. Bắt buộc dùng preview thì cất hồ sơ cũ sang khóa khác
    trước khi ghi (LESSONS.md 03/11/2026).

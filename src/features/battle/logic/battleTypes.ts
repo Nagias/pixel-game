@@ -100,6 +100,23 @@ export interface MonsterConfig {
   readonly canBeRare?: boolean;
   /** F19: quái hiếm loài này rơi vũ khí tên này (bắt buộc với loài `canBeRare`). */
   readonly drop?: string;
+  /**
+   * F19 (trùm): vỏ cứng — chỉ mất máu khi là con thứ ≥ ngần này trong combo của nhát chém; skill (không combo)
+   * không làm mất máu. Không có = 1 (mất máu như thường).
+   */
+  readonly minComboOrder?: number;
+  /** F19 (trùm): gọi quái — xem SummonConfig. */
+  readonly summon?: SummonConfig;
+}
+
+/**
+ * F19: cứ `every` lượt (sau lượt thứ every, 2·every…), con quái này — nếu còn sống và không bị đóng băng — gọi
+ * tối đa `count` con loài `kind` ra các ô trống sát bên (thứ tự cố định, không tung số ngẫu nhiên).
+ */
+export interface SummonConfig {
+  readonly kind: MonsterKind;
+  readonly count: number;
+  readonly every: number;
 }
 
 /**
@@ -366,4 +383,9 @@ export interface BattleState {
   readonly gold: number;
   /** Đợt 5: đã hạ quái hiếm của trận (tung rơi đồ lúc hết trận). F19: ghi loài của nó (món rơi theo loài). */
   readonly rareKilled?: MonsterKind;
+  /**
+   * F19: id cho con quái ra tiếp theo (đợt quái, quái được gọi). Không có = tính từ đội hình và các đợt đã ra
+   * (trạng thái cũ, chưa có quái được gọi).
+   */
+  readonly nextId?: number;
 }

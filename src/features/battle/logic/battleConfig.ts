@@ -228,8 +228,19 @@ export const BATTLE_CONFIG: BattleConfig = {
       canBeRare: true,
       drop: 'Lưỡi hái',
     },
-    // Người Cây: trùm màn 10 và 20 — rất trâu, đánh đau, tiến chậm.
-    treant: { name: 'Người Cây', gold: 10, hp: 14, advanceChance: 0.4, attack: 5 },
+    // Người Cây: trùm màn 10 và 20 — rất trâu, đánh đau, tiến chậm. F19 (chủ dự án duyệt 03/11/2026, mục 5): vỏ
+    // cứng — chỉ mất máu khi là con thứ ≥ 2 trong combo (skill không làm mất máu); cứ 3 lượt gọi 2 Yêu tinh ra ô
+    // trống sát bên (luôn có mồi để combo, không bao giờ kẹt). Máu 14 → 9 (agent dò bằng mô phỏng): với vỏ cứng phần
+    // lớn đòn vào trùm bị chặn — giữ 14 thì người mới chỉ thắng màn 10 khoảng 25% (mục tiêu 45%).
+    treant: {
+      name: 'Người Cây',
+      gold: 10,
+      hp: 9,
+      advanceChance: 0.4,
+      attack: 5,
+      minComboOrder: 2,
+      summon: { kind: 'goblin', count: 2, every: 3 },
+    },
   },
   // B6 (chủ dự án duyệt 27/10/2026): máu 10, nhát trúng ≥ 3 con hồi 1 máu, chí mạng ×2, hai skill
   // đánh cả sân mở từ màn 3. Con số cụ thể agent chọn bằng mô phỏng (giữ độ khó như trước B6).
@@ -364,13 +375,13 @@ export const BATTLE_CONFIG: BattleConfig = {
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
     },
-    // Màn 10: TRÙM Người Cây.
+    // Màn 10: TRÙM Người Cây. F19: luật trùm mới — 13 → 14 lượt, lượt dư mục tiêu ghi lại theo số đo.
     {
       monsters: ['treant', 'goblin', 'goblin'],
       spread: 3,
       quest: { kind: 'treant', count: 1 },
-      turnLimit: 13,
-      target: { winRate: 0.45, spareTurns: 1.75 },
+      turnLimit: 14,
+      target: { winRate: 0.45, spareTurns: 4.5 },
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 2, crit: 1, heal: 1 },
     },
@@ -482,15 +493,15 @@ export const BATTLE_CONFIG: BattleConfig = {
       target: { winRate: 0.74, spareTurns: 1 },
       assumedUpgrades: { hp: 3, crit: 2, heal: 2 },
     },
-    // Màn 20: TRÙM CUỐI Người Cây cùng Sói, Cung thủ.
+    // Màn 20: TRÙM CUỐI Người Cây cùng Sói, Cung thủ. F19: luật trùm mới — 9 → 12 lượt, lượt dư mục tiêu ghi lại.
     {
       monsters: ['treant', 'wolf'],
       spread: 3,
       waves: [['goblin', 'goblin', 'goblin']],
       nextWaveAt: 2,
       quest: { kind: 'treant', count: 1 },
-      turnLimit: 9,
-      target: { winRate: 0.72, spareTurns: 1.5 },
+      turnLimit: 12,
+      target: { winRate: 0.72, spareTurns: 4.75 },
       assumedUpgrades: { hp: 3, crit: 2, heal: 2 },
     },
   ],
