@@ -206,3 +206,15 @@ Thiết kế `docs/superpowers/specs/2026-11-02-giao-dien-mobile-design.md`, k�
 - [x] Đợt D — bản đồ, bảng trước trận, màn Vũ khí (PR #38)
 - [x] Đợt E — Nâng cấp và Cửa hàng dạng thẻ
 - [x] Rà soát cuối toàn bộ F18 (agent mạnh nhất): sửa 3 lỗi (chạm đúp nút màn, bộ nhớ bị chặn, tài liệu F14/F17)
+
+## F19 — Hoàn thiện cơ chế cũ: vũ khí mới, rơi đồ, quái mới, trùm (03/11/2026)
+
+Chủ dự án duyệt cả 8 mục ("Duyệt hết"). Kế hoạch và cách kiểm chứng từng phần:
+`docs/plans/2026-11-03-hoan-thien-co-che-cu.md`.
+
+- [ ] PR A — Búa, Lưỡi hái, Nỏ; mở khóa theo màn; màn Vũ khí 9 thẻ; cửa hàng 7 món
+- [ ] PR B — rơi theo loài, 70% có hạn 10 trận / 30% vĩnh viễn, món thừa đổi vàng, hồ sơ bản 6
+- [ ] PR C — nâng cấp từng vũ khí (3 cấp, 15/30/60 vàng), hồ sơ bản 7
+- [ ] PR D — trùm Người Cây: chỉ mất máu từ con thứ 2 trong combo, gọi 2 Yêu tinh mỗi 3 lượt
+- [ ] PR E — Nấm nổ, Pháp sư yêu tinh, Tổ nhện, Rùa gai; sinh lại màn 8–20
+- [ ] Kiểm chứng cuối: `npm run check` trên main, chơi tay cả luồng từ hồ sơ mới
