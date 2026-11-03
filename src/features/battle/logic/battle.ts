@@ -3,7 +3,7 @@
 // đánh (F04) → quái di chuyển → hết đóng băng (B6) → kiểm hết máu → kiểm hết lượt. F06: mỗi màn mở
 // bằng createBattle(seed, config, màn). B6: castSkill đánh cả sân giữa hai nhát chém, không tốn lượt.
 import { nextFloat, nextInt, seedRng, type RngState } from '../../../shared/random';
-import { isInZone, knockbackCell, wrapSector } from './arena';
+import { aimSectors, isInZone, knockbackCell, wrapSector, zoneSectors } from './arena';
 import { defaultLoadout, validateLoadout } from './loadout';
 import {
   PUSH_DIRECTIONS,
@@ -45,6 +45,17 @@ function validateBattleConfig(config: BattleConfig): void {
     }
     const crit = weapon.critChance ?? 0;
     if (!(crit >= 0 && crit <= 1)) problems.push(`${label}: chí mạng ${crit} nằm ngoài [0, 1]`);
+    const stun = weapon.stunTurns ?? 0;
+    if (!Number.isInteger(stun) || stun < 0) {
+      problems.push(`${label}: số lượt choáng phải là số nguyên ≥ 0`);
+    }
+    const unlock = weapon.unlockAfterLevel;
+    if (
+      unlock !== undefined &&
+      (!Number.isInteger(unlock) || unlock < 0 || unlock >= levels.length)
+    ) {
+      problems.push(`${label}: mốc mở khóa ${unlock} không phải màn có trong game`);
+    }
   }
   if (!(config.critMultiplier >= 1)) problems.push('hệ số chí mạng phải từ 1 trở lên');
   for (const [kind, skill] of Object.entries(config.skills)) {
@@ -475,10 +486,20 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
   });
 
   const damageById = new Map(hits.map((hit) => [hit.monsterId, hit.damage]));
+  // F19: vũ khí choáng (Búa) — con trúng mà còn sống đứng im như bị đóng băng (không đi, không đánh).
+  const stun = weapon.stunTurns ?? 0;
   const survivors: Monster[] = [];
   for (const monster of state.monsters) {
-    const hp = monster.hp - (damageById.get(monster.id) ?? 0);
-    if (hp > 0) survivors.push(hp === monster.hp ? monster : { ...monster, hp });
+    const damage = damageById.get(monster.id);
+    const hp = monster.hp - (damage ?? 0);
+    if (hp <= 0) continue;
+    if (damage === undefined) {
+      survivors.push(monster);
+    } else if (stun > 0) {
+      survivors.push({ ...monster, hp, frozenTurns: Math.max(monster.frozenTurns ?? 0, stun) });
+    } else {
+      survivors.push({ ...monster, hp });
+    }
   }
 
   // B6 — hồi máu: nhát trúng đủ nhiều con thì hồi, không quá máu tối đa, trước khi quái đánh.
@@ -508,7 +529,7 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
   }
 
   // F05: đẩy quái ngay sau nhát chém, trước khi quái hành động.
-  const knocked = applyKnockback(survivors, hits, weapon, config);
+  const knocked = applyKnockback(survivors, hits, weapon, aimSector, config);
 
   // F04: quái đang áp sát (còn sống sau nhát chém và sau khi bị đẩy) đánh; quái vừa tiến vào vòng 0
   // lượt này chỉ đánh từ lượt sau — đúng những con người chơi đã thấy dấu "!" trước khi chém.
@@ -553,12 +574,13 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
 /**
  * F05: quái bị chém mà còn sống bị đẩy theo kiểu đẩy của vũ khí, lần lượt theo thứ tự combo.
  * Ô đích có quái khác hoặc nằm ngoài sân thì không bị đẩy. Trả về id những con bị đẩy thành công
- * (chúng đứng yên lượt đó). Không tung số ngẫu nhiên.
+ * (chúng đứng yên lượt đó). Không tung số ngẫu nhiên. F19: kiểu `gather` dời về lát giữa của nêm chứa quái.
  */
 function applyKnockback(
   survivors: readonly Monster[],
   hits: readonly Hit[],
   weapon: WeaponConfig,
+  aimSector: number,
   config: BattleConfig,
 ): { monsters: Monster[]; pushedIds: Set<number> } {
   const pushedIds = new Set<number>();
@@ -567,13 +589,19 @@ function applyKnockback(
   const key = (cell: { sector: number; ring: number }) => `${cell.sector}:${cell.ring}`;
   const positions = new Map(survivors.map((m) => [m.id, m]));
   const occupied = new Set(survivors.map(key));
+  const centers = aimSectors(aimSector, weapon, config.sectorCount);
+  const centerOf = (sector: number) =>
+    centers.find((c) => zoneSectors(c, weapon.widthSectors, config.sectorCount).includes(sector)) ??
+    sector;
 
   for (const hit of hits) {
     const monster = positions.get(hit.monsterId);
     if (!monster) continue; // đã chết trong nhát chém
-    const target = knockbackCell(monster, weapon.push, config.sectorCount);
+    const center = centerOf(monster.sector);
+    const target = knockbackCell(monster, weapon.push, config.sectorCount, center);
     const insideArena = target.ring >= 0 && target.ring < config.ringCount;
-    if (!insideArena || occupied.has(key(target))) continue;
+    const moved = target.sector !== monster.sector || target.ring !== monster.ring;
+    if (!moved || !insideArena || occupied.has(key(target))) continue;
 
     occupied.delete(key(monster));
     occupied.add(key(target));

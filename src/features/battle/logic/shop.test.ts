@@ -11,14 +11,18 @@ import { buyRental, effectiveTiers, rentalsAfterBattle, validateShopConfig } fro
 const SHOP: ShopConfig = { weapons: [0, 3, 1, 2], tier: 2, price: 25, battles: 5 };
 
 describe('cửa hàng', () => {
-  it('bảng thật đúng bản chủ dự án duyệt: Kiếm, Rìu, Giáo, Cung cấp Hiếm, 25 vàng, 5 trận', () => {
-    expect(SHOP_CONFIG).toEqual(SHOP);
+  // F19 (chủ dự án duyệt 03/11/2026, mục 3): bán thêm bản Hiếm của Búa, Lưỡi hái, Nỏ, cùng giá và hạn.
+  it('bảng thật đúng bản chủ dự án duyệt: Kiếm, Rìu, Giáo, Cung, Búa, Lưỡi hái, Nỏ cấp Hiếm, 25 vàng, 5 trận', () => {
+    expect(SHOP_CONFIG).toEqual({ ...SHOP, weapons: [...SHOP.weapons, 4, 5, 6] });
     expect(LOOT_CONFIG.tiers[SHOP_CONFIG.tier]?.name).toBe('Hiếm');
     expect(SHOP_CONFIG.weapons.map((w) => BATTLE_CONFIG.weapons[w]?.name)).toEqual([
       'Kiếm',
       'Rìu',
       'Giáo',
       'Cung',
+      'Búa',
+      'Lưỡi hái',
+      'Nỏ',
     ]);
     expect(() => validateShopConfig(SHOP_CONFIG, BATTLE_CONFIG, LOOT_CONFIG)).not.toThrow();
   });

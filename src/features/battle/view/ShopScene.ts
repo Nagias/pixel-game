@@ -5,14 +5,15 @@ import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
 import { registerPixelSprites } from '../../../app/pixelSprites';
 import { setSnapshotProvider } from '../../../app/testBridge';
 import { PALETTE } from '../../../shared/palette';
-import { loadProfile, saveProfile, type Profile } from '../../profile';
+import { clearedLevelCount, loadProfile, saveProfile, type Profile } from '../../profile';
 import { BATTLE_CONFIG, LOOT_CONFIG, SHOP_CONFIG } from '../logic/battleConfig';
 import type { WeaponRentals } from '../logic/battleTypes';
+import { ownedWeapons } from '../logic/loadout';
 import { buyRental } from '../logic/shop';
 import { CARD_TEXT, drawBuyButton, drawCardFrame, drawCardScreen, goFromNav } from './cardScreen';
 import type { MapSceneData } from './MapScene';
 import { UI_SPRITES, WEAPON_ICON, type UiSprite } from './uiSprites';
-import { buyButtonRect, cardRect, upgradeTapAt } from './upgradeLayout';
+import { smallBuyRect, smallCardRect, smallCardTapAt } from './upgradeLayout';
 import { styleTierText } from './weaponTierStyle';
 
 /** Thứ test E2E đọc được qua window.__PIXEL_GAME__.snapshot(). */
@@ -20,6 +21,8 @@ export interface ShopSnapshot {
   readonly scene: 'shop';
   readonly gold: number;
   readonly rentals: WeaponRentals;
+  /** F19: các món đang bày, theo thứ tự thẻ (chỉ món đã mở khóa). */
+  readonly weapons: readonly number[];
   /** Màn đã hiện đủ lâu để nhận chạm (chống chạm nhầm nối từ màn trước). */
   readonly canTap: boolean;
 }
@@ -40,6 +43,8 @@ export class ShopScene extends Scene {
   private returnTo: MapSceneData = {};
   private profile!: Profile;
   private cards: ShopCard[] = [];
+  /** F19: món đang bày — món cửa hàng bán mà người chơi đã có (mở khóa theo màn / rơi / thuê). */
+  private weapons: number[] = [];
   private gold!: { set(text: string): void };
   private notice!: GameObjects.Text;
   private uiKeys!: Record<UiSprite, string>;
@@ -53,6 +58,12 @@ export class ShopScene extends Scene {
   init(data: Partial<MapSceneData>): void {
     this.returnTo = data;
     this.profile = loadProfile();
+    const owned = ownedWeapons(BATTLE_CONFIG, {
+      clearedLevels: clearedLevelCount(this.profile, BATTLE_CONFIG.levels.length),
+      tiers: this.profile.weaponTiers,
+      rentals: this.profile.rentals,
+    });
+    this.weapons = SHOP_CONFIG.weapons.filter((weapon) => owned.includes(weapon));
   }
 
   create(): void {
@@ -67,7 +78,7 @@ export class ShopScene extends Scene {
       'shop',
       this.uiKeys,
     ));
-    SHOP_CONFIG.weapons.forEach((weapon, index) => this.createCard(weapon, index));
+    this.weapons.forEach((weapon, index) => this.createCard(weapon, index));
 
     this.input.on('pointerdown', (pointer: Input.Pointer) => this.handleTap(pointer.x, pointer.y));
     const clearSnapshot = setSnapshotProvider(() => this.snapshot());
@@ -86,12 +97,12 @@ export class ShopScene extends Scene {
 
   private handleTap(x: number, y: number): void {
     if (!this.canTap()) return;
-    const tap = upgradeTapAt(x, y, SHOP_CONFIG.weapons.length);
+    const tap = smallCardTapAt(x, y, this.weapons.length);
     if (tap?.kind === 'nav' && tap.target !== 'shop') {
       this.leaving = true;
       goFromNav(this, tap.target, this.returnTo, this.profile);
     } else if (tap?.kind === 'buy') {
-      const weapon = SHOP_CONFIG.weapons[tap.index];
+      const weapon = this.weapons[tap.index];
       if (weapon !== undefined) this.buy(weapon);
     }
   }
@@ -124,6 +135,7 @@ export class ShopScene extends Scene {
       scene: 'shop',
       gold: this.profile.gold,
       rentals: this.profile.rentals,
+      weapons: this.weapons,
       canTap: this.canTap(),
     };
   }
@@ -131,49 +143,51 @@ export class ShopScene extends Scene {
   // ---------- Vẽ ----------
 
   private createCard(weapon: number, index: number): void {
-    const card = cardRect(index);
+    // F19: thẻ nhỏ 3 cột (tới 7 món) — hình, tên, cấp, tình trạng ngắn, nút mua.
+    const card = smallCardRect(index);
     const cx = card.x + card.width / 2;
     const name = BATTLE_CONFIG.weapons[weapon]?.name ?? '';
     drawCardFrame(this, card);
     const icon = WEAPON_ICON[name];
     if (icon) {
       this.add
-        .image(cx, card.y + 36, this.uiKeys[icon])
+        .image(cx, card.y + 26, this.uiKeys[icon])
         .setScale(3)
         .setDepth(5);
     }
     this.add
-      .text(cx, card.y + 74, name, { ...CARD_TEXT, fontSize: '15px' })
+      .text(cx, card.y + 56, name, { ...CARD_TEXT, fontSize: '13px' })
       .setOrigin(0.5)
       .setDepth(5);
     const tier = this.add
-      .text(cx, card.y + 96, LOOT_CONFIG.tiers[SHOP_CONFIG.tier]?.name ?? '', {
+      .text(cx, card.y + 72, LOOT_CONFIG.tiers[SHOP_CONFIG.tier]?.name ?? '', {
         ...CARD_TEXT,
-        fontSize: '13px',
+        fontSize: '11px',
       })
       .setOrigin(0.5)
       .setDepth(5);
     styleTierText(tier, SHOP_CONFIG.tier);
     const status = this.add
-      .text(cx, card.y + 126, '', {
+      .text(cx, card.y + 87, '', {
         ...CARD_TEXT,
-        fontSize: '12px',
+        fontSize: '10px',
+        strokeThickness: 3,
         color: PALETTE.mist,
         align: 'center',
         wordWrap: { width: card.width - 16 },
       })
       .setOrigin(0.5)
       .setDepth(5);
-    const rect = buyButtonRect(index);
+    const rect = smallBuyRect(index);
     const buy = this.add.graphics().setDepth(5);
     const coin = this.add
-      .image(rect.x + 22, rect.y + rect.height / 2, this.uiKeys.coin)
+      .image(rect.x + 16, rect.y + rect.height / 2, this.uiKeys.coin)
       .setScale(2)
       .setDepth(5);
     const price = this.add
-      .text(rect.x + rect.width / 2 + 12, rect.y + rect.height / 2, '', {
+      .text(rect.x + rect.width / 2 + 10, rect.y + rect.height / 2, '', {
         ...CARD_TEXT,
-        fontSize: '16px',
+        fontSize: '15px',
       })
       .setOrigin(0.5)
       .setDepth(5);
@@ -190,18 +204,18 @@ export class ShopScene extends Scene {
       const ownsBetter = this.ownsBetter(card.weapon);
       card.status.setText(
         ownsBetter
-          ? `Đã có ${owned} (vĩnh viễn)`
+          ? `Đã có ${owned}`
           : left > 0
-            ? `Còn ${left} trận · mua thêm ${SHOP_CONFIG.battles}`
+            ? `Còn ${left} trận (+${SHOP_CONFIG.battles})`
             : `Dùng ${SHOP_CONFIG.battles} trận`,
       );
-      const rect = buyButtonRect(index);
+      const rect = smallBuyRect(index);
       const affordable = this.canBuy(card.weapon);
       drawBuyButton(card.buy, rect, affordable);
       card.coin.setVisible(!ownsBetter);
       card.price
         .setText(ownsBetter ? 'ĐÃ CÓ' : String(SHOP_CONFIG.price))
-        .setX(rect.x + rect.width / 2 + (ownsBetter ? 0 : 12))
+        .setX(rect.x + rect.width / 2 + (ownsBetter ? 0 : 10))
         .setColor(affordable || ownsBetter ? PALETTE.white : PALETTE.mist);
     });
   }

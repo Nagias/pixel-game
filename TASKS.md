@@ -212,7 +212,7 @@ Thiết kế `docs/superpowers/specs/2026-11-02-giao-dien-mobile-design.md`, k�
 Chủ dự án duyệt cả 8 mục ("Duyệt hết"). Kế hoạch và cách kiểm chứng từng phần:
 `docs/plans/2026-11-03-hoan-thien-co-che-cu.md`.
 
-- [ ] PR A — Búa, Lưỡi hái, Nỏ; mở khóa theo màn; màn Vũ khí 9 thẻ; cửa hàng 7 món
+- [x] PR A — Búa, Lưỡi hái, Nỏ; mở khóa theo màn; màn Vũ khí 9 thẻ; cửa hàng 7 món; sửa lỗi đổi vũ khí mất skill
 - [ ] PR B — rơi theo loài, 70% có hạn 10 trận / 30% vĩnh viễn, món thừa đổi vàng, hồ sơ bản 6
 - [ ] PR C — nâng cấp từng vũ khí (3 cấp, 15/30/60 vàng), hồ sơ bản 7
 - [ ] PR D — trùm Người Cây: chỉ mất máu từ con thứ 2 trong combo, gọi 2 Yêu tinh mỗi 3 lượt

@@ -8,6 +8,7 @@ import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE } from '../../../shared/palette';
 import { parseLevelParam } from '../../../shared/levelParam';
 import {
+  clearedLevelCount,
   isReplay,
   levelStatus,
   loadProfile,
@@ -31,6 +32,7 @@ import {
   fromSavedLoadout,
   isSkillUnlocked,
   loadoutForLevel,
+  ownedWeapons,
   skillOptions,
 } from '../logic/loadout';
 import { withWeaponTiers } from '../logic/loot';
@@ -141,8 +143,15 @@ export class MapScene extends Scene {
     // F18 đợt B: đồ đang mang nằm trong hồ sơ (màn Vũ khí ghi cả vào bộ nhớ phiên, phòng bộ nhớ trình duyệt bị
     // chặn); hồ sơ trỏ tới món không còn thì bộ mặc định.
     const session = this.registry.get(SESSION_LOADOUT) as SavedLoadout | undefined;
+    // F19: món đã lưu mà không còn có (món rơi có hạn hết hạn trước mốc mở khóa) thì về bộ mặc định.
+    const owned = ownedWeapons(this.config, {
+      clearedLevels: clearedLevelCount(profile, this.config.levels.length),
+      tiers: profile.weaponTiers,
+      rentals: profile.rentals,
+    });
     this.savedLoadout =
-      fromSavedLoadout(session ?? profile.loadout, this.config) ?? defaultLoadout(this.config);
+      fromSavedLoadout(session ?? profile.loadout, this.config, owned) ??
+      defaultLoadout(this.config, owned);
     // Bảng do màn trong game gửi sang (trận đấu: màn kế theo luật; màn phụ: bảng đang xem dở) thì tin — bộ nhớ
     // trình duyệt bị chặn thì hồ sơ không tiến, nhưng người chơi vẫn phải sang được màn kế trong phiên.
     // `?level=N` (thử tay / E2E) chỉ mở sẵn bảng màn N nếu đã mở khóa.

@@ -75,6 +75,51 @@ export const BATTLE_CONFIG: BattleConfig = {
       critChance: 0.1,
       twoSided: true,
     },
+    // F19 (chủ dự án duyệt 03/11/2026, mục 3): ba món mới, mỗi món một cách đánh; nối vào cuối để đồ đã lưu
+    // theo chỉ số không lệch. Mở bản Thường khi thắng màn đầu có loài rơi món đó (`unlockAfterLevel`, đếm từ 0).
+    // Búa: hẹp nhưng 2 sát thương, quái trúng còn sống choáng 1 lượt. Mốc tạm sau màn 10 — PR E đặt đúng màn
+    // Rùa gai (loài rơi Búa) ra lần đầu.
+    {
+      name: 'Búa',
+      slot: 'near',
+      rangeLabel: 'choáng',
+      push: 'none',
+      widthSectors: 1,
+      minRing: 0,
+      maxRing: 1,
+      damage: 2,
+      critChance: 0.1,
+      stunTurns: 1,
+      unlockAfterLevel: 9,
+    },
+    // Lưỡi hái: quét rộng, kéo quái ở hai mép vào giữa (gom cụm cho nhát combo sau). Mở sau màn 12 — Dơi đêm
+    // (loài rơi Lưỡi hái) ra lần đầu.
+    {
+      name: 'Lưỡi hái',
+      slot: 'mid',
+      rangeLabel: 'gom',
+      push: 'gather',
+      widthSectors: 5,
+      minRing: 2,
+      maxRing: 3,
+      damage: 1,
+      critChance: 0.1,
+      unlockAfterLevel: 11,
+    },
+    // Nỏ: một lát, xuyên cả hàng từ vòng 2 ra vòng 5, không đẩy. Mốc tạm sau màn 14 — PR E đặt đúng màn Tổ
+    // nhện (loài rơi Nỏ) ra lần đầu.
+    {
+      name: 'Nỏ',
+      slot: 'far',
+      rangeLabel: 'xuyên',
+      push: 'none',
+      widthSectors: 1,
+      minRing: 2,
+      maxRing: 5,
+      damage: 1,
+      critChance: 0.1,
+      unlockAfterLevel: 13,
+    },
   ],
   // B6: quái mạnh lên cùng lúc nhân vật có máu 10, hồi máu, chí mạng, skill — máu slime 2 → 3, sức đánh
   // ×2 (agent chọn bằng mô phỏng 27/10/2026; trước đó Cầu lửa 2 sát thương dọn sạch slime 2 máu).
@@ -476,7 +521,14 @@ export const LOOT_CONFIG: LootConfig = {
  * cấp Hiếm (chỉ số trong LOOT_CONFIG.tiers), 25 vàng mỗi món, dùng 5 trận (thắng hay thua đều trừ — agent
  * chọn: chỉ trừ trận có mang món đó). Nút xem quảng cáo để giai đoạn D.
  */
-export const SHOP_CONFIG: ShopConfig = { weapons: [0, 3, 1, 2], tier: 2, price: 25, battles: 5 };
+// F19 (chủ dự án duyệt 03/11/2026, mục 3): bán thêm Búa, Lưỡi hái, Nỏ cấp Hiếm, cùng giá và hạn. Cửa hàng chỉ
+// bày món người chơi đã có (agent chọn: không bán món chưa gặp).
+export const SHOP_CONFIG: ShopConfig = {
+  weapons: [0, 3, 1, 2, 4, 5, 6],
+  tier: 2,
+  price: 25,
+  battles: 5,
+};
 
 /**
  * Đợt 7 (chủ dự án duyệt 27/10/2026): các chương theo chủ đề môi trường, theo thứ tự màn. Chủ đề Băng, Núi

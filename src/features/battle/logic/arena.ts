@@ -1,8 +1,16 @@
 // Hình học sân đấu tròn: lát (sector) quấn vòng, vùng đánh của vũ khí, vị trí vùng xanh theo thời gian.
 import type { Cell, PushDirection, WeaponConfig } from './battleTypes';
 
-/** F05: ô đích khi một ô bị đẩy theo kiểu `push` (chưa xét ô có trống hay nằm trong sân không). */
-export function knockbackCell(cell: Cell, push: PushDirection, sectorCount: number): Cell {
+/**
+ * F05: ô đích khi một ô bị đẩy theo kiểu `push` (chưa xét ô có trống hay nằm trong sân không). F19: `gather`
+ * dời 1 lát về phía `center` (lát giữa của nêm chứa ô) theo đường ngắn nhất; ô đã ở lát giữa thì đứng nguyên.
+ */
+export function knockbackCell(
+  cell: Cell,
+  push: PushDirection,
+  sectorCount: number,
+  center = cell.sector,
+): Cell {
   switch (push) {
     case 'out':
       return { sector: cell.sector, ring: cell.ring + 1 };
@@ -10,6 +18,13 @@ export function knockbackCell(cell: Cell, push: PushDirection, sectorCount: numb
       return { sector: cell.sector, ring: cell.ring - 1 };
     case 'clockwise':
       return { sector: wrapSector(cell.sector + 1, sectorCount), ring: cell.ring };
+    case 'gather': {
+      // Lệch theo chiều kim đồng hồ từ lát giữa tới ô, đưa về (−nửa vòng, nửa vòng].
+      const offset =
+        wrapSector(cell.sector - center + sectorCount / 2, sectorCount) - sectorCount / 2;
+      const step = offset > 0 ? -1 : offset < 0 ? 1 : 0;
+      return { sector: wrapSector(cell.sector + step, sectorCount), ring: cell.ring };
+    }
     case 'none':
       return { sector: cell.sector, ring: cell.ring };
   }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyBattleResult,
+  clearedLevelCount,
   emptyProfile,
   isReplay,
   levelStatus,
@@ -391,6 +392,15 @@ describe('trạng thái màn trên bản đồ', () => {
   it('chơi lại = màn đã qua', () => {
     expect(isReplay(p, 0, 20)).toBe(true);
     expect(isReplay(p, 3, 20)).toBe(false);
+  });
+
+  // F19: vũ khí mới mở khóa khi đã thắng màn mốc — cần biết đã qua bao nhiêu màn.
+  it('số màn đã qua: bằng màn đang tới; phá đảo thì đủ mọi màn; không vượt số màn của game', () => {
+    expect(clearedLevelCount(profile({ unlockedLevel: 0 }), 20)).toBe(0);
+    expect(clearedLevelCount(p, 20)).toBe(3);
+    expect(clearedLevelCount(profile({ unlockedLevel: 19 }), 20)).toBe(19);
+    expect(clearedLevelCount(profile({ unlockedLevel: 19, clearedAll: true }), 20)).toBe(20);
+    expect(clearedLevelCount(profile({ unlockedLevel: 30 }), 20)).toBe(19);
   });
 });
 
