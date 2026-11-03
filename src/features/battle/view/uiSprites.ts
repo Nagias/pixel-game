@@ -84,6 +84,52 @@ const bow: PixelSprite = [
   '..PPP.......',
 ];
 
+// F19: ba vũ khí mới — Búa (đầu búa vuông), Lưỡi hái (lưỡi cong trên cán dài), Nỏ (cánh cung ngang trên báng).
+const hammer: PixelSprite = [
+  '.PPPPP......',
+  'PJJJKKP.....',
+  'PJKKKLP.....',
+  'PKKLLLP.....',
+  '.PPPP5PP....',
+  '.....P55P...',
+  '......P55P..',
+  '.......P55P.',
+  '........P55P',
+  '.........PP.',
+  '............',
+  '............',
+];
+
+const scythe: PixelSprite = [
+  '....PPPPPPP.',
+  '..PPJJJJKK5P',
+  '.PJKPPPPPP5P',
+  'PJKP.....P5P',
+  'PKP.....P5P.',
+  '.P.....P5P..',
+  '......P5P...',
+  '.....P5P....',
+  '....P5P.....',
+  '...P5P......',
+  '..P5P.......',
+  '..PP........',
+];
+
+const crossbow: PixelSprite = [
+  '.....PP.....',
+  '....PJKP....',
+  'PPPPPKKPPPPP',
+  'P5555KK5555P',
+  'PPPPP55PPPPP',
+  '....P55P....',
+  '....P55P....',
+  '....P55P....',
+  '....P55P....',
+  '....P44P....',
+  '....P44P....',
+  '....PPPP....',
+];
+
 const iceRain: PixelSprite = [
   '...PPPP.....',
   '..PJJJJPP...',
@@ -211,6 +257,9 @@ export const UI_SPRITES = {
   axe,
   spear,
   bow,
+  hammer,
+  scythe,
+  crossbow,
   iceRain,
   fireball,
   hp,
@@ -229,6 +278,9 @@ export const WEAPON_ICON: Readonly<Record<string, UiSprite>> = {
   Rìu: 'axe',
   Giáo: 'spear',
   Cung: 'bow',
+  Búa: 'hammer',
+  'Lưỡi hái': 'scythe',
+  Nỏ: 'crossbow',
 };
 
 export const SKILL_ICON: Readonly<Record<SkillKind, UiSprite>> = {

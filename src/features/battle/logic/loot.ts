@@ -155,10 +155,13 @@ export function lootAfterBattle(
 ): { drop: Drop | null; pity: LootPity } {
   validateLootConfig(loot, config);
   if (!state.rareKilled) return { drop: null, pity };
+  // F19 PR A: chỉ rơi các món có sẵn từ đầu (đứng đầu danh sách) — món mới mở theo màn; PR B thay bằng bảng
+  // rơi theo loài.
+  const starters = config.weapons.findIndex((w) => w.unlockAfterLevel !== undefined);
   const [drop, next] = rollLoot(
     pity,
     seedRng(state.seed + LOOT_STREAM),
-    config.weapons.length,
+    starters === -1 ? config.weapons.length : starters,
     loot,
   );
   return { drop, pity: next };

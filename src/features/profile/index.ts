@@ -2,6 +2,7 @@
 // từ file này (CLAUDE.md đường cấm #10).
 export {
   applyBattleResult,
+  clearedLevelCount,
   isReplay,
   levelStatus,
   startLevel,

@@ -10,7 +10,7 @@ import type {
 } from '../../src/features/battle';
 import * as autoPlay from '../../src/features/battle/logic/autoPlay';
 import type { Move } from '../../src/features/battle/logic/autoPlay';
-import { BATTLE_CONFIG, SHOP_CONFIG } from '../../src/features/battle/logic/battleConfig';
+import { BATTLE_CONFIG } from '../../src/features/battle/logic/battleConfig';
 import {
   UPGRADE_KINDS,
   type SkillKind,
@@ -25,7 +25,7 @@ import {
 import { levelNodeRect, PREBATTLE_LAYOUT } from '../../src/features/battle/view/mapLayout';
 import { navButtonRect, type NavTarget } from '../../src/features/battle/view/navLayout';
 import { gridCardRect } from '../../src/features/battle/view/weaponsLayout';
-import { buyButtonRect } from '../../src/features/battle/view/upgradeLayout';
+import { buyButtonRect, smallBuyRect } from '../../src/features/battle/view/upgradeLayout';
 import { PROFILE_KEY, PROFILE_VERSION } from '../../src/features/profile/logic/profileConfig';
 import type { RngState } from '../../src/shared/random';
 import { GameDriver } from './gameDriver';
@@ -143,9 +143,11 @@ export class BattleDriver extends GameDriver {
     throw new Error('Màn Cửa hàng không nhận chạm sau 2 giây');
   }
 
-  /** Đợt 6: màn Cửa hàng — chạm nút mua của vũ khí `weaponIndex` (chung bố cục hàng với màn Nâng cấp). */
+  /** Đợt 6: màn Cửa hàng — chạm nút mua của vũ khí `weaponIndex` (F19: thẻ nhỏ, chỉ món đang bày). */
   async buyFromShop(weaponIndex: number): Promise<void> {
-    const rect = buyButtonRect(SHOP_CONFIG.weapons.indexOf(weaponIndex));
+    const index = (await this.shopSnapshot()).weapons.indexOf(weaponIndex);
+    if (index === -1) throw new Error(`Cửa hàng không bày vũ khí số ${weaponIndex}`);
+    const rect = smallBuyRect(index);
     await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
   }
 

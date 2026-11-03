@@ -24,3 +24,6 @@ Thumbs.db
 
 # Bản phác thảo của công cụ brainstorming (không thuộc sản phẩm)
 .superpowers/
+
+# Nhật ký và ảnh của trình duyệt Playwright dùng khi thử tay (không thuộc sản phẩm)
+.playwright-mcp/

@@ -18,9 +18,12 @@ describe('bố cục màn Vũ khí', () => {
   const grid = Array.from({ length: GRID_CAPACITY }, (_, i) => gridCardRect(i));
   const all = [...equippedCardRects, EQUIPPED_SKILL, ...grid];
 
-  it('lưới đủ chỗ cho 4 vũ khí + 2 skill, nằm trên thanh nút dưới', () => {
-    expect(GRID_CAPACITY).toBeGreaterThanOrEqual(6);
-    for (const r of grid) expect(r.y + r.height).toBeLessThan(NAV_BAR.y);
+  it('lưới đủ chỗ cho 7 vũ khí + 2 skill (F19), nằm trên thanh nút dưới kể cả nút CHƠI nhô lên', () => {
+    expect(GRID_CAPACITY).toBeGreaterThanOrEqual(9);
+    for (const r of grid) {
+      expect(r.y + r.height).toBeLessThan(NAV_BAR.y);
+      expect(r.y + r.height).toBeLessThan(navButtonRect('play').y);
+    }
   });
 
   it('mọi thẻ nằm trong khung, không đè nhau', () => {

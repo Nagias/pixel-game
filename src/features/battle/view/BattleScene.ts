@@ -321,6 +321,14 @@ export class BattleScene extends Scene {
     const next = playTurn(this.battle, this.arcSector, this.config);
     this.battle = next;
     this.showHits(next.lastAttack?.hits ?? []);
+    // F19: Búa — quái trúng mà còn sống hiện "choáng" (luật: nó đứng im, không đánh lượt này).
+    if ((this.config.weapons[next.weaponIndex]?.stunTurns ?? 0) > 0) {
+      for (const hit of next.lastAttack?.hits ?? []) {
+        const sprite = this.monsterSprites.get(hit.monsterId);
+        if (sprite && !hit.killed)
+          this.popText(sprite.x, sprite.y - 28, 'choáng', PALETTE.mist, '13px');
+      }
+    }
     this.showStrikeBonus(next);
     this.syncMonsters(next);
     this.syncSkillButton(next);
@@ -752,6 +760,12 @@ export class BattleScene extends Scene {
         .text(textX, rect.y + 26, weapon.name, { ...TEXT, fontSize: '17px' })
         .setOrigin(0.5)
         .setDepth(DEPTH.hud);
+      // F19: tên dài ("Lưỡi hái") không vừa phần bên phải hình vũ khí thì xuống hai dòng, chữ nhỏ hơn.
+      const room = rect.width - 26;
+      if (name.width > room) {
+        name.setFontSize('13px').setWordWrapWidth(room).setAlign('center').setLineSpacing(-4);
+        if (name.width > room) name.setScale(room / name.width);
+      }
       const range = this.add
         .text(textX, rect.y + 50, this.weaponSubLabel(weaponIndex), { ...TEXT, fontSize: '13px' })
         .setOrigin(0.5)

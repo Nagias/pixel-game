@@ -25,6 +25,12 @@ Unit test và E2E điều khiển game qua cầu nối `window.__PIXEL_GAME__` v
    lại khung 375×760 trên tab mới (gặp 27/10/2026). Pane ẩn còn làm ảnh chụp **chậm một nhịp** (chạm
    xong mà ảnh vẫn như cũ): đọc `window.__PIXEL_GAME__.snapshot()` (chỉ đọc) xem đã đổi chưa rồi chụp
    lại, đừng chạm thêm lần nữa (gặp 27/10/2026, đợt 0).
+   Pane vẫn ẩn sau khi mở lại (chủ dự án không xem pane) thì game đứng hẳn — trình duyệt dừng vẽ trang ẩn,
+   cú bấm không có tác dụng. Khi đó thử tay bằng trình duyệt Playwright riêng (công cụ `mcp__playwright__*`):
+   khung 375×760, chụp ảnh rồi bấm chuột (`page.mouse.click`) vào đúng chỗ thấy trên ảnh (gặp 03/11/2026).
+   **Cần hồ sơ giả** (vd. đã qua màn 12): nạp trong trình duyệt Playwright riêng — bộ nhớ của nó tách khỏi
+   preview nên không đè hồ sơ chủ dự án đang chơi dở. Bắt buộc dùng preview thì cất hồ sơ cũ sang khóa khác
+   trước khi ghi (LESSONS.md 03/11/2026).
 3. **Chỉ thao tác như người:** bấm chuột vào đúng chỗ ngón tay sẽ chạm, dựa trên ảnh chụp màn hình. Không
    dùng cầu nối test hay gọi hàm trong game để điều khiển. Cầu nối chỉ được dùng **sau** khi thao tác,
    để đối chiếu điều mắt thấy với trạng thái thật.

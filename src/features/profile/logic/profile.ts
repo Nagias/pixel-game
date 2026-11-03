@@ -122,6 +122,15 @@ export function levelStatus(profile: Profile, level: number, levelCount: number)
   return level === current ? 'current' : 'locked';
 }
 
+/**
+ * F19: số màn đã thắng tính từ màn 1 — màn đếm từ 0 nhỏ hơn số này là đã qua (đã phá đảo thì đủ mọi màn).
+ * Dùng để mở khóa vũ khí theo màn.
+ */
+export function clearedLevelCount(profile: Profile, levelCount: number): number {
+  if (profile.clearedAll) return levelCount;
+  return Math.min(profile.unlockedLevel, levelCount - 1);
+}
+
 /** F18: chơi lại màn đã qua — không nhận vàng, không nhận đồ rơi (chủ dự án quyết 02/11/2026). */
 export function isReplay(profile: Profile, level: number, levelCount: number): boolean {
   return levelStatus(profile, level, levelCount) === 'cleared';

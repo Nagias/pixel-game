@@ -4,11 +4,18 @@ import type { RngState } from '../../../shared/random';
 
 /**
  * F05: quái bị chém mà còn sống bị đẩy thế nào. out = lùi ra xa 1 vòng, in = kéo vào gần 1 vòng,
- * clockwise = lệch sang phải 1 lát (theo chiều kim đồng hồ), none = không đẩy.
+ * clockwise = lệch sang phải 1 lát (theo chiều kim đồng hồ), none = không đẩy. F19: gather = dời 1 lát về
+ * phía lát giữa của vùng đánh (Lưỡi hái gom quái).
  */
-export type PushDirection = 'none' | 'out' | 'in' | 'clockwise';
+export type PushDirection = 'none' | 'out' | 'in' | 'clockwise' | 'gather';
 
-export const PUSH_DIRECTIONS: readonly PushDirection[] = ['none', 'out', 'in', 'clockwise'];
+export const PUSH_DIRECTIONS: readonly PushDirection[] = [
+  'none',
+  'out',
+  'in',
+  'clockwise',
+  'gather',
+];
 
 /** B4: tầm của vũ khí — mỗi trận mang đúng một món mỗi tầm (theo thứ tự này trên thanh nút). */
 export type WeaponSlot = 'near' | 'mid' | 'far';
@@ -35,6 +42,13 @@ export interface WeaponConfig {
   readonly critChance?: number;
   /** Đợt 5: cấp màu (chỉ số trong LootConfig.tiers) — đã cộng chỉ số của cấp. Không có = Thường (0). */
   readonly tier?: number;
+  /** F19: quái trúng mà còn sống bị choáng ngần này lượt (đứng im, không đánh — như đóng băng). Mặc định 0. */
+  readonly stunTurns?: number;
+  /**
+   * F19: món chỉ có sau khi thắng màn này (đếm từ 0) — hoặc khi đã có ở dạng rơi / thuê. Không có = có sẵn
+   * từ đầu.
+   */
+  readonly unlockAfterLevel?: number;
 }
 
 /** B6: các skill đánh cả sân (AOE). Thêm skill = thêm tên ở đây + con số trong battleConfig.ts. */

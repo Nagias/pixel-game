@@ -10,12 +10,40 @@ import {
   type SkillConfig,
   type SkillKind,
   type WeaponConfig,
+  type WeaponRentals,
   type WeaponSlot,
+  type WeaponTiers,
 } from './battleTypes';
 
-/** Mọi vũ khí trong cấu hình — "sở hữu" khi chưa có túi đồ. */
+/** Mọi vũ khí trong cấu hình (mô phỏng so mọi bộ đồ; game dùng ownedWeapons). */
 export function allWeapons(config: BattleConfig): number[] {
   return config.weapons.map((_, index) => index);
+}
+
+/** F19: tiến độ người chơi để biết đang có vũ khí nào (lấy từ hồ sơ). */
+export interface WeaponProgress {
+  /** Số màn đã thắng tính từ màn 1 (màn đếm từ 0 nhỏ hơn số này là đã qua). */
+  readonly clearedLevels: number;
+  /** Cấp vĩnh viễn đã rơi của từng vũ khí (khóa = chỉ số vũ khí). */
+  readonly tiers: WeaponTiers;
+  /** Món thuê / món rơi có hạn: số trận còn dùng (khóa = chỉ số vũ khí). */
+  readonly rentals: WeaponRentals;
+}
+
+const positive = (value: number | undefined) =>
+  value !== undefined && Number.isInteger(value) && value > 0;
+
+/**
+ * F19: các vũ khí người chơi đang có, theo thứ tự cấu hình: món không có mốc mở khóa, món đã thắng màn mốc,
+ * và món đã có ở dạng rơi vĩnh viễn hoặc còn hạn dùng.
+ */
+export function ownedWeapons(config: BattleConfig, progress: WeaponProgress): number[] {
+  return config.weapons.flatMap((weapon, index) => {
+    const unlocked =
+      weapon.unlockAfterLevel === undefined || progress.clearedLevels > weapon.unlockAfterLevel;
+    const dropped = positive(progress.tiers[index]) || positive(progress.rentals[index]);
+    return unlocked || dropped ? [index] : [];
+  });
 }
 
 /** Các món đang sở hữu theo từng tầm, thứ tự gần → vừa → xa; tầm không có món nào thì bỏ. */
@@ -62,12 +90,15 @@ function weaponAt(index: number, config: BattleConfig): WeaponConfig {
   return weapon;
 }
 
-/** Chọn món `weaponIndex`: thay món cùng tầm (hoặc thêm vào nếu tầm đó đang trống), giữ thứ tự tầm. */
+/**
+ * Chọn món `weaponIndex`: thay món cùng tầm (hoặc thêm vào nếu tầm đó đang trống), giữ thứ tự tầm. Skill đang
+ * mang giữ nguyên (F19: trước đó bị bỏ, đổi vũ khí là skill về mặc định).
+ */
 export function chooseWeapon(loadout: Loadout, weaponIndex: number, config: BattleConfig): Loadout {
   const slot = weaponAt(weaponIndex, config).slot;
   const others = loadout.weapons.filter((index) => weaponAt(index, config).slot !== slot);
   const order = (index: number) => WEAPON_SLOTS.indexOf(weaponAt(index, config).slot);
-  return { weapons: [...others, weaponIndex].sort((a, b) => order(a) - order(b)) };
+  return { ...loadout, weapons: [...others, weaponIndex].sort((a, b) => order(a) - order(b)) };
 }
 
 /**
@@ -107,6 +138,7 @@ const PUSH_LABEL: Record<PushDirection, string> = {
   out: 'đẩy lùi',
   in: 'kéo vào',
   clockwise: 'đẩy lệch phải',
+  gather: 'kéo vào giữa',
 };
 
 /**
@@ -119,6 +151,7 @@ export function describeWeapon(weapon: WeaponConfig, loot?: LootConfig): string 
     `rộng ${weapon.widthSectors} lát`,
     ...(weapon.twoSided ? ['2 phía'] : []),
     PUSH_LABEL[weapon.push],
+    ...((weapon.stunTurns ?? 0) > 0 ? [`choáng ${weapon.stunTurns} lượt`] : []),
     ...((weapon.critChance ?? 0) > 0
       ? [`chí mạng ${Math.round((weapon.critChance ?? 0) * 100)}%`]
       : []),
@@ -168,12 +201,18 @@ export function toSavedLoadout(loadout: Loadout, config: BattleConfig): SavedLoa
 
 /**
  * Dạng lưu → bộ đồ. Không dùng được (chưa lưu, món đã bỏ khỏi cấu hình, thiếu tầm, sai luật, skill lạ) thì
- * null — người gọi dùng bộ mặc định, không bao giờ để hồ sơ cũ làm hỏng trận.
+ * null — người gọi dùng bộ mặc định, không bao giờ để hồ sơ cũ làm hỏng trận. F19: có món không còn trong
+ * `owned` (vd. món rơi có hạn đã hết hạn mà chưa tới mốc mở khóa) cũng là null.
  */
-export function fromSavedLoadout(saved: SavedLoadout | null, config: BattleConfig): Loadout | null {
+export function fromSavedLoadout(
+  saved: SavedLoadout | null,
+  config: BattleConfig,
+  owned: readonly number[] = allWeapons(config),
+): Loadout | null {
   if (saved === null) return null;
   const weapons = saved.weapons.map((name) => config.weapons.findIndex((w) => w.name === name));
   if (weapons.includes(-1) || weapons.length !== defaultLoadout(config).weapons.length) return null;
+  if (!weapons.every((index) => owned.includes(index))) return null;
   if (saved.skill !== null && !Object.hasOwn(config.skills, saved.skill)) return null;
   const loadout: Loadout =
     saved.skill === null ? { weapons } : { weapons, skill: saved.skill as SkillKind };

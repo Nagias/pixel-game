@@ -11,10 +11,13 @@ export const equippedCardRects: readonly Rect[] = COLUMNS.map((x) => ({ x, y: 74
 /** Ô skill đang mang (chỉ hiện từ màn mở skill). */
 export const EQUIPPED_SKILL: Rect = { x: 18, y: 214, width: 324, height: 40 };
 
-const GRID_TOP = 290;
-const GRID_PITCH = 104;
-/** Số thẻ lưới tối đa (2 hàng × 3 cột). */
-export const GRID_CAPACITY = 6;
+// F19: 3 hàng (7 vũ khí + 2 skill) — lưới dời lên, hàng sát hơn để hàng cuối nằm trên nút CHƠI nhô lên.
+const GRID_TOP = 272;
+const GRID_PITCH = 98;
+/** Số thẻ lưới tối đa (3 hàng × 3 cột). */
+export const GRID_CAPACITY = 9;
+/** Dòng nhắc "Chạm thẻ để mang món đó" nằm giữa ô skill đang mang và lưới. */
+export const GRID_HINT_Y = 263;
 
 /** Thẻ thứ `index` của lưới (trái → phải, trên → dưới). */
 export function gridCardRect(index: number): Rect {

@@ -98,6 +98,12 @@ describe('B4 — đồ mang vào trận', () => {
     expect(chooseWeapon({ weapons: [0, 2] }, 1, CONFIG)).toEqual({ weapons: [0, 1, 2] });
   });
 
+  // F19 (thử tay 03/11/2026): đổi vũ khí làm mất skill đã chọn — chọn Cầu lửa rồi đổi vũ khí là bị về Mưa băng.
+  it('đổi vũ khí giữ nguyên skill đang mang', () => {
+    const withFire = { weapons: [0, 1, 2], skill: 'fireball' } as const;
+    expect(chooseWeapon(withFire, 3, CONFIG)).toEqual({ weapons: [3, 1, 2], skill: 'fireball' });
+  });
+
   it('mọi bộ đồ chọn được (cho mô phỏng): mỗi tầm một món, đủ mọi cách ghép', () => {
     expect(allLoadouts(CONFIG, allWeapons(CONFIG))).toEqual([
       { weapons: [0, 1, 2] },

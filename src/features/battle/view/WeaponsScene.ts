@@ -6,6 +6,7 @@ import { registerPixelSprites } from '../../../app/pixelSprites';
 import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE } from '../../../shared/palette';
 import {
+  clearedLevelCount,
   loadProfile,
   saveProfile,
   startLevel,
@@ -15,7 +16,6 @@ import {
 import { BATTLE_CONFIG, LOOT_CONFIG, SHOP_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
 import type { Loadout, SkillKind } from '../logic/battleTypes';
 import {
-  allWeapons,
   chooseSkill,
   chooseWeapon,
   defaultLoadout,
@@ -23,6 +23,7 @@ import {
   describeWeapon,
   fromSavedLoadout,
   isSkillUnlocked,
+  ownedWeapons,
   skillOptions,
   toSavedLoadout,
 } from '../logic/loadout';
@@ -36,7 +37,13 @@ import { drawNavBar } from './navBar';
 import { drawPanel, goldPill, SESSION_LOADOUT } from './uiKit';
 import { SKILL_ICON, UI_SPRITES, WEAPON_ICON, type UiSprite } from './uiSprites';
 import { styleTierText, tierColor } from './weaponTierStyle';
-import { equippedCardRects, EQUIPPED_SKILL, gridCardRect, weaponsTapAt } from './weaponsLayout';
+import {
+  equippedCardRects,
+  EQUIPPED_SKILL,
+  GRID_HINT_Y,
+  gridCardRect,
+  weaponsTapAt,
+} from './weaponsLayout';
 
 /** Mở màn Vũ khí; `returnTo` = Bản đồ mở lại thế nào khi chạm CHƠI (bảng trước trận của màn nào). */
 export interface WeaponsSceneData {
@@ -99,13 +106,20 @@ export class WeaponsScene extends Scene {
     this.gold = profile.gold;
     this.rentals = profile.rentals;
     const session = this.registry.get(SESSION_LOADOUT) as SavedLoadout | undefined;
+    // F19: chỉ các món đang có (mở khóa theo màn, hoặc có ở dạng rơi / thuê).
+    const owned = ownedWeapons(this.config, {
+      clearedLevels: clearedLevelCount(profile, this.config.levels.length),
+      tiers: profile.weaponTiers,
+      rentals: profile.rentals,
+    });
     this.loadout =
-      fromSavedLoadout(session ?? profile.loadout, this.config) ?? defaultLoadout(this.config);
+      fromSavedLoadout(session ?? profile.loadout, this.config, owned) ??
+      defaultLoadout(this.config, owned);
     // Skill chỉ hiện khi màn sắp chơi (bảng đang mở, hoặc màn đang tới) đã mở skill.
     const count = this.config.levels.length;
     const level = this.returnTo.popupLevel ?? startLevel(profile, null, count);
     this.cards = [
-      ...allWeapons(this.config).map((weapon): WeaponsCard => ({ kind: 'weapon', weapon })),
+      ...owned.map((weapon): WeaponsCard => ({ kind: 'weapon', weapon })),
       ...(isSkillUnlocked(level, this.config) ? skillOptions(this.config) : []).map(
         (skill): WeaponsCard => ({ kind: 'skill', skill }),
       ),
@@ -138,7 +152,7 @@ export class WeaponsScene extends Scene {
       .setOrigin(0.5)
       .setDepth(DEPTH.ui);
     this.add
-      .text(GAME_WIDTH / 2, 276, 'Chạm thẻ để mang món đó', {
+      .text(GAME_WIDTH / 2, GRID_HINT_Y, 'Chạm thẻ để mang món đó', {
         ...TEXT,
         fontSize: '13px',
         color: PALETTE.mist,

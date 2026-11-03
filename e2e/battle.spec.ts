@@ -929,7 +929,8 @@ test('Đợt 5: vũ khí có cấp màu — màn chuẩn bị và thanh vũ khí
   await game.seedProfile({ unlockedLevel: 2, weaponTiers: { 0: 5, 1: 3, 2: 2 } });
   await game.openPrebattle(SEED, 3);
   const prep = await game.waitPrebattleReady();
-  expect(prep.tiers).toEqual([5, 3, 2, 0]);
+  // F19: 7 vũ khí — Rìu, Búa, Lưỡi hái, Nỏ chưa rơi.
+  expect(prep.tiers).toEqual([5, 3, 2, 0, 0, 0, 0]);
   await game.advance(300);
   await page.screenshot({ path: test.info().outputPath('30-cap-vu-khi.png') });
   await game.startBattle();
@@ -971,4 +972,57 @@ test('Đợt 6: cửa hàng — mua Giáo Hiếm 25 vàng (mua thêm thì cộng
   await playBestUntilOver(game);
   expect((await game.snapshot()).battle.phase).toBe('won');
   expect((await game.storedProfile())?.rentals).toEqual({ [spear]: 9 });
+});
+
+test('F19: vũ khí mới — đã qua màn 12 thì màn Vũ khí có Búa, Lưỡi hái (chưa có Nỏ); mang Lưỡi hái chém thì quái ở mép bị kéo vào lát giữa', async ({
+  page,
+}) => {
+  test.slow();
+  const game = new BattleDriver(page);
+  const scythe = BATTLE_CONFIG.weapons.findIndex((w) => w.push === 'gather');
+  const hammer = BATTLE_CONFIG.weapons.findIndex((w) => (w.stunTurns ?? 0) > 0);
+  const crossbow = BATTLE_CONFIG.weapons.findIndex((w) => w.name === 'Nỏ');
+  // Đã thắng 12 màn: Búa (mốc sau màn 10) và Lưỡi hái (sau màn 12) mở, Nỏ (sau màn 14) chưa.
+  await game.openPrebattle(SEED, 13);
+  const weapons = await game.openWeapons();
+  const owned = weapons.cards.flatMap((c) => (c.kind === 'weapon' ? [c.weapon] : []));
+  expect(owned).toEqual([0, 1, 2, 3, hammer, scythe]);
+  expect(owned).not.toContain(crossbow);
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('41-vu-khi-moi.png') });
+  await game.backToPrebattle();
+
+  await game.chooseWeapon(scythe);
+  expect((await game.waitPrebattleReady()).loadout.weapons).toEqual([0, scythe, 2]);
+  await game.startBattle();
+
+  // Chém trượt cho quái tiến vào tầm Lưỡi hái (vòng 2–3), tới khi có một con đứng một mình ở mép vùng đánh.
+  const { sectorCount } = BATTLE_CONFIG;
+  const wrap = (s: number) => ((s % sectorCount) + sectorCount) % sectorCount;
+  for (let turn = 0; turn < 8; turn++) {
+    const before = await game.snapshot();
+    expect(before.battle.phase).toBe('playing');
+    const ids = (aim: number) => hitIds(before, { weaponIndex: scythe, sector: aim });
+    const target = before.battle.monsters.find((m) => {
+      const aim = wrap(m.sector + 1);
+      const centerFree = !before.battle.monsters.some((o) => o.sector === aim && o.ring === m.ring);
+      return m.hp > 1 && centerFree && ids(aim).length === 1 && ids(aim)[0] === m.id;
+    });
+    if (!target) {
+      await game.play(missMove(before));
+      continue;
+    }
+    const aim = wrap(target.sector + 1);
+    await game.play({ weaponIndex: scythe, sector: aim });
+    const after = await game.snapshot();
+    expect(after.battle.lastAttack?.hits.map((h) => h.monsterId)).toEqual([target.id]);
+    expect(after.battle.monsters.find((m) => m.id === target.id)).toMatchObject({
+      sector: aim,
+      ring: target.ring,
+    });
+    await game.advance(300);
+    await page.screenshot({ path: test.info().outputPath('42-luoi-hai-gom.png') });
+    return;
+  }
+  throw new Error('Không có lúc nào quái đứng một mình ở mép vùng Lưỡi hái');
 });

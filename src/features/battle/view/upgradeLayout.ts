@@ -32,3 +32,39 @@ export function upgradeTapAt(x: number, y: number, count: number): UpgradeTap | 
   const target = navTapAt(x, y);
   return target ? { kind: 'nav', target } : null;
 }
+
+// ---------- F19: thẻ nhỏ 3 cột (Cửa hàng 7 món) ----------
+
+const SMALL_COLUMNS = [18, 130, 242] as const;
+const SMALL_CARD = { width: 100, height: 148 } as const;
+const SMALL_TOP = 96;
+const SMALL_PITCH = 156;
+/** Số thẻ nhỏ tối đa (3 hàng × 3 cột). */
+export const SMALL_CARD_CAPACITY = 9;
+
+/** Thẻ nhỏ thứ `index` (trái → phải, trên → dưới). */
+export function smallCardRect(index: number): Rect {
+  const x = SMALL_COLUMNS[index % SMALL_COLUMNS.length] ?? SMALL_COLUMNS[0];
+  return {
+    x,
+    y: SMALL_TOP + Math.floor(index / SMALL_COLUMNS.length) * SMALL_PITCH,
+    ...SMALL_CARD,
+  };
+}
+
+/** Nút mua ở đáy thẻ nhỏ `index`. */
+export function smallBuyRect(index: number): Rect {
+  const card = smallCardRect(index);
+  return { x: card.x + 8, y: card.y + card.height - 52, width: card.width - 16, height: 44 };
+}
+
+/** Chạm: nút mua của thẻ nhỏ nào (trong `count` thẻ), nút thanh dưới, hoặc null. */
+export function smallCardTapAt(x: number, y: number, count: number): UpgradeTap | null {
+  for (let index = 0; index < count; index++) {
+    const r = smallBuyRect(index);
+    if (x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height)
+      return { kind: 'buy', index };
+  }
+  const target = navTapAt(x, y);
+  return target ? { kind: 'nav', target } : null;
+}
