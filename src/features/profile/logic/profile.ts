@@ -18,6 +18,7 @@ export function emptyProfile(): Profile {
     weaponTiers: {},
     lootPity: {},
     rentals: {},
+    rentalTiers: {},
     clearedAll: false,
     loadout: null,
   };
@@ -43,12 +44,14 @@ function parseProfile(raw: string): Profile | null {
     weaponTiers,
     lootPity,
     rentals,
+    rentalTiers,
     clearedAll,
     loadout,
   } = data as Record<string, unknown>;
   if (!isCount(gold) || !isCount(unlockedLevel)) return null;
   // Bước chuyển từ phiên bản cũ: 1 → 2 thêm cấp nâng cấp (chưa nâng gì); 2 → 3 thêm đồ rơi (chưa có gì);
-  // 3 → 4 thêm món thuê (chưa thuê gì); 4 → 5 thêm đã phá đảo (chưa) và đồ đang mang (chưa lưu).
+  // 3 → 4 thêm món thuê (chưa thuê gì); 4 → 5 thêm đã phá đảo (chưa) và đồ đang mang (chưa lưu); 5 → 6 thêm
+  // cấp của món có hạn (chưa ghi — món thuê cũ là cấp cửa hàng).
   if (version === 1) return { ...emptyProfile(), gold, unlockedLevel };
   if (!isLevels(upgrades)) return null;
   if (version === 2) return { ...emptyProfile(), gold, unlockedLevel, upgrades };
@@ -57,9 +60,12 @@ function parseProfile(raw: string): Profile | null {
   if (version === 3) return { ...emptyProfile(), gold, unlockedLevel, upgrades, ...loot };
   if (!isLevels(rentals)) return null;
   if (version === 4) return { ...emptyProfile(), gold, unlockedLevel, upgrades, ...loot, rentals };
-  if (version !== PROFILE_VERSION || typeof clearedAll !== 'boolean') return null;
+  if (typeof clearedAll !== 'boolean') return null;
   if (loadout !== null && !isSavedLoadout(loadout)) return null;
-  return { version, gold, unlockedLevel, upgrades, ...loot, rentals, clearedAll, loadout };
+  const rest = { gold, unlockedLevel, upgrades, ...loot, rentals, clearedAll, loadout };
+  if (version === 5) return { ...emptyProfile(), ...rest };
+  if (version !== PROFILE_VERSION || !isLevels(rentalTiers)) return null;
+  return { version, ...rest, rentalTiers };
 }
 
 const isSavedLoadout = (value: unknown): value is SavedLoadout => {
@@ -146,7 +152,10 @@ export function applyBattleResult(
   result: BattleResult,
   levelCount: number,
 ): Profile {
-  const rentals = result.rentals ? { rentals: result.rentals } : {};
+  const rentals = {
+    ...(result.rentals ? { rentals: result.rentals } : {}),
+    ...(result.rentalTiers ? { rentalTiers: result.rentalTiers } : {}),
+  };
   if (isReplay(profile, result.level, levelCount)) return { ...profile, ...rentals };
   const next = result.won ? Math.min(result.level + 1, levelCount - 1) : 0;
   return {

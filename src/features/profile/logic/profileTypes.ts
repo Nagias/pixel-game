@@ -11,8 +11,13 @@ export interface Profile {
   readonly weaponTiers: Readonly<Record<string, number>>;
   /** Đợt 5 (phiên bản 3): bộ đếm bảo hiểm rơi đồ theo tên (tính năng battle đọc). */
   readonly lootPity: Readonly<Record<string, number>>;
-  /** Đợt 6 (phiên bản 4): món thuê ở cửa hàng — số trận còn dùng của từng vũ khí. */
+  /** Đợt 6 (phiên bản 4): món thuê ở cửa hàng — số trận còn dùng của từng vũ khí. F19: cả món rơi có hạn. */
   readonly rentals: Readonly<Record<string, number>>;
+  /**
+   * F19 (phiên bản 6): cấp của món có hạn (món rơi có hạn có cấp riêng). Món không ghi cấp (thuê ở cửa hàng
+   * trước phiên bản 6) — tính năng battle coi là cấp cửa hàng.
+   */
+  readonly rentalTiers: Readonly<Record<string, number>>;
   /** F18 (phiên bản 5): đã thắng màn cuối — để màn cuối hiện "đã qua" và chơi lại không nhận vàng. */
   readonly clearedAll: boolean;
   /** F18 (phiên bản 5): đồ đang mang, lưu để tắt game mở lại vẫn còn. Chưa chọn lần nào = null. */
@@ -42,6 +47,8 @@ export interface BattleResult {
   readonly loot?: Pick<Profile, 'weaponTiers' | 'lootPity'>;
   /** Đợt 6: số trận còn lại của món thuê sau trận (thay cái cũ). */
   readonly rentals?: Profile['rentals'];
+  /** F19: cấp của món có hạn sau trận (thay cái cũ) — đi cùng `rentals`. */
+  readonly rentalTiers?: Profile['rentalTiers'];
 }
 
 /** Phần nhỏ của `Storage` (localStorage) mà hồ sơ cần — để logic test được không cần trình duyệt. */

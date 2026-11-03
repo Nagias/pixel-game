@@ -219,6 +219,8 @@ describe('vũ khí đang có (mở khóa theo màn, hoặc có đồ rơi / món
     expect(ownedWeapons(CONFIG, { ...none, tiers: { [SCYTHE_I]: 1 } })).toContain(SCYTHE_I);
     expect(ownedWeapons(CONFIG, { ...none, rentals: { [SCYTHE_I]: 2 } })).toContain(SCYTHE_I);
     expect(ownedWeapons(CONFIG, { ...none, rentals: { [SCYTHE_I]: 0 } })).not.toContain(SCYTHE_I);
+    // F19 PR B: món Thường rơi vĩnh viễn của vũ khí chưa mở khóa ghi cấp 0 — vẫn là có.
+    expect(ownedWeapons(CONFIG, { ...none, tiers: { [SCYTHE_I]: 0 } })).toContain(SCYTHE_I);
   });
 
   it('đồ đã lưu có món không còn trong danh sách đang có thì bỏ, dùng bộ mặc định', () => {

@@ -39,11 +39,17 @@ const positive = (value: number | undefined) =>
  */
 export function ownedWeapons(config: BattleConfig, progress: WeaponProgress): number[] {
   return config.weapons.flatMap((weapon, index) => {
-    const unlocked =
-      weapon.unlockAfterLevel === undefined || progress.clearedLevels > weapon.unlockAfterLevel;
-    const dropped = positive(progress.tiers[index]) || positive(progress.rentals[index]);
-    return unlocked || dropped ? [index] : [];
+    const unlocked = isUnlocked(weapon, progress.clearedLevels);
+    // F19 PR B: món rơi vĩnh viễn ghi cả cấp 0 (món Thường của vũ khí chưa mở khóa).
+    const tier = progress.tiers[index];
+    const permanent = tier !== undefined && Number.isInteger(tier) && tier >= 0;
+    return unlocked || permanent || positive(progress.rentals[index]) ? [index] : [];
   });
+}
+
+/** F19: vũ khí đã mở khóa theo màn (không có mốc, hoặc đã thắng màn mốc) — chưa tính đồ rơi / thuê. */
+export function isUnlocked(weapon: WeaponConfig, clearedLevels: number): boolean {
+  return weapon.unlockAfterLevel === undefined || clearedLevels > weapon.unlockAfterLevel;
 }
 
 /** Các món đang sở hữu theo từng tầm, thứ tự gần → vừa → xa; tầm không có món nào thì bỏ. */

@@ -1,12 +1,13 @@
 // Đợt 5: cấp màu vũ khí và rơi đồ khi hạ quái hiếm. Hàm thuần. Cấp màu không đổi luật trận: withWeaponTiers
 // trả cấu hình trận đã cộng chỉ số của cấp (như withUpgrades), trận chạy y như cũ trên cấu hình đó.
-import { nextFloat, nextInt, seedRng, type RngState } from '../../../shared/random';
+import { nextFloat, seedRng, type RngState } from '../../../shared/random';
 import type {
   BattleConfig,
   BattleState,
   Drop,
   LootConfig,
   LootPity,
+  WeaponRentals,
   WeaponTiers,
 } from './battleTypes';
 
@@ -31,6 +32,18 @@ export function validateLootConfig(loot: LootConfig, config: BattleConfig): void
   }
   if (!Number.isInteger(loot.highPity) || loot.highPity < 1) {
     problems.push('bảo hiểm cấp cao phải là số nguyên ≥ 1');
+  }
+  if (!(loot.permanentChance >= 0 && loot.permanentChance <= 1)) {
+    problems.push('tỉ lệ món vĩnh viễn phải trong [0, 1]');
+  }
+  if (!Number.isInteger(loot.rentalBattles) || loot.rentalBattles < 1) {
+    problems.push('số trận của món có hạn phải là số nguyên ≥ 1');
+  }
+  if (
+    loot.salvageGold.length !== tiers.length ||
+    !loot.salvageGold.every((gold) => Number.isInteger(gold) && gold >= 0)
+  ) {
+    problems.push('vàng đổi món thừa phải có đúng một số nguyên ≥ 0 cho mỗi cấp');
   }
   const strongest = Math.max(0, ...config.weapons.map((w) => w.critChance ?? 0));
   for (const tier of tiers) {
@@ -83,12 +96,6 @@ export function withWeaponTiers(
   };
 }
 
-/** Nhận một món: vũ khí lên cấp của món nếu cao hơn cấp đang có — đồ vĩnh viễn, không bao giờ tụt. */
-export function addDrop(tiers: WeaponTiers, drop: Drop): WeaponTiers {
-  const current = tiers[drop.weapon] ?? 0;
-  return drop.tier > current ? { ...tiers, [drop.weapon]: drop.tier } : tiers;
-}
-
 /** Bộ đếm bảo hiểm từ dữ liệu hồ sơ (tên lạ bỏ qua, thiếu hoặc sai thì 0). */
 export function readPity(record: Readonly<Record<string, number>>): LootPity {
   const count = (value: number | undefined) =>
@@ -118,13 +125,14 @@ function pickTier(rng: RngState, lowest: number, loot: LootConfig): [number, Rng
 
 /**
  * Hạ một quái hiếm: tung xem có rơi không (hụt `dryPity` lần liền thì chắc rơi), rơi thì tung cấp (món
- * thứ `highPity` liền dưới `highTier` thì chỉ tung trong các cấp từ `highTier`) và loại vũ khí (đều nhau
- * trong `weaponCount` vũ khí — bảng rơi theo loài chủ dự án chốt sau).
+ * thứ `highPity` liền dưới `highTier` thì chỉ tung trong các cấp từ `highTier`). F19: món là vũ khí
+ * `weapon` của loài quái hiếm (chủ dự án duyệt 03/11/2026); tung thêm vĩnh viễn hay có hạn — món bảo hiểm
+ * cấp cao luôn vĩnh viễn.
  */
 export function rollLoot(
   pity: LootPity,
   rng: RngState,
-  weaponCount: number,
+  weapon: number,
   loot: LootConfig,
 ): [drop: Drop | null, pity: LootPity, rng: RngState] {
   const [roll, afterRoll] = nextFloat(rng);
@@ -134,10 +142,11 @@ export function rollLoot(
   }
   const forcedHigh = pity.dropsSinceHighTier >= loot.highPity - 1;
   const [tier, afterTier] = pickTier(afterRoll, forcedHigh ? loot.highTier : 0, loot);
-  const [weapon, next] = nextInt(afterTier, weaponCount);
+  const [form, next] = nextFloat(afterTier);
+  const permanent = forcedHigh || form < loot.permanentChance;
   const high = tier >= loot.highTier;
   return [
-    { weapon, tier },
+    permanent ? { weapon, tier } : { weapon, tier, battles: loot.rentalBattles },
     { dryRareKills: 0, dropsSinceHighTier: high ? 0 : pity.dropsSinceHighTier + 1 },
     next,
   ];
@@ -155,14 +164,75 @@ export function lootAfterBattle(
 ): { drop: Drop | null; pity: LootPity } {
   validateLootConfig(loot, config);
   if (!state.rareKilled) return { drop: null, pity };
-  // F19 PR A: chỉ rơi các món có sẵn từ đầu (đứng đầu danh sách) — món mới mở theo màn; PR B thay bằng bảng
-  // rơi theo loài.
-  const starters = config.weapons.findIndex((w) => w.unlockAfterLevel !== undefined);
-  const [drop, next] = rollLoot(
-    pity,
-    seedRng(state.seed + LOOT_STREAM),
-    starters === -1 ? config.weapons.length : starters,
-    loot,
-  );
+  // F19: món rơi là vũ khí của loài quái hiếm vừa hạ (cấu hình đã chặn loài hóa hiếm được mà không có món).
+  const name = config.monsterKinds[state.rareKilled].drop;
+  const weapon = config.weapons.findIndex((w) => w.name === name);
+  if (weapon === -1) return { drop: null, pity };
+  const [drop, next] = rollLoot(pity, seedRng(state.seed + LOOT_STREAM), weapon, loot);
   return { drop, pity: next };
+}
+
+// ---------- F19: túi đồ — món vĩnh viễn và món có hạn ----------
+
+/** Túi đồ của người chơi (phần của hồ sơ): cấp vĩnh viễn, số trận còn của món có hạn và cấp của món đó. */
+export interface Inventory {
+  readonly tiers: WeaponTiers;
+  readonly rentals: WeaponRentals;
+  /** Cấp của món có hạn; không ghi (món thuê ở cửa hàng từ hồ sơ cũ) = cấp cửa hàng. */
+  readonly rentalTiers: WeaponTiers;
+}
+
+/** Kết quả nhận món: thành vĩnh viễn, thành món có hạn mới, cộng dồn trận, hay thừa nên đổi vàng. */
+export type DropOutcome = 'permanent' | 'rental' | 'extended' | 'salvaged';
+
+const count = (value: number | undefined) =>
+  value !== undefined && Number.isInteger(value) && value > 0 ? value : 0;
+
+/** Cấp vĩnh viễn đã ghi của vũ khí (kể cả 0 — món Thường rơi khi chưa mở khóa); chưa ghi hoặc dữ liệu lạ = undefined. */
+export function permanentTierOf(tiers: WeaponTiers, weapon: number): number | undefined {
+  const raw = tiers[weapon];
+  return raw !== undefined && Number.isInteger(raw) && raw >= 0 ? raw : undefined;
+}
+
+/**
+ * Nhận một món rơi vào túi đồ (chủ dự án duyệt 03/11/2026, mục 2 và 6). Món vĩnh viễn cao hơn cấp vĩnh viễn
+ * đang có thì lên cấp. Món có hạn cao hơn cấp vĩnh viễn: chưa có món có hạn (hoặc món đang có thấp hơn) thì
+ * thay; cùng cấp thì cộng dồn trận. Còn lại là món thừa — giữ túi đồ, đổi vàng theo cấp món rơi. `unlocked`:
+ * vũ khí đã mở khóa theo màn — bản Thường coi như đã có vĩnh viễn; chưa mở khóa thì món Thường vẫn nhận.
+ */
+export function applyDrop(
+  inventory: Inventory,
+  drop: Drop,
+  loot: LootConfig,
+  shopTier: number,
+  unlocked: boolean,
+): { inventory: Inventory; outcome: DropOutcome; salvage: number } {
+  const recorded = permanentTierOf(inventory.tiers, drop.weapon);
+  const owned = recorded ?? (unlocked ? 0 : -1);
+  const salvaged = {
+    inventory,
+    outcome: 'salvaged' as const,
+    salvage: loot.salvageGold[drop.tier] ?? 0,
+  };
+  if (drop.tier <= owned) return salvaged;
+  if (drop.battles === undefined) {
+    return {
+      inventory: { ...inventory, tiers: { ...inventory.tiers, [drop.weapon]: drop.tier } },
+      outcome: 'permanent',
+      salvage: 0,
+    };
+  }
+  const left = count(inventory.rentals[drop.weapon]);
+  const current = left > 0 ? (inventory.rentalTiers[drop.weapon] ?? shopTier) : -1;
+  if (drop.tier < current) return salvaged;
+  const extended = drop.tier === current;
+  return {
+    inventory: {
+      ...inventory,
+      rentals: { ...inventory.rentals, [drop.weapon]: (extended ? left : 0) + drop.battles },
+      rentalTiers: { ...inventory.rentalTiers, [drop.weapon]: drop.tier },
+    },
+    outcome: extended ? 'extended' : 'rental',
+    salvage: 0,
+  };
 }

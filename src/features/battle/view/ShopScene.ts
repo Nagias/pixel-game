@@ -9,7 +9,7 @@ import { clearedLevelCount, loadProfile, saveProfile, type Profile } from '../..
 import { BATTLE_CONFIG, LOOT_CONFIG, SHOP_CONFIG } from '../logic/battleConfig';
 import type { WeaponRentals } from '../logic/battleTypes';
 import { ownedWeapons } from '../logic/loadout';
-import { buyRental } from '../logic/shop';
+import { buyRental, rentalTierOf } from '../logic/shop';
 import { CARD_TEXT, drawBuyButton, drawCardFrame, drawCardScreen, goFromNav } from './cardScreen';
 import type { MapSceneData } from './MapScene';
 import { UI_SPRITES, WEAPON_ICON, type UiSprite } from './uiSprites';
@@ -121,9 +121,21 @@ export class ShopScene extends Scene {
     this.sync();
   }
 
-  /** Đã có vĩnh viễn từ cấp cửa hàng trở lên — mua là phí, cửa hàng không bán. */
+  /** F19: cấp của món có hạn còn hạn (-1 nếu không có). */
+  private rentalTier(weapon: number): number {
+    const { rentals, rentalTiers } = this.profile;
+    return rentalTierOf(rentals, rentalTiers, weapon, SHOP_CONFIG);
+  }
+
+  /**
+   * Đã có vĩnh viễn từ cấp cửa hàng trở lên, hoặc (F19) đang có món có hạn cấp cao hơn — mua là phí, cửa hàng
+   * không bán.
+   */
   private ownsBetter(weapon: number): boolean {
-    return (this.profile.weaponTiers[weapon] ?? 0) >= SHOP_CONFIG.tier;
+    return (
+      (this.profile.weaponTiers[weapon] ?? 0) >= SHOP_CONFIG.tier ||
+      this.rentalTier(weapon) > SHOP_CONFIG.tier
+    );
   }
 
   private canBuy(weapon: number): boolean {
@@ -200,12 +212,15 @@ export class ShopScene extends Scene {
     this.gold.set(String(gold));
     this.cards.forEach((card, index) => {
       const left = rentals[card.weapon] ?? 0;
-      const owned = LOOT_CONFIG.tiers[weaponTiers[card.weapon] ?? 0]?.name ?? '';
+      const best = Math.max(weaponTiers[card.weapon] ?? 0, this.rentalTier(card.weapon));
+      const owned = LOOT_CONFIG.tiers[best]?.name ?? '';
       const ownsBetter = this.ownsBetter(card.weapon);
+      // Món có hạn cùng cấp cửa hàng thì mua là cộng dồn; thấp hơn thì mua là thay hẳn.
+      const stacks = this.rentalTier(card.weapon) === SHOP_CONFIG.tier;
       card.status.setText(
         ownsBetter
           ? `Đã có ${owned}`
-          : left > 0
+          : stacks
             ? `Còn ${left} trận (+${SHOP_CONFIG.battles})`
             : `Dùng ${SHOP_CONFIG.battles} trận`,
       );

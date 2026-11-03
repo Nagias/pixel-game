@@ -132,7 +132,7 @@ export class MapScene extends Scene {
     // Đợt 6: món thuê ở cửa hàng còn hạn thì dùng cấp của cửa hàng (không hạ món vĩnh viễn cao hơn).
     this.config = withWeaponTiers(
       withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
-      effectiveTiers(profile.weaponTiers, profile.rentals, SHOP_CONFIG),
+      effectiveTiers(profile.weaponTiers, profile.rentals, profile.rentalTiers, SHOP_CONFIG),
       LOOT_CONFIG,
     );
     const count = Math.min(this.config.levels.length, LEVEL_COUNT_ON_MAP);

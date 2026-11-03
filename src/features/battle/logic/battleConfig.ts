@@ -183,8 +183,17 @@ export const BATTLE_CONFIG: BattleConfig = {
     // Chủ đề Rừng rậm (chủ dự án duyệt 27/10/2026): 5 loài không phải slime, dùng lại đặc tính có sẵn. Vàng
     // theo độ khó hạ (agent đề xuất, cùng nguyên tắc đợt 3). Đợt 5: 4 loài thường hóa hiếm được (slime và
     // trùm thì không).
+    // F19 (chủ dự án duyệt 03/11/2026, mục 1): quái hiếm rơi đúng một loại vũ khí theo loài (`drop`).
     // Yêu tinh: lính thường của rừng, cứng hơn slime.
-    goblin: { name: 'Yêu tinh', gold: 2, hp: 4, advanceChance: 0.6, attack: 2, canBeRare: true },
+    goblin: {
+      name: 'Yêu tinh',
+      gold: 2,
+      hp: 4,
+      advanceChance: 0.6,
+      attack: 2,
+      canBeRare: true,
+      drop: 'Kiếm',
+    },
     // Sói rừng: lao 2 vòng mỗi lần tiến — phải hạ trước khi nó áp sát.
     wolf: {
       name: 'Sói rừng',
@@ -194,6 +203,7 @@ export const BATTLE_CONFIG: BattleConfig = {
       attack: 3,
       step: 2,
       canBeRare: true,
+      drop: 'Rìu',
     },
     // Yêu tinh cung thủ: tới vòng 4 thì đứng bắn — ưu tiên dùng Cung.
     goblinArcher: {
@@ -204,6 +214,7 @@ export const BATTLE_CONFIG: BattleConfig = {
       attack: 2,
       shootRing: 4,
       canBeRare: true,
+      drop: 'Cung',
     },
     // Dơi đêm: lượt chẵn bay lẩn (vô hình) — canh đúng lượt.
     bat: {
@@ -214,6 +225,7 @@ export const BATTLE_CONFIG: BattleConfig = {
       attack: 2,
       ghost: true,
       canBeRare: true,
+      drop: 'Lưỡi hái',
     },
     // Người Cây: trùm màn 10 và 20 — rất trâu, đánh đau, tiến chậm.
     treant: { name: 'Người Cây', gold: 10, hp: 14, advanceChance: 0.4, attack: 5 },
@@ -497,9 +509,11 @@ export const UPGRADE_CONFIG: UpgradeConfig = {
 };
 
 /**
- * Đợt 5 (chủ dự án duyệt 27/10/2026, lượt duyệt chung mục 1b): hạ quái hiếm thì 50% rơi một vũ khí (loại
- * tạm ngẫu nhiên trong mọi vũ khí); 6 cấp màu chỉ cộng chỉ số. Bảo hiểm: hụt 3 lần liền thì lần thứ 4 chắc
- * rơi; 29 món liền dưới Sử thi thì món thứ 30 chắc từ Sử thi trở lên.
+ * Đợt 5 (chủ dự án duyệt 27/10/2026, lượt duyệt chung mục 1b): hạ quái hiếm thì 50% rơi một vũ khí; 6 cấp màu
+ * chỉ cộng chỉ số. Bảo hiểm: hụt 3 lần liền thì lần thứ 4 chắc rơi; 29 món liền dưới Sử thi thì món thứ 30 chắc
+ * từ Sử thi trở lên. F19 (chủ dự án duyệt 03/11/2026, mục 1, 2, 6): loại vũ khí theo loài quái (`drop` ở
+ * `monsterKinds`); 30% vĩnh viễn, 70% có hạn 10 trận (món bảo hiểm cấp cao luôn vĩnh viễn); món thừa đổi vàng
+ * theo cấp (agent chọn: dưới giá một cấp nâng cấp nhân với cấp — không thành nguồn vàng chính).
  */
 export const LOOT_CONFIG: LootConfig = {
   dropChance: 0.5,
@@ -514,6 +528,9 @@ export const LOOT_CONFIG: LootConfig = {
     { name: 'Huyền thoại', critBonus: 0.15, widthBonus: 2, damageBonus: 1, dropRate: 0.04 },
     { name: 'Thần', critBonus: 0.2, widthBonus: 2, damageBonus: 1, dropRate: 0.01 },
   ],
+  permanentChance: 0.3,
+  rentalBattles: 10,
+  salvageGold: [1, 2, 4, 8, 15, 30],
 };
 
 /**

@@ -45,6 +45,7 @@ describe('đọc / ghi hồ sơ', () => {
       weaponTiers: {},
       lootPity: {},
       rentals: {},
+      rentalTiers: {},
       clearedAll: false,
       loadout: null,
     });
@@ -59,6 +60,7 @@ describe('đọc / ghi hồ sơ', () => {
       weaponTiers: { 0: 3, 2: 1 },
       lootPity: { dryRareKills: 2, dropsSinceHighTier: 11 },
       rentals: { 1: 4 },
+      rentalTiers: { 1: 3 },
       clearedAll: true,
       loadout: { weapons: ['Rìu', 'Giáo', 'Cung'], skill: 'fireball' },
     });
@@ -107,10 +109,30 @@ describe('đọc / ghi hồ sơ', () => {
     const { store, data } = memoryStore({ [PROFILE_KEY]: JSON.stringify(v4) });
     expect(readProfile(store)).toEqual({
       ...v4,
-      version: 5,
+      version: PROFILE_VERSION,
+      rentalTiers: {},
       clearedAll: false,
       loadout: null,
     });
+    expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
+  });
+
+  // F19 PR B: phiên bản 6 thêm cấp của món có hạn (món rơi có hạn có cấp riêng). Bản 5 tự chuyển lên: món thuê
+  // cũ chưa ghi cấp — luật rơi đồ coi là cấp cửa hàng (Hiếm), nên không mất gì.
+  it('hồ sơ phiên bản 5 chuyển lên phiên bản 6: giữ mọi thứ, món thuê cũ chưa ghi cấp', () => {
+    const v5 = {
+      version: 5,
+      gold: 12,
+      unlockedLevel: 6,
+      upgrades: { crit: 2 },
+      weaponTiers: { 3: 4 },
+      lootPity: { dropsSinceHighTier: 5 },
+      rentals: { 0: 3 },
+      clearedAll: true,
+      loadout: { weapons: ['Rìu', 'Giáo', 'Cung'], skill: 'iceRain' },
+    };
+    const { store, data } = memoryStore({ [PROFILE_KEY]: JSON.stringify(v5) });
+    expect(readProfile(store)).toEqual({ ...v5, version: 6, rentalTiers: {} });
     expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
   });
 
@@ -339,6 +361,16 @@ describe('cộng kết quả trận vào hồ sơ', () => {
         7,
       ),
     ).toEqual(profile({ rentals: { 0: 4 } }));
+  });
+
+  it('F19: kết quả món có hạn ghi cả cấp của món có hạn', () => {
+    expect(
+      applyBattleResult(
+        profile({ rentals: { 0: 5 }, rentalTiers: { 0: 2 } }),
+        { level: 0, won: false, gold: 0, rentals: { 0: 4, 1: 10 }, rentalTiers: { 0: 2, 1: 4 } },
+        7,
+      ),
+    ).toEqual(profile({ rentals: { 0: 4, 1: 10 }, rentalTiers: { 0: 2, 1: 4 } }));
   });
 
   it('trận không có kết quả rơi đồ: giữ nguyên đồ và bảo hiểm', () => {

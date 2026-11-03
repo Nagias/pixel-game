@@ -93,6 +93,10 @@ function validateBattleConfig(config: BattleConfig): void {
     if (rule.step !== undefined && (!Number.isInteger(rule.step) || rule.step < 1)) {
       problems.push(`${label}: số vòng lao ${rule.step} phải là số nguyên ≥ 1`);
     }
+    // F19: quái hiếm rơi vũ khí theo loài — loài hóa hiếm được phải có món rơi là vũ khí trong game.
+    if (rule.canBeRare && !weapons.some((weapon) => weapon.name === rule.drop)) {
+      problems.push(`${label}: hóa hiếm được nhưng món rơi "${String(rule.drop)}" không có`);
+    }
   }
   if (config.rare) {
     const { fromLevel, chance, hpMultiplier, goldMultiplier } = config.rare;
@@ -322,7 +326,7 @@ function rewardsAfter(
   state: BattleState,
   hits: readonly Hit[],
   config: BattleConfig,
-): { gold: number; rareKilled?: boolean } {
+): { gold: number; rareKilled?: MonsterKind } {
   const byId = new Map(state.monsters.map((m) => [m.id, m]));
   const killed = hits.flatMap((hit) => {
     const monster = byId.get(hit.monsterId);
@@ -332,7 +336,9 @@ function rewardsAfter(
     const base = config.monsterKinds[m.kind].gold ?? 0;
     return sum + (m.rare ? base * (config.rare?.goldMultiplier ?? 1) : base);
   }, state.gold);
-  return killed.some((m) => m.rare) ? { gold, rareKilled: true } : { gold };
+  // F19: ghi loài quái hiếm vừa hạ — món rơi theo loài.
+  const rare = killed.find((m) => m.rare);
+  return rare ? { gold, rareKilled: rare.kind } : { gold };
 }
 
 /** Dòng ngẫu nhiên riêng để chọn quái hiếm (tách khỏi dòng của trận): có hay không thì ván vẫn như nhau. */
