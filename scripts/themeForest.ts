@@ -191,115 +191,119 @@ const THEME: Shape[] = [
     quest: { kind: 'bat', counts: [2, 3] },
     turns: [7, 15],
   },
-  // 13: Yêu tinh + Sói tới từ hai phía.
+  // F19 PR E (chủ dự án duyệt 03/11/2026, mục 4 và 7): màn 13–16 mỗi màn giới thiệu một quái mới (nhiệm vụ là hạ
+  // đúng loài đó), màn 17–19 trộn quái cũ với quái mới. Màn 1–12 và 20 giữ nguyên.
+  // 13: Nấm nổ — chết thì nổ, quái sát bên mất máu; chém nấm giữa đám đông.
+  {
+    opening: [
+      { kind: 'mushroom', counts: [2, 3] },
+      { kind: 'goblin', counts: [2, 3] },
+    ],
+    spread: [4],
+    waves: [
+      { kind: 'mushroom', counts: [1, 2] },
+      { kind: 'goblin', counts: [1] },
+    ],
+    nextWaveAt: [2],
+    quest: { kind: 'mushroom', counts: [3, 4] },
+    turns: [7, 15],
+  },
+  // 14: Rùa gai — chém bằng vũ khí tầm gần thì bị phản đòn; hạ bằng Giáo, Cung, skill. Búa mở sau màn này.
+  {
+    opening: [
+      { kind: 'turtle', counts: [1, 2] },
+      { kind: 'goblin', counts: [2, 3] },
+    ],
+    spread: [4],
+    waves: [
+      { kind: 'turtle', counts: [1] },
+      { kind: 'goblin', counts: [1, 2] },
+    ],
+    nextWaveAt: [2],
+    quest: { kind: 'turtle', counts: [2, 3] },
+    turns: [7, 15],
+  },
+  // 15: Pháp sư yêu tinh — phủ khiên cho quái cạnh nó; hạ nó trước.
+  {
+    opening: [
+      { kind: 'goblinShaman', counts: [1, 2] },
+      { kind: 'goblin', counts: [3, 4] },
+    ],
+    spread: [3, 4],
+    waves: [
+      { kind: 'goblinShaman', counts: [1] },
+      { kind: 'goblin', counts: [1, 2] },
+    ],
+    nextWaveAt: [2],
+    quest: { kind: 'goblinShaman', counts: [2] },
+    turns: [7, 17],
+  },
+  // 16: Tổ nhện — đứng yên ở rìa sân, cứ 3 lượt đẻ Nhện con; hạ bằng Cung (kéo vào) và skill. Nỏ mở sau màn này.
+  {
+    opening: [
+      { kind: 'spiderNest', counts: [1, 2] },
+      { kind: 'goblin', counts: [2, 3] },
+      { kind: 'wolf', counts: [0, 1] },
+    ],
+    spread: [4, 5],
+    waves: [
+      { kind: 'spiderNest', counts: [1] },
+      { kind: 'goblin', counts: [1] },
+    ],
+    nextWaveAt: [2],
+    quest: { kind: 'spiderNest', counts: [1, 2] },
+    turns: [7, 18],
+  },
+  // 17: bầy Sói hai phía như màn cũ, thay 2 Yêu tinh bằng Nấm nổ và Pháp sư. Bản mô tả rộng hơn từng chọn màn 9
+  // lượt mà Cầu lửa thua Mưa băng 15% (số lượt là ngưỡng gắt) — giữ khung cũ, agent chọn cách xếp (500 ván 83,6% / 81%).
   {
     splitOpposite: true,
     opening: [
-      { kind: 'goblin', counts: [3, 4] },
-      { kind: 'wolf', counts: [1, 2] },
+      { kind: 'wolf', counts: [2] },
+      { kind: 'goblin', counts: [2] },
+      { kind: 'mushroom', counts: [1] },
+      { kind: 'goblinShaman', counts: [1] },
     ],
     spread: [3],
-    waves: [
-      { kind: 'wolf', counts: [1] },
-      { kind: 'goblin', counts: [2] },
-    ],
-    nextWaveAt: [2, 3],
-    quest: { kind: 'goblin', counts: [4, 5, 6] },
-    turns: [7, 15],
+    waves: [{ kind: 'wolf', counts: [3] }],
+    nextWaveAt: [1],
+    quest: { kind: 'wolf', counts: [4] },
+    turns: [10, 15],
   },
-  // 14: Cung thủ được Yêu tinh che chắn.
+  // 18: Cung thủ + Rùa gai + Dơi đêm.
   {
     opening: [
       { kind: 'goblinArcher', counts: [2] },
-      { kind: 'goblin', counts: [3, 4] },
-    ],
-    spread: [4, 5],
-    waves: [
-      { kind: 'goblinArcher', counts: [1] },
-      { kind: 'goblin', counts: [1, 2] },
-    ],
-    nextWaveAt: [1, 2],
-    quest: { kind: 'goblinArcher', counts: [3] },
-    turns: [7, 15],
-  },
-  // 15: Dơi + Sói.
-  {
-    opening: [
-      { kind: 'bat', counts: [2] },
-      { kind: 'wolf', counts: [1, 2] },
-      { kind: 'goblin', counts: [1, 2] },
-    ],
-    spread: [4, 5],
-    waves: [
-      { kind: 'wolf', counts: [1] },
-      { kind: 'bat', counts: [1] },
-    ],
-    nextWaveAt: [1, 2],
-    quest: { kind: 'wolf', counts: [2, 3] },
-    turns: [7, 15],
-  },
-  // 16: trộn Yêu tinh, Cung thủ, Dơi.
-  {
-    opening: [
-      { kind: 'goblin', counts: [3] },
-      { kind: 'goblinArcher', counts: [1] },
+      { kind: 'turtle', counts: [1, 2] },
       { kind: 'bat', counts: [1, 2] },
     ],
     spread: [4, 5],
     waves: [
-      { kind: 'goblin', counts: [1, 2] },
       { kind: 'goblinArcher', counts: [1] },
-      { kind: 'bat', counts: [1] },
-    ],
-    nextWaveAt: [2, 3],
-    quest: { kind: 'goblin', counts: [4, 5] },
-    turns: [7, 15],
-  },
-  // 17: bầy Sói hai phía.
-  {
-    splitOpposite: true,
-    opening: [
-      { kind: 'wolf', counts: [2, 3, 4] },
-      { kind: 'goblin', counts: [2, 3, 4] },
-    ],
-    spread: [3],
-    waves: [{ kind: 'wolf', counts: [2, 3] }],
-    nextWaveAt: [1, 2, 3],
-    quest: { kind: 'wolf', counts: [3, 4, 5] },
-    turns: [5, 14],
-  },
-  // 18: Cung thủ + Dơi.
-  {
-    opening: [
-      { kind: 'goblinArcher', counts: [2] },
-      { kind: 'bat', counts: [2] },
-      { kind: 'goblin', counts: [1, 2] },
-    ],
-    spread: [4, 5],
-    waves: [
-      { kind: 'goblinArcher', counts: [1] },
-      { kind: 'bat', counts: [1] },
+      { kind: 'turtle', counts: [1] },
     ],
     nextWaveAt: [1, 2],
     quest: { kind: 'goblinArcher', counts: [3] },
-    turns: [7, 15],
+    turns: [6, 15],
   },
-  // 19: mọi loài rừng.
+  // 19: mọi loài rừng, Tổ nhện ở đợt sau. Lần dò đầu Mưa băng hơn Cầu lửa 17% — cho thử bớt Sói, Dơi, Nấm.
   {
     opening: [
-      { kind: 'goblin', counts: [2] },
-      { kind: 'wolf', counts: [1, 2] },
-      { kind: 'goblinArcher', counts: [1, 2] },
-      { kind: 'bat', counts: [1] },
+      { kind: 'goblin', counts: [1, 2] },
+      { kind: 'wolf', counts: [1] },
+      { kind: 'goblinArcher', counts: [1] },
+      { kind: 'mushroom', counts: [0, 1] },
+      { kind: 'goblinShaman', counts: [1] },
+      { kind: 'turtle', counts: [1] },
     ],
     spread: [4, 5],
     waves: [
+      { kind: 'spiderNest', counts: [1] },
       { kind: 'wolf', counts: [1] },
-      { kind: 'goblinArcher', counts: [1] },
-      { kind: 'bat', counts: [1, 2] },
+      { kind: 'bat', counts: [0, 1] },
     ],
-    nextWaveAt: [2, 3],
-    quest: { kind: 'wolf', counts: [2, 3] },
+    nextWaveAt: [2],
+    quest: { kind: 'wolf', counts: [2] },
     turns: [6, 15],
   },
   // 20: TRÙM CUỐI Người Cây cùng Sói và Cung thủ.

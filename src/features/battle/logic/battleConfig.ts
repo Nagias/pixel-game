@@ -78,8 +78,8 @@ export const BATTLE_CONFIG: BattleConfig = {
     },
     // F19 (chủ dự án duyệt 03/11/2026, mục 3): ba món mới, mỗi món một cách đánh; nối vào cuối để đồ đã lưu
     // theo chỉ số không lệch. Mở bản Thường khi thắng màn đầu có loài rơi món đó (`unlockAfterLevel`, đếm từ 0).
-    // Búa: hẹp nhưng 2 sát thương, quái trúng còn sống choáng 1 lượt. Mốc tạm sau màn 10 — PR E đặt đúng màn
-    // Rùa gai (loài rơi Búa) ra lần đầu.
+    // Búa: hẹp nhưng 2 sát thương, quái trúng còn sống choáng 1 lượt. Mở sau màn 14 — Rùa gai (loài rơi Búa) ra
+    // lần đầu.
     {
       name: 'Búa',
       slot: 'near',
@@ -91,7 +91,7 @@ export const BATTLE_CONFIG: BattleConfig = {
       damage: 2,
       critChance: 0.1,
       stunTurns: 1,
-      unlockAfterLevel: 9,
+      unlockAfterLevel: 13,
     },
     // Lưỡi hái: quét rộng, kéo quái ở hai mép vào giữa (gom cụm cho nhát combo sau). Mở sau màn 12 — Dơi đêm
     // (loài rơi Lưỡi hái) ra lần đầu.
@@ -107,8 +107,7 @@ export const BATTLE_CONFIG: BattleConfig = {
       critChance: 0.1,
       unlockAfterLevel: 11,
     },
-    // Nỏ: một lát, xuyên cả hàng từ vòng 2 ra vòng 5, không đẩy. Mốc tạm sau màn 14 — PR E đặt đúng màn Tổ
-    // nhện (loài rơi Nỏ) ra lần đầu.
+    // Nỏ: một lát, xuyên cả hàng từ vòng 2 ra vòng 5, không đẩy. Mở sau màn 16 — Tổ nhện (loài rơi Nỏ) ra lần đầu.
     {
       name: 'Nỏ',
       slot: 'far',
@@ -119,7 +118,7 @@ export const BATTLE_CONFIG: BattleConfig = {
       maxRing: 5,
       damage: 1,
       critChance: 0.1,
-      unlockAfterLevel: 13,
+      unlockAfterLevel: 15,
     },
   ],
   // B6: quái mạnh lên cùng lúc nhân vật có máu 10, hồi máu, chí mạng, skill — máu slime 2 → 3, sức đánh
@@ -240,6 +239,46 @@ export const BATTLE_CONFIG: BattleConfig = {
       attack: 5,
       minComboOrder: 2,
       summon: { kind: 'goblin', count: 2, every: 3 },
+    },
+    // F19 PR E (chủ dự án duyệt 03/11/2026, mục 4): bốn quái có hành vi riêng, mỗi loài ít nhất hai cách hạ. Con số
+    // agent chọn rồi dò bằng mô phỏng khi sinh lại màn.
+    // Nấm nổ: chết thì nổ — quái sát bên mất 2 máu, nổ sát nhân vật thì nhân vật mất 2 máu. Không hóa hiếm.
+    mushroom: { name: 'Nấm nổ', gold: 2, hp: 2, advanceChance: 0.6, attack: 2, explode: 2 },
+    // Pháp sư yêu tinh: hết mỗi lượt phủ khiên (đỡ một đòn) cho quái cạnh nó — ưu tiên hạ nó. Rơi Giáo.
+    goblinShaman: {
+      name: 'Pháp sư yêu tinh',
+      gold: 3,
+      hp: 3,
+      advanceChance: 0.5,
+      attack: 1,
+      shieldAllies: true,
+      canBeRare: true,
+      drop: 'Giáo',
+    },
+    // Tổ nhện: đứng yên, cứ 3 lượt đẻ 1 Nhện con — hạ sớm bằng vũ khí xa. Rơi Nỏ.
+    spiderNest: {
+      name: 'Tổ nhện',
+      gold: 4,
+      hp: 5,
+      advanceChance: 0,
+      attack: 1,
+      stationary: true,
+      summon: { kind: 'spiderling', count: 1, every: 3 },
+      canBeRare: true,
+      drop: 'Nỏ',
+    },
+    // Nhện con: yếu, tiến nhanh, không cho vàng (tránh "nuôi tổ lấy vàng").
+    spiderling: { name: 'Nhện con', gold: 0, hp: 1, advanceChance: 0.8, attack: 1 },
+    // Rùa gai: trâu, chậm; vũ khí tầm gần chém trúng thì nhân vật mất 1 máu — hạ bằng Giáo, Cung, skill. Rơi Búa.
+    turtle: {
+      name: 'Rùa gai',
+      gold: 3,
+      hp: 5,
+      advanceChance: 0.4,
+      attack: 2,
+      thorns: 1,
+      canBeRare: true,
+      drop: 'Búa',
     },
   },
   // B6 (chủ dự án duyệt 27/10/2026): máu 10, nhát trúng ≥ 3 con hồi 1 máu, chí mạng ×2, hai skill
@@ -410,87 +449,88 @@ export const BATTLE_CONFIG: BattleConfig = {
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 2, crit: 1, heal: 1 },
     },
-    // Màn 13: Yêu tinh + Sói tới từ hai phía.
+    // Màn 13: F19 — giới thiệu Nấm nổ (chết thì nổ, quái sát bên mất máu).
     {
-      monsters: ['goblin', 'goblin', 'goblin', 'goblin', 'wolf'],
-      spread: 3,
-      waves: [['wolf', 'goblin', 'goblin']],
-      nextWaveAt: 3,
-      quest: { kind: 'goblin', count: 4 },
-      turnLimit: 11,
-      target: { winRate: 0.65, spareTurns: 2.25 },
-      targetPlayer: 'Người mới',
-      assumedUpgrades: { hp: 2, crit: 2, heal: 1 },
-      splitOpposite: true,
-    },
-    // Màn 14: Cung thủ được Yêu tinh che chắn.
-    {
-      monsters: ['goblinArcher', 'goblinArcher', 'goblin', 'goblin', 'goblin', 'goblin'],
+      monsters: ['mushroom', 'mushroom', 'goblin', 'goblin', 'goblin'],
       spread: 4,
-      waves: [['goblinArcher', 'goblin']],
+      waves: [['mushroom', 'goblin']],
       nextWaveAt: 2,
-      quest: { kind: 'goblinArcher', count: 3 },
-      turnLimit: 11,
-      target: { winRate: 0.25, spareTurns: 1.5 },
+      quest: { kind: 'mushroom', count: 3 },
+      turnLimit: 8,
+      target: { winRate: 0.65, spareTurns: 1.5 },
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 2, crit: 2, heal: 1 },
     },
-    // Màn 15: Dơi + Sói.
+    // Màn 14: F19 — giới thiệu Rùa gai (vũ khí tầm gần bị phản đòn). Búa mở sau màn này.
     {
-      monsters: ['bat', 'bat', 'wolf', 'wolf', 'goblin', 'goblin'],
-      spread: 5,
-      waves: [['wolf', 'bat']],
-      nextWaveAt: 1,
-      quest: { kind: 'wolf', count: 3 },
-      turnLimit: 13,
+      monsters: ['turtle', 'turtle', 'goblin', 'goblin'],
+      spread: 4,
+      waves: [['turtle', 'goblin']],
+      nextWaveAt: 2,
+      quest: { kind: 'turtle', count: 2 },
+      turnLimit: 7,
+      target: { winRate: 0.25, spareTurns: 0.75 },
+      targetPlayer: 'Người mới',
+      assumedUpgrades: { hp: 2, crit: 2, heal: 1 },
+    },
+    // Màn 15: F19 — giới thiệu Pháp sư yêu tinh (phủ khiên cho quái cạnh nó).
+    {
+      monsters: ['goblinShaman', 'goblin', 'goblin', 'goblin', 'goblin'],
+      spread: 4,
+      waves: [['goblinShaman', 'goblin', 'goblin']],
+      nextWaveAt: 2,
+      quest: { kind: 'goblinShaman', count: 2 },
+      turnLimit: 10,
       target: { winRate: 0.35, spareTurns: 1 },
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 2, crit: 2, heal: 1 },
     },
-    // Màn 16: trộn Yêu tinh, Cung thủ, Dơi.
+    // Màn 16: F19 — giới thiệu Tổ nhện (đứng yên, đẻ Nhện con). Nỏ mở sau màn này.
     {
-      monsters: ['goblin', 'goblin', 'goblin', 'goblinArcher', 'bat'],
+      monsters: ['spiderNest', 'spiderNest', 'goblin', 'goblin', 'goblin', 'wolf'],
       spread: 5,
-      waves: [['goblin', 'goblin', 'goblinArcher', 'bat']],
+      waves: [['spiderNest', 'goblin']],
       nextWaveAt: 2,
-      quest: { kind: 'goblin', count: 5 },
-      turnLimit: 14,
-      target: { winRate: 0.21, spareTurns: 1.25 },
+      quest: { kind: 'spiderNest', count: 2 },
+      turnLimit: 8,
+      target: { winRate: 0.21, spareTurns: 0.75 },
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 2, crit: 2, heal: 2 },
     },
-    // Màn 17: bầy Sói hai phía.
+    // Màn 17: F19 — bầy Sói hai phía như cũ, thay 2 Yêu tinh bằng Nấm nổ và Pháp sư. Bộ sinh màn chọn cách xếp chỉ
+    // 9 lượt mà Cầu lửa thua Mưa băng 15% (ngưỡng gắt: 10 lượt là thắng ~100%); agent giữ khung cũ, đo 500 ván:
+    // 83,6% / 81,0%.
     {
-      monsters: ['wolf', 'wolf', 'goblin', 'goblin', 'goblin', 'goblin'],
+      monsters: ['wolf', 'wolf', 'goblin', 'goblin', 'mushroom', 'goblinShaman'],
       spread: 3,
       waves: [['wolf', 'wolf', 'wolf']],
       nextWaveAt: 1,
       quest: { kind: 'wolf', count: 4 },
       turnLimit: 13,
-      target: { winRate: 0.79, spareTurns: 1 },
+      target: { winRate: 0.79, spareTurns: 1.25 },
       assumedUpgrades: { hp: 2, crit: 2, heal: 2 },
       splitOpposite: true,
     },
-    // Màn 18: Cung thủ + Dơi.
+    // Màn 18: F19 — Cung thủ + Rùa gai + Dơi đêm.
     {
-      monsters: ['goblinArcher', 'goblinArcher', 'bat', 'bat', 'goblin', 'goblin'],
+      monsters: ['goblinArcher', 'goblinArcher', 'turtle', 'turtle', 'bat'],
       spread: 4,
-      waves: [['goblinArcher', 'bat']],
+      waves: [['goblinArcher', 'turtle']],
       nextWaveAt: 2,
       quest: { kind: 'goblinArcher', count: 3 },
       turnLimit: 9,
-      target: { winRate: 0.76, spareTurns: 0.75 },
+      target: { winRate: 0.76, spareTurns: 1.25 },
       assumedUpgrades: { hp: 2, crit: 2, heal: 2 },
     },
-    // Màn 19: mọi loài rừng.
+    // Màn 19: F19 — mọi loài rừng, Tổ nhện ở đợt sau.
     {
-      monsters: ['goblin', 'goblin', 'wolf', 'wolf', 'goblinArcher', 'goblinArcher', 'bat'],
-      spread: 4,
-      waves: [['wolf', 'goblinArcher', 'bat', 'bat']],
+      monsters: ['goblin', 'wolf', 'goblinArcher', 'goblinShaman', 'turtle'],
+      spread: 5,
+      waves: [['spiderNest', 'wolf', 'bat']],
       nextWaveAt: 2,
       quest: { kind: 'wolf', count: 2 },
-      turnLimit: 8,
-      target: { winRate: 0.74, spareTurns: 1 },
+      turnLimit: 10,
+      target: { winRate: 0.74, spareTurns: 1.25 },
       assumedUpgrades: { hp: 3, crit: 2, heal: 2 },
     },
     // Màn 20: TRÙM CUỐI Người Cây cùng Sói, Cung thủ. F19: luật trùm mới — 9 → 12 lượt, lượt dư mục tiêu ghi lại.

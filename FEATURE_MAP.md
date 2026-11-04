@@ -813,7 +813,7 @@ nhất — **không tự ghi** cấu hình, agent chép vào `battleConfig.ts`. 
 | 19  | 8    | 2 Yêu tinh + 2 Sói + 2 Cung thủ + 1 Dơi (±4) | 1 Sói + 1 Cung thủ + 2 Dơi      | hạ 2 Sói rừng   | 74% / 1               |
 | 20  | 9    | 1 Người Cây + 1 Sói (±3)                     | 3 Yêu tinh                      | hạ Người Cây    | 72% / 1,5             |
 
-Con số màn 1–7 ở các mục F06–F14 phía trên là số cũ lúc làm tính năng đó — số hiện hành là bảng này.
+Con số màn 1–7 ở các mục F06–F14 phía trên là số cũ lúc làm tính năng đó — số hiện hành là bảng này. **Từ F19 (03/11/2026): màn 10, 20 đổi số lượt (PR D), màn 13–19 sinh lại có quái mới (PR E) — số hiện hành ở F19.**
 
 **Màn đầu dễ hơn (chủ dự án duyệt 28/10/2026):** chủ dự án chơi thử thấy màn đầu đã rất khó — mục tiêu cũ đo bằng
 bot "Ngắm chuẩn" (luôn chém chỗ tốt nhất, không trượt nhịp), còn người mới (đo bằng bot nửa chuẩn nửa chém bừa,
@@ -1200,6 +1200,61 @@ yếu hơn (đứng đầu combo) vẫn không mất, skill không mất máu nh
 id không trùng, trùm đóng băng không gọi, nhát thắng không gọi, cấu hình sai, bot không chém mình trùm;
 `balance.test.ts` màn 10, 20 trong dung sai. E2E — bắn Cung vào mình trùm: "chặn", máu giữ nguyên; sau lượt 3 có Yêu
 tinh mới sát bên (ảnh `48-trum-vo-cung.png`, `49-trum-chan.png`, `50-trum-goi-quai.png`).
+
+### PR E — Bốn quái có hành vi riêng + sinh lại màn 13–19
+
+**Người chơi thấy và làm gì:** từ màn 13 gặp lần lượt bốn quái mới, mỗi loài một câu đố (nhiệm vụ màn giới thiệu là hạ
+đúng loài đó):
+
+| Quái             | Máu | Đánh | Vàng | Hành vi                                                                               | Rơi  | Màn giới thiệu |
+| ---------------- | --- | ---- | ---- | ------------------------------------------------------------------------------------- | ---- | -------------- |
+| Nấm nổ           | 2   | 2    | 2    | chết thì nổ — 8 ô quanh nó mất 2 máu (dây chuyền); nổ ở vòng 0 thì nhân vật mất 2 máu | —    | 13             |
+| Rùa gai          | 5   | 2    | 3    | vũ khí tầm gần chém trúng thì nhân vật mất 1 máu ("-1 gai"); tiến chậm (40%)          | Búa  | 14             |
+| Pháp sư yêu tinh | 3   | 1    | 3    | hết mỗi lượt phủ khiên (vòng xanh) cho quái ở 8 ô quanh nó; khiên đỡ trọn một đòn     | Giáo | 15             |
+| Tổ nhện          | 5   | 1    | 4    | không tự đi (vẫn bị đẩy / kéo); cứ 3 lượt đẻ 1 Nhện con ra ô trống sát bên            | Nỏ   | 16             |
+| Nhện con         | 1   | 1    | 0    | yếu, tiến nhanh (80%); không cho vàng (tránh "nuôi tổ lấy vàng")                      | —    | (Tổ nhện đẻ)   |
+
+**Luật** (nguồn sự thật: `logic/battle.ts` `resolveBlasts` / `applyShields` / `summonMonsters` / `moveMonsters` /
+`strikeHits` + `logic/newMonsters.test.ts`; chủ dự án duyệt mục 4, 7):
+
+1. **Nổ** (`explode`): con nổ bị hạ bởi chém, skill hay nổ khác; quái trúng nổ có khiên thì mất khiên, quái vỏ cứng (trùm)
+   không mất máu. Nổ tính nhiệm vụ, vàng, quái hiếm. Nhát / skill vừa xong nhiệm vụ thì thắng, không trừ máu nhân vật.
+2. **Khiên** (`shieldAllies`, `shield`): Pháp sư còn sống, không bị đóng băng, phủ sau khi quái đi (người chơi thấy khiên
+   trước nhát chém tới), không phủ cho chính nó. Con có khiên vẫn giữ chỗ trong combo, vẫn bị đẩy, không bị choáng, đỡ
+   skill trọn vẹn (không mất máu, không bị băng).
+3. **Đứng yên** (`stationary`) + **gọi quái** (`summon`, dùng chung luật của trùm PR D).
+4. **Phản đòn** (`thorns`): chỉ vũ khí tầm gần; kết quả nhát chém ghi `thorns`, `heroBlast` để màn hình hiện "-1 gai",
+   "-2 nổ".
+5. Bot "Ngắm chuẩn" coi mỗi Rùa gai trúng bằng vũ khí tầm gần như bớt 2 con trúng; khiên tự được tính (đòn 0 sát thương
+   không tính là trúng con nhiệm vụ).
+6. **Mở khóa:** Búa sau màn 14 (Rùa gai ra lần đầu), Nỏ sau màn 16 (Tổ nhện) — có test "mốc mở khóa = màn đầu tiên có
+   loài rơi món đó".
+
+**Màn 13–19 sinh lại** (`npm run levelgen -- --levels 13-19 --games 200`, bản mô tả `scripts/themeForest.ts`; giữ
+mục tiêu % thắng đã duyệt, lượt dư mục tiêu = số đo làm tròn 0,25; màn 1–12 và 20 giữ nguyên):
+
+| Màn | Lượt | Mở màn (cụm)                                         | Đợt sau              | Nhiệm vụ      | Mục tiêu (bot)   | Đo Mưa băng / Cầu lửa |
+| --- | ---- | ---------------------------------------------------- | -------------------- | ------------- | ---------------- | --------------------- |
+| 13  | 8    | 2 Nấm nổ + 3 Yêu tinh (±4)                           | Nấm nổ + Yêu tinh    | hạ 3 Nấm nổ   | 65% (Người mới)  | 71% / 64%             |
+| 14  | 7    | 2 Rùa gai + 2 Yêu tinh (±4)                          | Rùa gai + Yêu tinh   | hạ 2 Rùa gai  | 25% (Người mới)  | 25% / 21,5%           |
+| 15  | 10   | Pháp sư + 4 Yêu tinh (±4)                            | Pháp sư + 2 Yêu tinh | hạ 2 Pháp sư  | 35% (Người mới)  | 46% / 23%             |
+| 16  | 8    | 2 Tổ nhện + 3 Yêu tinh + Sói (±5)                    | Tổ nhện + Yêu tinh   | hạ 2 Tổ nhện  | 21% (Người mới)  | 19,5% / 22,5%         |
+| 17  | 13   | 2 Sói + 2 Yêu tinh + Nấm nổ + Pháp sư (±3, hai phía) | 3 Sói                | hạ 4 Sói      | 79% (Ngắm chuẩn) | 83,6% / 81%           |
+| 18  | 9    | 2 Cung thủ + 2 Rùa gai + Dơi (±4)                    | Cung thủ + Rùa gai   | hạ 3 Cung thủ | 76% (Ngắm chuẩn) | 80,5% / 76%           |
+| 19  | 10   | Yêu tinh, Sói, Cung thủ, Pháp sư, Rùa gai (±5)       | Tổ nhện + Sói + Dơi  | hạ 2 Sói      | 74% (Ngắm chuẩn) | 81,5% / 71,5%         |
+
+Số đo của bộ sinh màn (200 ván; màn 17 agent chọn tay và đo 500 ván — bản mô tả rộng hơn từng chọn màn 9 lượt mà Cầu lửa
+thua Mưa băng 15%, số lượt là ngưỡng gắt). Màn đo bằng "Người mới" chỉ đòi dung sai ở trung bình hai skill (màn 15:
+34,5%). `balance.test.ts` đo lại 500 ván, cả 23 bài đạt. Ván E2E chơi liền vẫn dùng seed 6 (dò lại, vẫn thắng đủ).
+Ba E2E quái hiếm chuyển từ màn 16 sang màn 17 (seed 34, 143): ở màn 16 mới, trong 100 seed bot "Nhìn trước" không ván
+nào vừa thắng vừa hạ quái hiếm (thắng khi xong nhiệm vụ hạ Tổ nhện, thường trước khi kịp hạ con hiếm).
+
+**Kiểm chứng tự động:** unit (`newMonsters.test.ts`) — nổ trúng đúng 8 ô, dây chuyền, nổ vòng 0, nổ tính nhiệm vụ / vàng,
+không làm trùm mất máu, skill hạ nấm cũng nổ; khiên phủ đúng ô, đỡ chém (giữ chỗ combo) / skill / nổ, Pháp sư băng không
+phủ; Tổ nhện không tự đi, đẻ Nhện con lượt 3, vẫn bị Cung kéo; Rùa gai phản đòn tầm gần, tầm xa không, nhát thắng không;
+cấu hình sai; bảng rơi theo loài; mốc mở khóa; bot tránh chém Rùa gai bằng tầm gần. `balance.test.ts` màn 13–19 trong
+dung sai. E2E — màn 13–16 mỗi màn có loài mới, chơi 3 nhát: có khiên ở màn 15, có Nhện con ở màn 16 (ảnh
+`51…58-man-*.png`).
 
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 

@@ -55,6 +55,11 @@ const CONFIG: BattleConfig = {
     goblinArcher: { name: 'Cung thủ thử', hp: 3, advanceChance: 1, attack: 2, shootRing: 4 },
     bat: { name: 'Dơi thử', hp: 3, advanceChance: 1, attack: 1, ghost: true },
     treant: { name: 'Cây thử', hp: 14, advanceChance: 1, attack: 5 },
+    mushroom: { name: 'Nấm thử', hp: 2, advanceChance: 1, attack: 1, explode: 2 },
+    goblinShaman: { name: 'Pháp sư thử', hp: 3, advanceChance: 1, attack: 1, shieldAllies: true },
+    spiderNest: { name: 'Tổ thử', hp: 5, advanceChance: 0, attack: 1, stationary: true },
+    spiderling: { name: 'Nhện thử', hp: 1, advanceChance: 1, attack: 1 },
+    turtle: { name: 'Rùa thử', hp: 5, advanceChance: 1, attack: 2, thorns: 1 },
   },
   // B6: hồi máu 0 để các test luật cũ không đổi; test hồi máu / skill nằm ở skill.test.ts.
   hero: { hp: 5, healMinHits: 3, healAmount: 0 },

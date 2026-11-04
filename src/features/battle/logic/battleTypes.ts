@@ -76,7 +76,12 @@ export type MonsterKind =
   | 'wolf'
   | 'goblinArcher'
   | 'bat'
-  | 'treant';
+  | 'treant'
+  | 'mushroom'
+  | 'goblinShaman'
+  | 'spiderNest'
+  | 'spiderling'
+  | 'turtle';
 
 export interface MonsterConfig {
   readonly name: string;
@@ -107,6 +112,17 @@ export interface MonsterConfig {
   readonly minComboOrder?: number;
   /** F19 (trùm): gọi quái — xem SummonConfig. */
   readonly summon?: SummonConfig;
+  /**
+   * F19 (Nấm nổ): chết (chém, skill, nổ) thì nổ — quái ở 8 ô quanh nó mất ngần này máu (dây chuyền được); nổ ở
+   * vòng 0 thì nhân vật mất ngần này máu. Quái có khiên đỡ được; quái vỏ cứng không mất máu.
+   */
+  readonly explode?: number;
+  /** F19 (Pháp sư yêu tinh): hết mỗi lượt phủ khiên (đỡ trọn một đòn) cho quái ở 8 ô quanh nó. */
+  readonly shieldAllies?: boolean;
+  /** F19 (Tổ nhện): không tự đi (vẫn bị đẩy / kéo bởi vũ khí). */
+  readonly stationary?: boolean;
+  /** F19 (Rùa gai): mỗi lần vũ khí tầm gần chém trúng nó, nhân vật mất ngần này máu (sau khi kiểm thắng). */
+  readonly thorns?: number;
 }
 
 /**
@@ -328,6 +344,8 @@ export interface Monster extends Cell {
   readonly frozenTurns?: number;
   /** Đợt 5: quái hiếm (máu đã nhân, hạ được nhiều vàng, có thể rơi đồ). */
   readonly rare?: boolean;
+  /** F19: có khiên của Pháp sư — đòn kế tiếp (chém, skill, nổ) không làm mất máu; đỡ xong thì mất khiên. */
+  readonly shield?: boolean;
 }
 
 export interface Hit {
@@ -343,12 +361,20 @@ export interface AttackRecord {
   readonly crit: boolean;
   /** B6: số máu nhân vật hồi nhờ nhát này. */
   readonly healed: number;
+  /** F19: quái trúng vụ nổ của Nấm nổ (sau nhát chém), theo thứ tự nổ. Không có = không có vụ nổ. */
+  readonly blasts?: readonly Hit[];
+  /** F19: máu nhân vật mất vì Rùa gai phản đòn vũ khí tầm gần (nhát thắng thì không bị trừ). */
+  readonly thorns?: number;
+  /** F19: máu nhân vật mất vì Nấm nổ nổ sát bên (nhát thắng thì không bị trừ). */
+  readonly heroBlast?: number;
 }
 
 /** B6: lần bấm skill gần nhất — để view hiện số sát thương. */
 export interface SkillRecord {
   readonly skill: SkillKind;
   readonly hits: readonly Hit[];
+  /** F19: quái trúng vụ nổ của Nấm nổ bị skill hạ. */
+  readonly blasts?: readonly Hit[];
 }
 
 export type BattlePhase = 'playing' | 'won' | 'lost';
