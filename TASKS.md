@@ -217,4 +217,4 @@ Chủ dự án duyệt cả 8 mục ("Duyệt hết"). Kế hoạch và cách ki
 - [x] PR C — nâng cấp từng vũ khí (3 cấp, 15/30/60 vàng), hồ sơ bản 7
 - [x] PR D — trùm Người Cây: chỉ mất máu từ con thứ 2 trong combo, gọi 2 Yêu tinh mỗi 3 lượt
 - [x] PR E — Nấm nổ, Pháp sư yêu tinh, Tổ nhện, Rùa gai; sinh lại màn 13–19 (màn 8–12, 20 giữ nguyên)
-- [ ] Kiểm chứng cuối: `npm run check` trên main, chơi tay cả luồng từ hồ sơ mới
+- [x] Kiểm chứng cuối: `npm run check` trên main, chơi tay cả luồng từ hồ sơ mới (04/11/2026, xem FEATURE_MAP F19)
