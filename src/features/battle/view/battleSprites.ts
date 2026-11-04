@@ -187,6 +187,75 @@ const treant: PixelSprite = [
   '.PPPPP....PPPPP.',
 ];
 
+// F19 PR E: bốn quái mới + Nhện con.
+
+/** Nấm nổ — mũ đỏ chấm trắng, thân kem, mắt đen. 12×10. */
+const mushroom: PixelSprite = [
+  '...PPPPPP...',
+  '..P88J888P..',
+  '.P8J8888J87P',
+  'P888J888887P',
+  'PPPPPPPPPPPP',
+  '..P222222P..',
+  '..P2P22P2P..',
+  '..P222224P..',
+  '..P222244P..',
+  '...PPPPPP...',
+];
+
+/** Pháp sư yêu tinh — mũ trùm và áo tím, mặt xanh lá, gậy vàng có ngọc xanh. 12×10. */
+const goblinShaman: PixelSprite = [
+  '..PPPPPP.PP.',
+  '.PRRRRRRPPIP',
+  'PRRCCCCRRPAP',
+  'PRC8CC8CRPAP',
+  '.PCCCCCCP.AP',
+  '.PRSSSSSRPAP',
+  'PRRSSSSSRRAP',
+  'PRRRRRRRRRAP',
+  '.PRRRRRRRP..',
+  '.PPP..PPP...',
+];
+
+/** Tổ nhện — ụ tơ trắng xám, lỗ tối ở giữa. 12×10. */
+const spiderNest: PixelSprite = [
+  '....PPPP....',
+  '..PPKJJKPP..',
+  '.PKJKLLKJKP.',
+  'PKJLPPPPLJKP',
+  'PJKLPOOPLKJP',
+  'PKJLPPPPLJKP',
+  'PLKJKLLKJKLP',
+  '.PLLKJJKLLP.',
+  '..PMMMMMMP..',
+  '...PPPPPP...',
+];
+
+/** Nhện con — nhỏ, thân tối, mắt đỏ. 10×7. */
+const spiderling: PixelSprite = [
+  'P.P....P.P',
+  '.P.PPPP.P.',
+  '..PNNNNP..',
+  'PPN8NN8NPP',
+  '..PNNNNP..',
+  '.P.PPPP.P.',
+  'P........P',
+];
+
+/** Rùa gai — mai xanh có gai trắng, đầu xanh mắt đỏ. 12×10. */
+const turtle: PixelSprite = [
+  '..P.P..P.P..',
+  '.PJPJPPJPJP.',
+  '.PDDDDDDDDP.',
+  'PDCDCDDCDCDP',
+  'PDDCDDDDCDDP',
+  'PEEEEEEEEEEP',
+  '.PP4PCCP4PP.',
+  '...PC88CP...',
+  '....PCCP....',
+  '.....PP.....',
+];
+
 /** Tên hình quái trùng tên loại quái (MonsterKind) để view lấy hình theo `monster.kind`. */
 export const BATTLE_SPRITES = {
   hero,
@@ -201,6 +270,11 @@ export const BATTLE_SPRITES = {
   goblinArcher,
   bat,
   treant,
+  mushroom,
+  goblinShaman,
+  spiderNest,
+  spiderling,
+  turtle,
 } as const;
 
 /** Phóng to nguyên lần để giữ nét pixel. */
@@ -217,4 +291,9 @@ export const SPRITE_SCALE = {
   goblinArcher: 2,
   bat: 2,
   treant: 2,
+  mushroom: 2,
+  goblinShaman: 2,
+  spiderNest: 2,
+  spiderling: 2,
+  turtle: 2,
 } as const;

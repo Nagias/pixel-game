@@ -188,6 +188,10 @@ export class BattleScene extends Scene {
   private uiKeys!: Record<UiSprite, string>;
   /** F04: dấu "!" trên đầu quái sắp đánh, theo id quái. */
   private readonly threatMarks = new Map<number, GameObjects.Text>();
+  /** F19: trạng thái ngay trước lần bấm skill (để biết Nấm nổ nào vừa nổ). */
+  private battleBeforeCast!: BattleState;
+  /** F19: vòng khiên quanh quái được Pháp sư phủ khiên, theo id quái. */
+  private readonly shieldMarks = new Map<number, GameObjects.Graphics>();
   private resultLayer!: GameObjects.Container;
   private resultTitle!: GameObjects.Text;
   private resultDetail!: GameObjects.Text;
@@ -248,6 +252,7 @@ export class BattleScene extends Scene {
     this.monsterSprites.clear();
     this.monsterUnits.clear();
     this.threatMarks.clear();
+    this.shieldMarks.clear();
     this.weaponButtons = [];
     this.skillButton = null;
 
@@ -343,9 +348,11 @@ export class BattleScene extends Scene {
   }
 
   private attack(): void {
+    const before = this.battle;
     const next = playTurn(this.battle, this.arcSector, this.config);
     this.battle = next;
     this.showHits(next.lastAttack?.hits ?? []);
+    this.showBlasts(before, next.lastAttack?.hits ?? [], next.lastAttack?.blasts ?? []);
     // F19: Búa — quái trúng mà còn sống hiện "choáng" (luật: nó đứng im, không đánh lượt này).
     if ((this.config.weapons[next.weaponIndex]?.stunTurns ?? 0) > 0) {
       for (const hit of next.lastAttack?.hits ?? []) {
@@ -363,11 +370,13 @@ export class BattleScene extends Scene {
 
   /** B6: bấm skill — chớp sân màu skill, số sát thương bay lên trên mọi quái, không tốn lượt. */
   private cast(): void {
+    this.battleBeforeCast = this.battle;
     const next = castSkill(this.battle, this.config);
     this.battle = next;
     if (next.lastSkill) {
       this.flashArena(SKILL_COLOR[next.lastSkill.skill]);
       this.showHits(next.lastSkill.hits);
+      this.showBlasts(this.battleBeforeCast, next.lastSkill.hits, next.lastSkill.blasts ?? []);
     }
     this.syncMonsters(next);
     this.syncSkillButton(next);
@@ -530,6 +539,7 @@ export class BattleScene extends Scene {
     }
 
     this.syncThreatMarks(state);
+    this.syncShieldMarks(state);
   }
 
   /**
@@ -662,6 +672,54 @@ export class BattleScene extends Scene {
     }
   }
 
+  /**
+   * F19: vụ nổ của Nấm nổ — vòng cam lan ra ở chỗ con nấm vừa bị hạ, số sát thương trên quái trúng nổ (luật ở
+   * logic/battle.ts; view chỉ đọc kết quả nhát chém / skill).
+   */
+  private showBlasts(before: BattleState, hits: readonly Hit[], blasts: readonly Hit[]): void {
+    const kindOf = new Map(before.monsters.map((m) => [m.id, m.kind]));
+    for (const hit of [...hits, ...blasts]) {
+      const kind = kindOf.get(hit.monsterId);
+      const sprite = this.monsterSprites.get(hit.monsterId);
+      if (!hit.killed || !kind || !sprite || !this.config.monsterKinds[kind].explode) continue;
+      const ring = this.add.circle(sprite.x, sprite.y, 10, colorNumber('orange'), 0.7);
+      ring.setDepth(DEPTH.popup);
+      this.tweens.add({
+        targets: ring,
+        scale: 4,
+        alpha: 0,
+        duration: 380,
+        onComplete: () => ring.destroy(),
+      });
+    }
+    this.showHits(blasts);
+  }
+
+  /** F19: vòng khiên xanh quanh đúng những con đang có khiên (state.shield). */
+  private syncShieldMarks(state: BattleState): void {
+    const shielded = new Map(state.monsters.filter((m) => m.shield).map((m) => [m.id, m] as const));
+    for (const [id, mark] of this.shieldMarks) {
+      if (shielded.has(id)) continue;
+      mark.destroy();
+      this.shieldMarks.delete(id);
+    }
+    for (const [id, monster] of shielded) {
+      const point = cellToPoint(monster, this.config.sectorCount, ARENA_LAYOUT);
+      let mark = this.shieldMarks.get(id);
+      if (!mark) {
+        mark = this.add
+          .graphics()
+          .lineStyle(2, colorNumber('cyan'), 0.9)
+          .strokeCircle(0, 0, 15)
+          .setDepth(DEPTH.popup);
+        mark.setPosition(point.x, point.y);
+        this.shieldMarks.set(id, mark);
+      } else {
+        this.tweens.add({ targets: mark, x: point.x, y: point.y, duration: MOVE_TWEEN_MS });
+      }
+    }
+  }
+
   /** Chữ bay lên rồi mờ dần ở (x, y). */
   private popText(x: number, y: number, text: string, color: string, fontSize = '18px'): void {
     const label = this.add
@@ -680,6 +738,15 @@ export class BattleScene extends Scene {
   /** B6: nhát chí mạng hiện "CHÍ MẠNG!" trên đầu nhân vật; nhát hồi máu hiện "+n" bên cạnh. */
   private showStrikeBonus(state: BattleState): void {
     const { centerX, centerY } = ARENA_LAYOUT;
+    // F19: máu mất vì Rùa gai phản đòn / Nấm nổ nổ sát bên (nhát thắng thì luật không trừ).
+    const attack = state.lastAttack;
+    if (attack && state.phase !== 'won') {
+      if (attack.thorns)
+        this.popText(centerX - 34, centerY - 18, `-${attack.thorns} gai`, PALETTE.red, '14px');
+      if (attack.heroBlast) {
+        this.popText(centerX + 34, centerY - 18, `-${attack.heroBlast} nổ`, PALETTE.orange, '14px');
+      }
+    }
     if (state.lastAttack?.crit) this.popText(centerX, centerY - 44, 'CHÍ MẠNG!', PALETTE.red);
     const healed = state.lastAttack?.healed ?? 0;
     // Hồi máu rồi vẫn gục trong cùng lượt: không hiện "+n" chồng lên màn THUA.

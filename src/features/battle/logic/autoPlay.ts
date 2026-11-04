@@ -61,10 +61,18 @@ export function bestMove(state: BattleState, config: BattleConfig): Move {
           .filter((hit) => hit.damage > 0)
           .map((hit) => hit.monsterId),
       );
+      // F19: vũ khí tầm gần chém Rùa gai thì bị phản đòn — mỗi con trừ như mất 2 con trúng.
+      const thorned =
+        config.weapons[weaponIndex]?.slot === 'near'
+          ? ids.filter((id) => {
+              const kind = byId.get(id)?.kind;
+              return kind !== undefined && (config.monsterKinds[kind].thorns ?? 0) > 0;
+            }).length
+          : 0;
       const score = [
         ids.filter((id) => aimingShooters.has(id)).length,
         ids.filter((id) => byId.get(id)?.kind === questKind && hurt.has(id)).length,
-        ids.length,
+        ids.length - 2 * thorned,
         ids.reduce((sum, id) => sum + (config.ringCount - (byId.get(id)?.ring ?? 0)), 0),
       ];
       const better = score.findIndex((value, i) => value !== bestScore[i]);

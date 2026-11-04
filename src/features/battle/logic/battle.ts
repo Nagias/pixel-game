@@ -8,6 +8,7 @@ import { defaultLoadout, validateLoadout } from './loadout';
 import {
   PUSH_DIRECTIONS,
   type BattleConfig,
+  type Cell,
   type BattleState,
   type Hit,
   type LevelConfig,
@@ -92,6 +93,14 @@ function validateBattleConfig(config: BattleConfig): void {
     }
     if (rule.step !== undefined && (!Number.isInteger(rule.step) || rule.step < 1)) {
       problems.push(`${label}: số vòng lao ${rule.step} phải là số nguyên ≥ 1`);
+    }
+    for (const [field, value] of [
+      ['sức nổ', rule.explode],
+      ['phản đòn', rule.thorns],
+    ] as const) {
+      if (value !== undefined && (!Number.isInteger(value) || value < 1)) {
+        problems.push(`${label}: ${field} ${value} phải là số nguyên ≥ 1`);
+      }
     }
     const order = rule.minComboOrder;
     if (order !== undefined && (!Number.isInteger(order) || order < 1)) {
@@ -508,7 +517,8 @@ function strikeHits(
 ): Hit[] {
   return targets.map((monster, order) => {
     const armored = order + 1 < (config.monsterKinds[monster.kind].minComboOrder ?? 1);
-    const damage = armored ? 0 : weapon.damage * (order + 1) * multiplier;
+    // F19: khiên của Pháp sư đỡ trọn đòn (con có khiên vẫn giữ chỗ trong combo).
+    const damage = armored || monster.shield ? 0 : weapon.damage * (order + 1) * multiplier;
     return { monsterId: monster.id, damage, killed: monster.hp - damage <= 0 };
   });
 }
@@ -552,33 +562,61 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
   const hits = strikeHits(targets, weapon, crit ? config.critMultiplier : 1, config);
 
   const damageById = new Map(hits.map((hit) => [hit.monsterId, hit.damage]));
-  // F19: vũ khí choáng (Búa) — con trúng mà còn sống đứng im như bị đóng băng (không đi, không đánh).
+  // F19: vũ khí choáng (Búa) — con trúng mà còn sống đứng im như bị đóng băng (không đi, không đánh). Con có
+  // khiên đỡ trọn đòn: chỉ mất khiên, không choáng.
   const stun = weapon.stunTurns ?? 0;
-  const survivors: Monster[] = [];
+  const struck: Monster[] = [];
+  const killed: Monster[] = [];
   for (const monster of state.monsters) {
     const damage = damageById.get(monster.id);
-    const hp = monster.hp - (damage ?? 0);
-    if (hp <= 0) continue;
     if (damage === undefined) {
-      survivors.push(monster);
-    } else if (stun > 0) {
-      survivors.push({ ...monster, hp, frozenTurns: Math.max(monster.frozenTurns ?? 0, stun) });
-    } else {
-      survivors.push({ ...monster, hp });
+      struck.push(monster);
+      continue;
     }
+    const hp = monster.hp - damage;
+    if (hp <= 0) {
+      killed.push(monster);
+      continue;
+    }
+    const { shield, ...rest } = monster;
+    if (shield) struck.push(rest);
+    else if (stun > 0)
+      struck.push({ ...rest, hp, frozenTurns: Math.max(monster.frozenTurns ?? 0, stun) });
+    else struck.push({ ...rest, hp });
   }
+  // F19: Nấm nổ bị hạ thì nổ (dây chuyền).
+  const blast = resolveBlasts(struck, killed, config);
+  const survivors = blast.monsters;
+  const allHits = [...hits, ...blast.hits];
 
   // B6 — hồi máu: nhát trúng đủ nhiều con thì hồi, không quá máu tối đa, trước khi quái đánh.
   const { hp: maxHp, healMinHits, healAmount } = config.hero;
   const healed = hits.length >= healMinHits ? Math.min(healAmount, maxHp - state.heroHp) : 0;
-  const lastAttack = { aimSector, hits, crit, healed };
+  // F19: Rùa gai phản đòn vũ khí tầm gần (mỗi con trúng); Nấm nổ nổ sát nhân vật — ghi vào kết quả nhát chém.
+  const kindOf = new Map(state.monsters.map((m) => [m.id, m.kind]));
+  const thorns =
+    weapon.slot === 'near'
+      ? hits.reduce((sum, hit) => {
+          const kind = kindOf.get(hit.monsterId);
+          return sum + (kind ? (config.monsterKinds[kind].thorns ?? 0) : 0);
+        }, 0)
+      : 0;
+  const lastAttack = {
+    aimSector,
+    hits,
+    crit,
+    healed,
+    ...(blast.hits.length > 0 ? { blasts: blast.hits } : {}),
+    ...(thorns > 0 ? { thorns } : {}),
+    ...(blast.heroDamage > 0 ? { heroBlast: blast.heroDamage } : {}),
+  };
   const turnsLeft = state.turnsLeft - 1;
   const skill = state.loadout.skill;
   const skillCharge =
     skill === undefined ? 0 : Math.min(state.skillCharge + 1, config.skills[skill].chargeTurns);
   const level = levelAt(state.level, config);
-  const questProgress = questProgressAfter(state, hits, level);
-  const rewards = rewardsAfter(state, hits, config);
+  const questProgress = questProgressAfter(state, allHits, level);
+  const rewards = rewardsAfter(state, allHits, config);
   const common = { turnsLeft, skillCharge, lastAttack, lastSkill: null, questProgress, ...rewards };
 
   // F11: xong nhiệm vụ thì thắng ngay — quái còn lại không đánh, không đi nữa.
@@ -615,7 +653,7 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
   const damageTaken = knocked.monsters
     .filter((m) => willAttack(m, config) && !stunnedIds.has(m.id))
     .reduce((sum, m) => sum + config.monsterKinds[m.kind].attack, 0);
-  const heroHp = Math.max(0, state.heroHp + healed - damageTaken);
+  const heroHp = Math.max(0, state.heroHp + healed - damageTaken - thorns - blast.heroDamage);
 
   const moved = moveMonsters(knocked.monsters, rng, config, knocked.pushedIds);
   // F19: quái gọi quái (trùm) — sau khi quái đi, trước khi hết đóng băng (con đang bị băng không gọi).
@@ -625,8 +663,9 @@ export function playTurn(state: BattleState, aimSector: number, config: BattleCo
     ...state,
     ...common,
     heroHp,
-    // B6: hết lượt này thì bớt một lượt đóng băng.
-    monsters: summoned.monsters.map(thaw),
+    // F19: Pháp sư phủ khiên sau khi quái đi (người chơi thấy khiên trước nhát chém tới). B6: hết lượt này thì bớt
+    // một lượt đóng băng.
+    monsters: applyShields(summoned.monsters, config).map(thaw),
     rng: moved.rng,
     nextId: summoned.nextId,
   };
@@ -740,31 +779,115 @@ export function castSkill(state: BattleState, config: BattleConfig): BattleState
 
   // F12: quái ma đang vô hình thì skill đi xuyên qua — không mất máu, không bị đóng băng. F19: quái vỏ cứng
   // (trùm) không mất máu vì skill không phải combo, nhưng vẫn bị đóng băng.
+  // F19: khiên của Pháp sư đỡ trọn skill (không mất máu, không bị băng; mất khiên).
   const damageOf = (m: Monster) =>
-    (config.monsterKinds[m.kind].minComboOrder ?? 1) > 1 ? 0 : skill.damage;
+    (config.monsterKinds[m.kind].minComboOrder ?? 1) > 1 || m.shield ? 0 : skill.damage;
   const hits: Hit[] = [...state.monsters]
     .filter((m) => canBeHit(m, state, config))
     .sort((a, b) => a.id - b.id)
     .map((m) => ({ monsterId: m.id, damage: damageOf(m), killed: m.hp - damageOf(m) <= 0 }));
-  const struck = new Set(hits.map((hit) => hit.monsterId));
-  const monsters: Monster[] = state.monsters
-    .filter((m) => !struck.has(m.id) || m.hp - damageOf(m) > 0)
-    .map((m) => {
-      if (!struck.has(m.id)) return m;
-      const hp = m.hp - damageOf(m);
-      if (skill.freezeTurns === 0) return { ...m, hp };
-      return { ...m, hp, frozenTurns: Math.max(m.frozenTurns ?? 0, skill.freezeTurns) };
-    });
-  const lastSkill = { skill: kind, hits };
+  const struckIds = new Set(hits.map((hit) => hit.monsterId));
+  const alive: Monster[] = [];
+  const killed: Monster[] = [];
+  for (const m of state.monsters) {
+    if (!struckIds.has(m.id)) {
+      alive.push(m);
+      continue;
+    }
+    const hp = m.hp - damageOf(m);
+    if (hp <= 0) {
+      killed.push(m);
+      continue;
+    }
+    const { shield, ...rest } = m;
+    if (shield || skill.freezeTurns === 0) alive.push({ ...rest, hp });
+    else alive.push({ ...rest, hp, frozenTurns: Math.max(m.frozenTurns ?? 0, skill.freezeTurns) });
+  }
+  // F19: Nấm nổ bị skill hạ cũng nổ.
+  const blast = resolveBlasts(alive, killed, config);
+  const monsters = blast.monsters;
+  const allHits = [...hits, ...blast.hits];
+  const lastSkill = {
+    skill: kind,
+    hits,
+    ...(blast.hits.length > 0 ? { blasts: blast.hits } : {}),
+  };
   const level = levelAt(state.level, config);
-  const questProgress = questProgressAfter(state, hits, level);
-  const rewards = rewardsAfter(state, hits, config);
-  const after = { ...state, monsters, skillCharge: 0, lastSkill, questProgress, ...rewards };
+  const questProgress = questProgressAfter(state, allHits, level);
+  const rewards = rewardsAfter(state, allHits, config);
+  const heroHp = Math.max(0, state.heroHp - blast.heroDamage);
+  const after = {
+    ...state,
+    monsters,
+    heroHp,
+    skillCharge: 0,
+    lastSkill,
+    questProgress,
+    ...rewards,
+  };
 
   if (isLevelCleared(level, questProgress, monsters, state.nextWave)) {
-    return { ...after, phase: 'won', lossReason: null };
+    return { ...after, heroHp: state.heroHp, phase: 'won', lossReason: null };
   }
+  if (heroHp <= 0) return { ...after, phase: 'lost', lossReason: 'heroDefeated' };
   return spawnWave(after, config);
+}
+
+/** F19: hai ô sát nhau (8 ô quanh một ô, quấn qua lát 0) — vùng nổ của Nấm nổ, vùng phủ khiên của Pháp sư. */
+function isAdjacent(a: Cell, b: Cell, sectorCount: number): boolean {
+  const dSector = Math.abs(wrapSector(a.sector - b.sector + 1, sectorCount) - 1);
+  return Math.abs(a.ring - b.ring) <= 1 && dSector <= 1 && (dSector !== 0 || a.ring !== b.ring);
+}
+
+/**
+ * F19: Nấm nổ trong `killed` (theo thứ tự) nổ — quái còn sống ở 8 ô quanh nó mất `explode` máu (khiên đỡ, vỏ cứng
+ * không mất); con chết vì nổ mà cũng là Nấm nổ thì nổ tiếp. Nổ ở vòng 0 thì nhân vật mất máu. Không tung số ngẫu
+ * nhiên.
+ */
+function resolveBlasts(
+  alive: readonly Monster[],
+  killed: readonly Monster[],
+  config: BattleConfig,
+): { monsters: Monster[]; hits: Hit[]; heroDamage: number } {
+  let monsters = [...alive];
+  const hits: Hit[] = [];
+  let heroDamage = 0;
+  const queue = killed.filter((m) => (config.monsterKinds[m.kind].explode ?? 0) > 0);
+  for (let i = 0; i < queue.length; i++) {
+    const bomb = queue[i] as Monster;
+    const power = config.monsterKinds[bomb.kind].explode ?? 0;
+    if (bomb.ring === 0) heroDamage += power;
+    const next: Monster[] = [];
+    for (const m of monsters) {
+      if (!isAdjacent(bomb, m, config.sectorCount)) {
+        next.push(m);
+        continue;
+      }
+      const armored = (config.monsterKinds[m.kind].minComboOrder ?? 1) > 1;
+      const damage = armored || m.shield ? 0 : power;
+      const hp = m.hp - damage;
+      hits.push({ monsterId: m.id, damage, killed: hp <= 0 });
+      if (hp <= 0) {
+        if ((config.monsterKinds[m.kind].explode ?? 0) > 0) queue.push(m);
+        continue;
+      }
+      const { shield, ...rest } = m;
+      next.push(shield ? rest : { ...rest, hp });
+    }
+    monsters = next;
+  }
+  return { monsters, hits, heroDamage };
+}
+
+/** F19: Pháp sư (còn sống, không bị đóng băng) phủ khiên cho quái ở 8 ô quanh nó (không cho chính nó). */
+function applyShields(monsters: readonly Monster[], config: BattleConfig): Monster[] {
+  const casters = monsters.filter((m) => config.monsterKinds[m.kind].shieldAllies && !isFrozen(m));
+  if (casters.length === 0) return [...monsters];
+  return monsters.map((m) =>
+    !m.shield && casters.some((c) => c.id !== m.id && isAdjacent(c, m, config.sectorCount))
+      ? { ...m, shield: true }
+      : m,
+  );
 }
 
 /**
@@ -838,8 +961,14 @@ function moveMonsters(
   const positions = new Map(monsters.map((m) => [m.id, m]));
 
   for (const monster of [...monsters].sort((a, b) => a.id - b.id)) {
-    // B6: quái bị đóng băng đứng im, không tung số ngẫu nhiên.
-    if (isThreatening(monster, config) || isFrozen(monster) || pushedIds.has(monster.id)) continue;
+    // B6: quái bị đóng băng đứng im, không tung số ngẫu nhiên. F19: quái đứng yên (Tổ nhện) không tự đi.
+    if (
+      isThreatening(monster, config) ||
+      isFrozen(monster) ||
+      pushedIds.has(monster.id) ||
+      config.monsterKinds[monster.kind].stationary
+    )
+      continue;
     let roll: number;
     [roll, rng] = nextFloat(rng);
 

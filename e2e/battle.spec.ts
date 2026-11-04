@@ -91,14 +91,18 @@ async function playBestUntilOver(
     // Đợt 5: sát thương vũ khí theo cấu hình thật của trận (vũ khí cấp cao có thể +1 sát thương).
     const multiplier = lastAttack?.crit ? before.config.critMultiplier : 1;
     const weaponDamage = (before.config.weapons[move.weaponIndex]?.damage ?? 0) * multiplier;
-    // F19: quái vỏ cứng (trùm) đứng trước thứ tự combo tối thiểu thì không mất máu.
-    const kindOf = (id: number) => before.battle.monsters.find((m) => m.id === id)?.kind;
-    const minOrder = (id: number) => {
-      const kind = kindOf(id);
-      return kind ? (before.config.monsterKinds[kind].minComboOrder ?? 1) : 1;
+    // F19: quái vỏ cứng (trùm) đứng trước thứ tự combo tối thiểu, hay quái đang có khiên của Pháp sư, không mất máu.
+    const monsterOf = (id: number) => before.battle.monsters.find((m) => m.id === id);
+    const blocked = (id: number, order: number) => {
+      const monster = monsterOf(id);
+      if (!monster) return false;
+      return (
+        monster.shield === true ||
+        order < (before.config.monsterKinds[monster.kind].minComboOrder ?? 1)
+      );
     };
     expect(hits.map((hit) => hit.damage)).toEqual(
-      hits.map((hit, i) => (i + 1 < minOrder(hit.monsterId) ? 0 : weaponDamage * (i + 1))),
+      hits.map((hit, i) => (blocked(hit.monsterId, i + 1) ? 0 : weaponDamage * (i + 1))),
     );
     mostHitsInOneStrike = Math.max(mostHitsInOneStrike, hits.length);
   }
@@ -876,11 +880,12 @@ test('B6: màn chuẩn bị nhớ skill đã chọn qua các màn chưa có skil
 });
 
 /**
- * Đợt 5: seed 34 ở màn 16 — có quái hiếm và bot "Nhìn trước" (hồ sơ nâng cấp như ván chơi liền) hạ được nó
- * rồi thắng (script dò tạm 27/10/2026). Màn 3–8 không có quái hiếm: ngoài loại nhiệm vụ chỉ có slime.
+ * Đợt 5: seed 34 ở màn 17 — có quái hiếm (Pháp sư yêu tinh) và bot "Nhìn trước" (hồ sơ nâng cấp như ván chơi
+ * liền) hạ được nó rồi thắng (F19 PR E dò lại sau khi sinh lại màn 13–19, `.cache/f19-rare-seed.ts`; màn 16 mới
+ * không seed nào trong 1–100 vừa thắng vừa hạ quái hiếm). Màn 3–8 không có quái hiếm: ngoài loại nhiệm vụ chỉ có slime.
  */
 const RARE_SEED = 34;
-const RARE_LEVEL = 16;
+const RARE_LEVEL = 17;
 
 test('Đợt 5: quái hiếm sáng lên, máu ×2; hạ nó thì (bảo hiểm) chắc rơi vũ khí từ Sử thi — lưu vĩnh viễn, màn chuẩn bị hiện cấp màu', async ({
   page,
@@ -988,7 +993,7 @@ test('Đợt 6: cửa hàng — mua Giáo Hiếm 25 vàng (mua thêm thì cộng
   expect((await game.storedProfile())?.rentals).toEqual({ [spear]: 9 });
 });
 
-test('F19: vũ khí mới — đã qua màn 12 thì màn Vũ khí có Búa, Lưỡi hái (chưa có Nỏ); mang Lưỡi hái chém thì quái ở mép bị kéo vào lát giữa', async ({
+test('F19: vũ khí mới — đã qua màn 14 thì màn Vũ khí có Búa, Lưỡi hái (chưa có Nỏ); mang Lưỡi hái chém thì quái ở mép bị kéo vào lát giữa', async ({
   page,
 }) => {
   test.slow();
@@ -996,8 +1001,8 @@ test('F19: vũ khí mới — đã qua màn 12 thì màn Vũ khí có Búa, Lư�
   const scythe = BATTLE_CONFIG.weapons.findIndex((w) => w.push === 'gather');
   const hammer = BATTLE_CONFIG.weapons.findIndex((w) => (w.stunTurns ?? 0) > 0);
   const crossbow = BATTLE_CONFIG.weapons.findIndex((w) => w.name === 'Nỏ');
-  // Đã thắng 12 màn: Búa (mốc sau màn 10) và Lưỡi hái (sau màn 12) mở, Nỏ (sau màn 14) chưa.
-  await game.openPrebattle(SEED, 13);
+  // Đã thắng 14 màn: Lưỡi hái (mốc sau màn 12) và Búa (sau màn 14) mở, Nỏ (sau màn 16) chưa.
+  await game.openPrebattle(SEED, 15);
   const weapons = await game.openWeapons();
   const owned = weapons.cards.flatMap((c) => (c.kind === 'weapon' ? [c.weapon] : []));
   expect(owned).toEqual([0, 1, 2, 3, hammer, scythe]);
@@ -1042,10 +1047,10 @@ test('F19: vũ khí mới — đã qua màn 12 thì màn Vũ khí có Búa, Lư�
 });
 
 /**
- * F19 PR B: seed 36 ở màn 16 — quái hiếm là Cung thủ, bot "Nhìn trước" hạ được rồi thắng; bảo hiểm chắc rơi
- * (không ép cấp cao) ra Cung Tốt có hạn 10 trận (script dò tạm 03/11/2026, `.cache/f19-rare-seed.ts`).
+ * F19: seed 143 ở màn 17 — quái hiếm là Yêu tinh, bot "Nhìn trước" hạ được rồi thắng; bảo hiểm chắc rơi
+ * (không ép cấp cao) ra Kiếm Tốt có hạn 10 trận (script dò tạm 03/11/2026, `.cache/f19-rare-seed.ts`).
  */
-const TIMED_DROP_SEED = 36;
+const TIMED_DROP_SEED = 143;
 
 test('F19: quái hiếm rơi đúng vũ khí của loài; món có hạn ghi số trận ở màn kết quả và màn Vũ khí, chưa bị trừ trận vừa đánh', async ({
   page,
@@ -1095,7 +1100,7 @@ test('F19: món rơi không mạnh hơn đồ đang có thì đổi vàng — m�
 }) => {
   test.slow();
   const game = new BattleDriver(page);
-  // Seed 34 với bảo hiểm chắc rơi (không ép cấp cao): Lưỡi hái Thường — món Thường của vũ khí đã mở khóa là thừa.
+  // Seed 34 với bảo hiểm chắc rơi (không ép cấp cao): Giáo Thường — món Thường của vũ khí đã có là thừa, đổi vàng.
   const pity = { dryRareKills: 3, dropsSinceHighTier: 0 };
   await game.seedProfile({
     unlockedLevel: RARE_LEVEL - 1,
@@ -1192,4 +1197,56 @@ test('F19: trùm Người Cây — bắn trúng mình nó thì bị vỏ cứng 
   }
   await game.advance(300);
   await page.screenshot({ path: test.info().outputPath('50-trum-goi-quai.png') });
+});
+
+/**
+ * F19 PR E: mỗi màn giới thiệu quái mới (13 Nấm nổ, 14 Rùa gai, 15 Pháp sư yêu tinh, 16 Tổ nhện) — mở màn, chơi
+ * vài nhát bằng bot "Nhìn trước", chụp ảnh; quái mới phải có mặt và luật của nó phải hiện ra trên sân.
+ */
+test('F19: quái mới — màn 13–16 mỗi màn có loài mới; Pháp sư phủ khiên, Tổ nhện đẻ Nhện con', async ({
+  page,
+}) => {
+  test.slow();
+  const intro: [level: number, kind: string][] = [
+    [13, 'mushroom'],
+    [14, 'turtle'],
+    [15, 'goblinShaman'],
+    [16, 'spiderNest'],
+  ];
+  const game = new BattleDriver(page);
+  await game.seedProfile({ unlockedLevel: 16, upgrades: FULL_RUN_UPGRADES });
+  let shot = 51;
+  for (const [level, kind] of intro) {
+    await game.open(`/?seed=${SEED}&level=${level}`);
+    await game.startBattle();
+    const start = await game.snapshot();
+    expect(start.battle.level).toBe(level - 1);
+    const all = [
+      levelAt(level - 1, BATTLE_CONFIG).monsters,
+      ...(levelAt(level - 1, BATTLE_CONFIG).waves ?? []),
+    ];
+    expect(all.flat()).toContain(kind);
+    await game.advance(LEVEL_DRAWN_MS);
+    await page.screenshot({ path: test.info().outputPath(`${shot++}-man-${level}-${kind}.png`) });
+    // Ba nhát: hết lượt thứ 3 Tổ nhện đẻ Nhện con; Pháp sư phủ khiên ngay từ lượt đầu.
+    let rng = seedRng(SEED + 1_000_000);
+    for (let i = 0; i < 3 && (await game.snapshot()).battle.phase === 'playing'; i++) {
+      const [{ move }, next] = lookaheadTurn(await game.snapshot(), rng);
+      rng = next;
+      await game.play(move);
+    }
+    const after = (await game.snapshot()).battle;
+    if (kind === 'goblinShaman' && after.monsters.some((m) => m.kind === 'goblinShaman')) {
+      expect(after.monsters.some((m) => m.shield)).toBe(true);
+    }
+    if (kind === 'spiderNest') {
+      // Tổ còn sống và không bị đóng băng thì hết lượt 3 đã đẻ Nhện con (Cung có thể kéo tổ vào — không kiểm vị trí).
+      const nests = after.monsters.filter((m) => m.kind === 'spiderNest');
+      if (nests.length > 0) expect(after.monsters.some((m) => m.kind === 'spiderling')).toBe(true);
+    }
+    await game.advance(300);
+    await page.screenshot({
+      path: test.info().outputPath(`${shot++}-man-${level}-sau-3-nhat.png`),
+    });
+  }
 });

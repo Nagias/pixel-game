@@ -55,6 +55,11 @@ const CONFIG: BattleConfig = {
     goblinArcher: { name: 'Cung thủ thử', hp: 3, advanceChance: 1, attack: 2, shootRing: 4 },
     bat: { name: 'Dơi thử', hp: 3, advanceChance: 1, attack: 1, ghost: true },
     treant: { name: 'Cây thử', hp: 14, advanceChance: 1, attack: 5 },
+    mushroom: { name: 'Nấm thử', hp: 2, advanceChance: 1, attack: 1, explode: 2 },
+    goblinShaman: { name: 'Pháp sư thử', hp: 3, advanceChance: 1, attack: 1, shieldAllies: true },
+    spiderNest: { name: 'Tổ thử', hp: 5, advanceChance: 0, attack: 1, stationary: true },
+    spiderling: { name: 'Nhện thử', hp: 1, advanceChance: 1, attack: 1 },
+    turtle: { name: 'Rùa thử', hp: 5, advanceChance: 1, attack: 2, thorns: 1 },
   },
   hero: { hp: 5, healMinHits: 9, healAmount: 0 },
   critMultiplier: 2,
@@ -147,7 +152,8 @@ describe('quái hiếm xuất hiện', () => {
     expect(() => createBattle(1, withRare(patch), 1)).toThrow(RangeError);
   });
 
-  it('bảng thật: từ màn 3, 15%, máu ×2, vàng ×3; slime không bao giờ hiếm, 4 loài rừng thường thì được', () => {
+  // F19 PR E: thêm Rùa gai, Pháp sư yêu tinh, Tổ nhện (chủ dự án duyệt 03/11/2026); Nấm nổ, Nhện con thì không.
+  it('bảng thật: từ màn 3, 15%, máu ×2, vàng ×3; slime, trùm, Nấm nổ, Nhện con không bao giờ hiếm; 7 loài rừng thì được', () => {
     expect(BATTLE_CONFIG.rare).toEqual({
       fromLevel: 2,
       chance: 0.15,
@@ -157,7 +163,15 @@ describe('quái hiếm xuất hiện', () => {
     const canBeRare = (Object.keys(BATTLE_CONFIG.monsterKinds) as MonsterKind[]).filter(
       (kind) => BATTLE_CONFIG.monsterKinds[kind].canBeRare,
     );
-    expect(canBeRare.sort()).toEqual(['bat', 'goblin', 'goblinArcher', 'wolf']);
+    expect(canBeRare.sort()).toEqual([
+      'bat',
+      'goblin',
+      'goblinArcher',
+      'goblinShaman',
+      'spiderNest',
+      'turtle',
+      'wolf',
+    ]);
   });
 });
 
@@ -268,7 +282,15 @@ describe('món rơi theo loài', () => {
         .filter(([, rule]) => rule.canBeRare)
         .map(([kind, rule]) => [kind, rule.drop]),
     );
-    expect(drops).toEqual({ goblin: 'Kiếm', wolf: 'Rìu', goblinArcher: 'Cung', bat: 'Lưỡi hái' });
+    expect(drops).toEqual({
+      goblin: 'Kiếm',
+      wolf: 'Rìu',
+      goblinArcher: 'Cung',
+      bat: 'Lưỡi hái',
+      turtle: 'Búa',
+      goblinShaman: 'Giáo',
+      spiderNest: 'Nỏ',
+    });
     for (const drop of Object.values(drops)) expect(names).toContain(drop);
   });
 });
