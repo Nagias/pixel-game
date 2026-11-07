@@ -133,6 +133,8 @@ export interface SummonConfig {
   readonly kind: MonsterKind;
   readonly count: number;
   readonly every: number;
+  /** F20: gọi cả khi 8 ô quanh nó không còn quái nào (giữ "mồi" cho trùm vỏ cứng — chủ dự án duyệt 07/11/2026). */
+  readonly whenAlone?: boolean;
 }
 
 /**

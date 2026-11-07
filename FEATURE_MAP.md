@@ -763,13 +763,13 @@ không chập chờn). Chưa nâng cấp riêng từng vũ khí (có thể ở �
 rừng (không còn chỉ là slime), màn 10 và 20 là trùm **Người Cây**. Màn 1–7 giữ quái cũ nhưng số đã sinh
 lại theo đường độ khó mới.
 
-| Quái      | Máu               | Đánh | Vàng | Đặc tính (dùng lại luật sẵn có)                                  | Hình                      |
-| --------- | ----------------- | ---- | ---- | ---------------------------------------------------------------- | ------------------------- |
-| Yêu tinh  | 4                 | 2    | 2    | —                                                                | người lùn da xanh lá      |
-| Sói rừng  | 4                 | 3    | 3    | lao 2 vòng (`step: 2`, như Slime Lao)                            | sói xám mắt đỏ            |
-| Cung thủ  | 3                 | 2    | 3    | bắn từ vòng 4 (`shootRing: 4`, như Pháo)                         | yêu tinh đội mũ, cầm cung |
-| Dơi đêm   | 3                 | 2    | 3    | vô hình lượt chẵn (`ghost`, như Slime Ma)                        | dơi tím sải cánh          |
-| Người Cây | 9 (F19, trước 14) | 5    | 10   | trùm, tiến chậm (40%); F19: vỏ cứng 2, gọi 2 Yêu tinh mỗi 3 lượt | gốc cây có tán lá, 16×16  |
+| Quái      | Máu                       | Đánh | Vàng | Đặc tính (dùng lại luật sẵn có)                                                                                             | Hình                      |
+| --------- | ------------------------- | ---- | ---- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| Yêu tinh  | 4                         | 2    | 2    | —                                                                                                                           | người lùn da xanh lá      |
+| Sói rừng  | 4                         | 3    | 3    | lao 2 vòng (`step: 2`, như Slime Lao)                                                                                       | sói xám mắt đỏ            |
+| Cung thủ  | 3                         | 2    | 3    | bắn từ vòng 4 (`shootRing: 4`, như Pháo)                                                                                    | yêu tinh đội mũ, cầm cung |
+| Dơi đêm   | 3                         | 2    | 3    | vô hình lượt chẵn (`ghost`, như Slime Ma)                                                                                   | dơi tím sải cánh          |
+| Người Cây | 10 (F20; F19 9, trước 14) | 5    | 10   | trùm, tiến chậm (40%); F19: vỏ cứng 2, gọi 2 Yêu tinh mỗi 3 lượt; F20: gọi cả khi quanh nó trống, luôn đứng sau trong combo | gốc cây có tán lá, 16×16  |
 
 **Luật** (chủ dự án duyệt 27/10/2026 — lượt duyệt chung "A–E", `docs/plans/2026-10-27-ke-hoach-sau-b6.md`
 mục 1b): không thêm cơ chế mới — 5 loại quái chỉ là con số trong `monsterKinds`. Slime không bao giờ là quái
@@ -1321,6 +1321,29 @@ vĩnh viễn, nhận món (lên cấp / đổi vàng / vũ khí chưa mở khóa
 chưa có vũ khí, bảng sai), hồ sơ bản 4 / 5 / 6 / 7 → 8, thanh dưới 3 nút, tên cấp luôn ghi. E2E — lên Kiếm Tốt → Hiếm
 ở màn Nâng cấp rồi vào trận thấy Kiếm dài + rộng hơn (ảnh `46`, `47`, `47b`); quái hiếm rơi món làm vũ khí lên cấp
 (ảnh `43`, `44`); món thừa đổi vàng; bỏ test Cửa hàng.
+
+### PR B — Trùm Người Cây: gọi mồi khi quanh nó trống, luôn đứng sau trong combo
+
+**Vì sao:** đo bảng cấp PR A thấy vũ khí cộng sát thương làm màn 20 khó hơn (Hiếm 89% → Huyền thoại 55%).
+
+**Luật** (nguồn sự thật: `logic/battle.ts` `summonMonsters` / `strikeTargets` + `logic/boss.test.ts`):
+
+1. **Gọi mồi khi quanh trống** (chủ dự án duyệt 07/11/2026, `summon.whenAlone`): ngoài cứ 3 lượt, trùm gọi 2 Yêu tinh
+   ngay khi 8 ô quanh nó không còn quái nào (đang bị đóng băng thì không gọi). Tổ nhện giữ luật cũ.
+2. **Trùm luôn đứng sau trong combo** (agent chọn — phương án gần nhất vì mục 1 chưa đủ): làm xong mục 1, màn 20 vẫn tụt
+   (Hiếm 95% → Huyền thoại 75%, dưới cả Thường 79%). Nguyên nhân: combo xếp con ít máu trước — vũ khí mạnh làm máu trùm
+   tụt dưới máu Yêu tinh, trùm thành con đứng đầu nên không mất máu; còn 1 máu thì gần như không bao giờ đứng thứ 2,
+   người chơi hết lượt. Giờ quái vỏ cứng luôn xếp sau quái thường trong cùng nhát: "chém trúng trùm cùng quái khác thì
+   trùm mất máu". Chủ dự án muốn giữ luật cũ thì chỉ cần bỏ `armoredRank`.
+3. **Số** (mô phỏng 500 ván, bot và bộ đồ theo mục tiêu độ khó): trùm dễ hạ hơn nên máu 9 → 10; màn 10: 14 → 10 lượt
+   (Thường 43,8%, mục tiêu 45%); màn 20: 12 → 8 lượt (70,1%, mục tiêu 72%). Lượt dư mục tiêu ghi theo số đo (2 và
+   2,25). Theo cấp vũ khí (cả 3 món cùng cấp) — màn 10: 43,8 / 80,6 / 96,7 / 98,5 / 99,7 / 99,8%; màn 20: 70,1 / 99,9 /
+   100 / 100 / 100 / 100% — cấp cao hơn không còn làm màn trùm khó hơn.
+
+**Kiểm chứng tự động:** unit — gọi ngay khi quanh trống (cả trước lượt thứ 3), còn quái sát bên thì chờ, quái ở xa
+không tính, bị đóng băng không gọi, cấu hình sai, trùm yếu máu vẫn đứng sau và mất máu, trùm 1 máu bị hạ khi chém cùng
+quái khỏe hơn. `balance.test.ts` 23/23. E2E chơi liền đổi seed 6 → 4 (seed 6 thua màn 10 với 10 lượt; seed 4 nhỏ nhất
+thắng đủ cả hai ván).
 
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 

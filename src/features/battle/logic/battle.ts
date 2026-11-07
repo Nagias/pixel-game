@@ -113,6 +113,10 @@ function validateBattleConfig(config: BattleConfig): void {
       }
       if (!Number.isInteger(count) || count < 1) problems.push(`${label}: số quái gọi phải ≥ 1`);
       if (!Number.isInteger(every) || every < 1) problems.push(`${label}: gọi mỗi số lượt ≥ 1`);
+      const { whenAlone } = rule.summon;
+      if (whenAlone !== undefined && typeof whenAlone !== 'boolean') {
+        problems.push(`${label}: "gọi khi quanh trống" phải là true / false`);
+      }
     }
     // F19: quái hiếm rơi vũ khí theo loài — loài hóa hiếm được phải có món rơi là vũ khí trong game.
     if (rule.canBeRare && !weapons.some((weapon) => weapon.name === rule.drop)) {
@@ -505,7 +509,21 @@ function strikeTargets(
         canBeHit(monster, state, config) &&
         isInZone(monster, aimSector, weapon, config.sectorCount),
     )
-    .sort((a, b) => a.hp - b.hp || a.ring - b.ring || a.id - b.id);
+    .sort(
+      (a, b) =>
+        armoredRank(a, config) - armoredRank(b, config) ||
+        a.hp - b.hp ||
+        a.ring - b.ring ||
+        a.id - b.id,
+    );
+}
+
+/**
+ * F20 PR B (chủ dự án duyệt 07/11/2026, mục 2 — agent chọn cách sửa): quái vỏ cứng (`minComboOrder` > 1) luôn xếp sau
+ * quái thường trong combo — "chém trúng trùm cùng quái khác thì trùm mất máu", không phụ thuộc máu ai thấp hơn.
+ */
+function armoredRank(monster: Monster, config: BattleConfig): number {
+  return (config.monsterKinds[monster.kind].minComboOrder ?? 1) > 1 ? 1 : 0;
 }
 
 /** Con thứ n ăn n × sát thương vũ khí × hệ số chí mạng. F19: vỏ cứng — đứng trước thứ tự tối thiểu thì 0. */
@@ -908,7 +926,7 @@ const NEIGHBOR_ORDER: readonly (readonly [ring: number, sector: number])[] = [
 /**
  * F19: sau lượt thứ every, 2·every… mỗi con quái có `summon`, còn sống và không bị đóng băng, gọi tối đa `count`
  * con ra ô trống sát bên (theo NEIGHBOR_ORDER, trong sân); hết ô thì gọi ít hơn. Xét theo id; quái mới đầy máu,
- * id nối tiếp `firstId`, lượt sau mới đi.
+ * id nối tiếp `firstId`, lượt sau mới đi. F20: `whenAlone` — gọi cả khi 8 ô quanh nó không còn quái nào.
  */
 function summonMonsters(
   monsters: readonly Monster[],
@@ -922,7 +940,14 @@ function summonMonsters(
   let nextId = firstId;
   for (const caller of [...monsters].sort((a, b) => a.id - b.id)) {
     const summon = config.monsterKinds[caller.kind].summon;
-    if (!summon || strikes === 0 || strikes % summon.every !== 0 || isFrozen(caller)) continue;
+    if (!summon || isFrozen(caller)) continue;
+    const onTurn = strikes > 0 && strikes % summon.every === 0;
+    const alone =
+      summon.whenAlone === true &&
+      !monsters.some(
+        (other) => other.id !== caller.id && isAdjacent(other, caller, config.sectorCount),
+      );
+    if (!onTurn && !alone) continue;
     let left = summon.count;
     for (const [dRing, dSector] of NEIGHBOR_ORDER) {
       if (left === 0) break;

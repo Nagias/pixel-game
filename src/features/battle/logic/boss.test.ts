@@ -120,14 +120,31 @@ describe('Người Cây — vỏ cứng: chỉ mất máu khi là con thứ ≥ 
     expect(after.lastAttack?.hits.map((h) => h.damage)).toEqual([1, 2]);
   });
 
-  it('trùm yếu hơn con kia (đứng đầu combo) thì vẫn không mất máu', () => {
+  // F20 PR B: trước đây trùm yếu máu hơn con kia thì đứng đầu combo và không mất máu — vũ khí sát thương cao làm máu
+  // trùm tụt dưới máu Yêu tinh, trùm còn 1 máu gần như không bao giờ đứng thứ 2, người chơi hết lượt (màn 20: Hiếm
+  // thắng 95%, Huyền thoại 75%). Giờ trùm luôn đứng sau quái khác trong cùng nhát: "chém trúng trùm cùng quái khác
+  // thì trùm mất máu".
+  it('F20: trùm yếu máu hơn con kia vẫn đứng sau trong combo — mất máu như con thứ 2', () => {
     const after = playTurn(
       stateWith([monster(1, 5, 3, 'treant', 3), monster(2, 6, 3, 'goblin')]),
       5,
       CONFIG,
     );
-    expect(byId(after, 1)?.hp).toBe(3);
-    expect(byId(after, 2)?.hp).toBe(2);
+    expect(after.lastAttack?.hits.map((h) => [h.monsterId, h.damage])).toEqual([
+      [2, 1],
+      [1, 2],
+    ]);
+    expect(byId(after, 1)?.hp).toBe(1);
+    expect(byId(after, 2)?.hp).toBe(3);
+  });
+
+  it('F20: trùm còn 1 máu, chém trúng cùng một quái khỏe hơn: trùm bị hạ', () => {
+    const after = playTurn(
+      stateWith([monster(1, 5, 3, 'treant', 1), monster(2, 6, 3, 'goblin')]),
+      5,
+      CONFIG,
+    );
+    expect(after.lastAttack?.hits.find((h) => h.monsterId === 1)).toMatchObject({ killed: true });
   });
 
   it('skill không làm trùm mất máu nhưng vẫn đóng băng nó; quái khác mất máu như thường', () => {
@@ -214,11 +231,72 @@ describe('cấu hình trùm sai bị từ chối', () => {
     expect(() => createBattle(1, withTreant(patch), 0)).toThrow(RangeError);
   });
 
-  it('cấu hình thật: Người Cây vỏ cứng 2, cứ 3 lượt gọi 2 Yêu tinh', () => {
+  it('cấu hình thật: Người Cây vỏ cứng 2, cứ 3 lượt gọi 2 Yêu tinh; F20: gọi cả khi quanh nó trống', () => {
     expect(BATTLE_CONFIG.monsterKinds.treant).toMatchObject({
       minComboOrder: 2,
-      summon: { kind: 'goblin', count: 2, every: 3 },
+      summon: { kind: 'goblin', count: 2, every: 3, whenAlone: true },
     });
+    // F20 PR B: máu 9 → 10 (cùng số lượt màn 10: 14 → 10, màn 20: 12 → 8 — đo bằng mô phỏng).
+    expect(BATTLE_CONFIG.monsterKinds.treant.hp).toBe(10);
+    // Tổ nhện giữ luật cũ: chỉ đẻ mỗi 3 lượt.
+    expect(BATTLE_CONFIG.monsterKinds.spiderNest.summon?.whenAlone).toBeUndefined();
+  });
+});
+
+// F20 PR B (chủ dự án duyệt 07/11/2026, mục 2): vũ khí sát thương cao giết hết Yêu tinh mồi, trùm (vỏ cứng) không
+// còn ai đứng trước trong combo nên không mất máu — màn 20 tụt. Sửa: ngoài cứ 3 lượt, trùm còn gọi ngay khi 8 ô quanh
+// nó không còn quái nào.
+describe('F20: Người Cây gọi Yêu tinh ngay khi quanh nó không còn quái nào', () => {
+  const ALONE: BattleConfig = {
+    ...CONFIG,
+    monsterKinds: {
+      ...CONFIG.monsterKinds,
+      treant: {
+        ...CONFIG.monsterKinds.treant,
+        summon: { kind: 'goblin', count: 2, every: 3, whenAlone: true },
+      },
+    },
+  };
+  const treantAt = (sector: number, ring: number) => monster(1, sector, ring, 'treant');
+  const goblinCells = (state: BattleState) =>
+    state.monsters.filter((m) => m.kind === 'goblin').map((m) => [m.sector, m.ring]);
+
+  it('quanh trùm trống: gọi ngay hết lượt đầu (chưa tới lượt thứ 3)', () => {
+    const state = playTurn(stateWith([treantAt(5, 0)]), EMPTY_SECTOR, ALONE);
+    expect(goblinCells(state)).toEqual([
+      [4, 0],
+      [6, 0],
+    ]);
+  });
+
+  it('còn quái ở ô sát bên thì chưa gọi (chờ lượt thứ 3 như cũ)', () => {
+    const state = playTurn(stateWith([treantAt(5, 0), monster(2, 4, 0)]), EMPTY_SECTOR, ALONE);
+    expect(goblinCells(state)).toEqual([]);
+  });
+
+  it('quái đứng xa (không sát bên) không tính là mồi — vẫn gọi', () => {
+    const state = playTurn(stateWith([treantAt(5, 0), monster(2, 12, 0)]), EMPTY_SECTOR, ALONE);
+    expect(goblinCells(state)).toHaveLength(2);
+  });
+
+  it('trùm đang bị đóng băng thì không gọi dù quanh trống', () => {
+    const frozen = { ...treantAt(5, 0), frozenTurns: 1 };
+    const state = playTurn(stateWith([frozen]), EMPTY_SECTOR, ALONE);
+    expect(goblinCells(state)).toEqual([]);
+  });
+
+  it('cấu hình sai bị từ chối: "gọi khi trống" không phải true/false', () => {
+    const bad: BattleConfig = {
+      ...ALONE,
+      monsterKinds: {
+        ...ALONE.monsterKinds,
+        treant: {
+          ...ALONE.monsterKinds.treant,
+          summon: { kind: 'goblin', count: 2, every: 3, whenAlone: 'có' as unknown as boolean },
+        },
+      },
+    };
+    expect(() => createBattle(1, bad, 0)).toThrow(RangeError);
   });
 });
 

@@ -51,6 +51,10 @@ cũng tụt): sát thương cao giết hết Yêu tinh mồi, trùm không còn 
 lượt. Sửa: ngoài cứ 3 lượt, trùm còn gọi Yêu tinh ngay khi 8 ô quanh nó không còn quái nào. Tổ nhện giữ luật cũ.
 Chỉnh lại số lượt màn 10, 20 cho đúng mục tiêu % thắng đã duyệt.
 
+**Khi làm (agent chọn, ghi ở PR B):** gọi mồi khi quanh trống chưa đủ — màn 20 vẫn tụt (Hiếm 95% → Huyền thoại 75%)
+vì combo xếp con ít máu trước. Thêm: quái vỏ cứng luôn đứng sau quái thường trong combo; máu trùm 9 → 10, màn 10 còn
+10 lượt, màn 20 còn 8 lượt.
+
 ### Mục 3 — Skill thành phần thưởng
 
 Màn 1–10 chỉ dùng vũ khí. Hạ trùm màn 10 thì có Mưa băng (dùng từ màn 11). Cầu lửa để dành làm phần thưởng sau:
