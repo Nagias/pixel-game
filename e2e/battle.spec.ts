@@ -35,9 +35,10 @@ const SEED = 42;
  * màn sau, bot tính theo cấu hình thật của trận (`snapshot.config`); seed 1 vẫn thắng đủ. Đổi cân bằng mà
  * không còn thắng đủ thì dò lại seed và ghi lý do trong PR. F19 PR D (03/11/2026): trùm Người Cây có vỏ cứng — seed 1
  * thua màn 20 với Cầu lửa; seed 6 là seed nhỏ nhất thắng đủ cả hai ván (script dò tạm `.cache/f19-seed-search.ts`,
- * chơi y như game: đồ rơi theo loài, món có hạn).
+ * chơi y như game: đồ rơi theo loài, món có hạn). F20 PR B (07/11/2026): trùm đứng sau trong combo, màn 10 còn 10 lượt —
+ * seed 6 thua màn 10; seed 4 là seed nhỏ nhất thắng đủ cả hai ván (cùng script, luật F20: cấp màu vĩnh viễn).
  */
-const FULL_RUN_SEED = 6;
+const FULL_RUN_SEED = 4;
 const FULL_RUN_UPGRADES = { hp: 3, crit: 3, heal: 3 };
 const FULL_RUN_CONFIG = withUpgrades(BATTLE_CONFIG, FULL_RUN_UPGRADES, UPGRADE_CONFIG);
 /** 20 màn qua màn chuẩn bị mất vài phút trên máy CI chậm. */
@@ -1126,7 +1127,7 @@ test('F20: lên cấp vũ khí bằng vàng — thẻ chọn "Vũ khí": Kiếm 
   await page.screenshot({ path: test.info().outputPath('47b-kiem-hiem-trong-tran.png') });
 });
 
-test('F19: trùm Người Cây — bắn trúng mình nó thì bị vỏ cứng chặn (không mất máu); hết lượt thứ 3 nó gọi Yêu tinh ra sát bên', async ({
+test('F19/F20: trùm Người Cây — bắn trúng mình nó thì bị vỏ cứng chặn (không mất máu); nó gọi Yêu tinh ra sát bên', async ({
   page,
 }) => {
   const game = new BattleDriver(page);
@@ -1150,11 +1151,16 @@ test('F19: trùm Người Cây — bắn trúng mình nó thì bị vỏ cứng 
   expect(blocked.battle.monsters.find((m) => m.id === treant.id)?.hp).toBe(treant.hp);
   await page.screenshot({ path: test.info().outputPath('49-trum-chan.png') });
 
-  // Thêm 2 nhát trượt: hết lượt thứ 3 trùm gọi Yêu tinh (id mới) ra ô trống sát bên.
-  for (let i = 0; i < 2; i++) await game.play(missMove(await game.snapshot()));
-  const after = await game.snapshot();
+  // Trùm gọi Yêu tinh (id mới) ra ô trống sát bên — cứ 3 lượt, hoặc ngay khi quanh nó trống (F20, có thể ngay lượt
+  // đầu). Xét ngay sau lượt gọi (lượt sau Yêu tinh tự đi): chém trượt tới khi có quái mới, tối đa hết lượt thứ 3.
+  const isNew = (m: { id: number }) => m.id >= (start.battle.nextId ?? 0);
+  let after = blocked;
+  for (let turn = 1; turn < 3 && !after.battle.monsters.some(isNew); turn++) {
+    await game.play(missMove(after));
+    after = await game.snapshot();
+  }
   const boss = after.battle.monsters.find((m) => m.id === treant.id);
-  const summoned = after.battle.monsters.filter((m) => m.id >= (start.battle.nextId ?? 0));
+  const summoned = after.battle.monsters.filter(isNew);
   expect(summoned.length).toBeGreaterThan(0);
   for (const goblin of summoned) {
     expect(goblin.kind).toBe('goblin');

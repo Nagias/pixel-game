@@ -233,11 +233,14 @@ export const BATTLE_CONFIG: BattleConfig = {
     treant: {
       name: 'Người Cây',
       gold: 10,
-      hp: 9,
+      // F20 PR B: 9 → 10 — trùm luôn đứng sau quái khác trong combo nên dễ hạ hơn (đo bằng mô phỏng, cùng số lượt
+      // màn 10, 20).
+      hp: 10,
       advanceChance: 0.4,
       attack: 5,
       minComboOrder: 2,
-      summon: { kind: 'goblin', count: 2, every: 3 },
+      // F20 (chủ dự án duyệt 07/11/2026): gọi cả khi quanh nó hết quái — vũ khí mạnh không làm mất "mồi".
+      summon: { kind: 'goblin', count: 2, every: 3, whenAlone: true },
     },
     // F19 PR E (chủ dự án duyệt 03/11/2026, mục 4): bốn quái có hành vi riêng, mỗi loài ít nhất hai cách hạ. Con số
     // agent chọn rồi dò bằng mô phỏng khi sinh lại màn.
@@ -413,13 +416,14 @@ export const BATTLE_CONFIG: BattleConfig = {
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
     },
-    // Màn 10: TRÙM Người Cây. F19: luật trùm mới — 13 → 14 lượt, lượt dư mục tiêu ghi lại theo số đo.
+    // Màn 10: TRÙM Người Cây. F19: luật trùm mới — 13 → 14 lượt, lượt dư mục tiêu ghi lại theo số đo. F20 PR B: trùm
+    // đứng sau trong combo, máu 10 — 14 → 10 lượt (500 ván: 43,8%), lượt dư mục tiêu ghi lại theo số đo.
     {
       monsters: ['treant', 'goblin', 'goblin'],
       spread: 3,
       quest: { kind: 'treant', count: 1 },
-      turnLimit: 14,
-      target: { winRate: 0.45, spareTurns: 4.5 },
+      turnLimit: 10,
+      target: { winRate: 0.45, spareTurns: 2 },
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 2, crit: 1, heal: 1 },
     },
@@ -533,14 +537,15 @@ export const BATTLE_CONFIG: BattleConfig = {
       assumedUpgrades: { hp: 3, crit: 2, heal: 2 },
     },
     // Màn 20: TRÙM CUỐI Người Cây cùng Sói, Cung thủ. F19: luật trùm mới — 9 → 12 lượt, lượt dư mục tiêu ghi lại.
+    // F20 PR B: 12 → 8 lượt (500 ván: 70,1%).
     {
       monsters: ['treant', 'wolf'],
       spread: 3,
       waves: [['goblin', 'goblin', 'goblin']],
       nextWaveAt: 2,
       quest: { kind: 'treant', count: 1 },
-      turnLimit: 12,
-      target: { winRate: 0.72, spareTurns: 4.75 },
+      turnLimit: 8,
+      target: { winRate: 0.72, spareTurns: 2.25 },
       assumedUpgrades: { hp: 3, crit: 2, heal: 2 },
     },
   ],

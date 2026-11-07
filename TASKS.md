@@ -225,6 +225,6 @@ Chủ dự án duyệt cả 3 mục ("Duyệt hết"). Kế hoạch và cách ki
 
 - [x] PR A — bảng cấp mới (dài / rộng / sát thương), cấp màu là cấp duy nhất, lên Tốt / Hiếm bằng vàng, đồ rơi
       luôn vĩnh viễn, bỏ đồ có hạn và Cửa hàng, hồ sơ bản 8
-- [ ] PR B — trùm gọi Yêu tinh khi quanh nó hết quái, chỉnh màn 10, 20
+- [x] PR B — trùm gọi Yêu tinh khi quanh nó hết quái, luôn đứng sau trong combo, chỉnh màn 10, 20
 - [ ] PR C — skill mở sau trùm màn 10 (Mưa băng), Cầu lửa khi phá đảo, chỉnh màn 3–10
 - [ ] Kiểm chứng cuối: `npm run check` trên main, chơi tay cả luồng từ hồ sơ mới
