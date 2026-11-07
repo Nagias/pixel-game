@@ -17,14 +17,7 @@ import {
   type SavedLoadout,
 } from '../../profile';
 import { levelAt } from '../logic/battle';
-import {
-  BATTLE_CONFIG,
-  CHAPTERS,
-  LOOT_CONFIG,
-  SHOP_CONFIG,
-  UPGRADE_CONFIG,
-  WEAPON_UPGRADE_CONFIG,
-} from '../logic/battleConfig';
+import { BATTLE_CONFIG, CHAPTERS, LOOT_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
 import type { Loadout, MonsterKind, QuestConfig, SkillKind } from '../logic/battleTypes';
 import { chapterOf } from '../logic/chapters';
 import { levelMonsterKinds } from '../logic/levelInfo';
@@ -37,8 +30,7 @@ import {
   skillOptions,
 } from '../logic/loadout';
 import { withWeaponTiers } from '../logic/loot';
-import { effectiveTiers } from '../logic/shop';
-import { withUpgrades, withWeaponLevels } from '../logic/upgrades';
+import { withUpgrades } from '../logic/upgrades';
 import type { BattleSceneData } from './BattleScene';
 import { BATTLE_SPRITES } from './battleSprites';
 import {
@@ -55,7 +47,7 @@ import { paintScenery } from './scenery';
 import { FOREST_MAP_SCENERY, FOREST_THEME } from './sceneryForest';
 import { drawPanel, goldPill, SESSION_LOADOUT } from './uiKit';
 import { SKILL_ICON, UI_SPRITES, WEAPON_ICON, type UiSprite } from './uiSprites';
-import { tierColor } from './weaponTierStyle';
+import { styleTierText, tierColor } from './weaponTierStyle';
 
 /** Mở Bản đồ; `popupLevel` (đếm từ 0) = mở sẵn bảng trước trận của màn đó (nếu đã mở khóa). */
 export interface MapSceneData {
@@ -130,15 +122,10 @@ export class MapScene extends Scene {
 
   init(data: Partial<MapSceneData>): void {
     const profile = loadProfile();
-    // Đợt 6: món thuê ở cửa hàng còn hạn thì dùng cấp của cửa hàng (không hạ món vĩnh viễn cao hơn).
-    this.config = withWeaponLevels(
-      withWeaponTiers(
-        withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
-        effectiveTiers(profile.weaponTiers, profile.rentals, profile.rentalTiers, SHOP_CONFIG),
-        LOOT_CONFIG,
-      ),
-      profile.weaponLevels,
-      WEAPON_UPGRADE_CONFIG,
+    this.config = withWeaponTiers(
+      withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
+      profile.weaponTiers,
+      LOOT_CONFIG,
     );
     const count = Math.min(this.config.levels.length, LEVEL_COUNT_ON_MAP);
     this.gold = profile.gold;
@@ -148,11 +135,9 @@ export class MapScene extends Scene {
     // F18 đợt B: đồ đang mang nằm trong hồ sơ (màn Vũ khí ghi cả vào bộ nhớ phiên, phòng bộ nhớ trình duyệt bị
     // chặn); hồ sơ trỏ tới món không còn thì bộ mặc định.
     const session = this.registry.get(SESSION_LOADOUT) as SavedLoadout | undefined;
-    // F19: món đã lưu mà không còn có (món rơi có hạn hết hạn trước mốc mở khóa) thì về bộ mặc định.
     const owned = ownedWeapons(this.config, {
       clearedLevels: clearedLevelCount(profile, this.config.levels.length),
       tiers: profile.weaponTiers,
-      rentals: profile.rentals,
     });
     this.savedLoadout =
       fromSavedLoadout(session ?? profile.loadout, this.config, owned) ??
@@ -483,10 +468,15 @@ export class MapScene extends Scene {
       const icon = WEAPON_ICON[weapon.name];
       if (icon) image(card.x + card.width / 2, card.y + 34, this.uiKeys[icon], 3);
       text(card.x + card.width / 2, card.y + 66, weapon.name, { fontSize: '12px' });
-      text(card.x + card.width / 2, card.y + 80, weapon.rangeLabel, {
-        fontSize: '11px',
-        color: PALETTE.yellow,
-      });
+      // F20: luôn ghi tên cấp (kể cả "Thường"), tô màu cấp.
+      const tier = weapon.tier ?? 0;
+      styleTierText(
+        text(card.x + card.width / 2, card.y + 80, LOOT_CONFIG.tiers[tier]?.name ?? '', {
+          fontSize: '11px',
+          strokeThickness: 3,
+        }),
+        tier,
+      );
     });
     const skill = loadout.skill;
     parts.push(drawPanel(this, skillCard, skill ? 'plum' : 'shadow', DEPTH.popup, 0));

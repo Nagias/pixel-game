@@ -35,6 +35,10 @@ function memoryStore(initial: Record<string, string> = {}, failing = false) {
 
 const profile = (patch: Partial<Profile> = {}): Profile => ({ ...emptyProfile(), ...patch });
 
+/** Bản sao của `data` bỏ các trường `keys` (F20: trường đã bỏ ở hồ sơ bản 8). */
+const without = (data: Record<string, unknown>, ...keys: string[]) =>
+  Object.fromEntries(Object.entries(data).filter(([key]) => !keys.includes(key)));
+
 describe('đọc / ghi hồ sơ', () => {
   it('người chơi mới (chưa có gì): hồ sơ trống — 0 vàng, mới mở màn 1', () => {
     expect(readProfile(memoryStore().store)).toEqual({
@@ -44,9 +48,6 @@ describe('đọc / ghi hồ sơ', () => {
       upgrades: {},
       weaponTiers: {},
       lootPity: {},
-      rentals: {},
-      rentalTiers: {},
-      weaponLevels: {},
       clearedAll: false,
       loadout: null,
     });
@@ -60,9 +61,6 @@ describe('đọc / ghi hồ sơ', () => {
       upgrades: { hp: 2, crit: 1 },
       weaponTiers: { 0: 3, 2: 1 },
       lootPity: { dryRareKills: 2, dropsSinceHighTier: 11 },
-      rentals: { 1: 4 },
-      rentalTiers: { 1: 3 },
-      weaponLevels: { 0: 2, 4: 1 },
       clearedAll: true,
       loadout: { weapons: ['Rìu', 'Giáo', 'Cung'], skill: 'fireball' },
     });
@@ -98,7 +96,7 @@ describe('đọc / ghi hồ sơ', () => {
   });
 
   // F18 đợt B: phiên bản 5 thêm "đã phá đảo" và đồ đang mang. Bản 4 (đợt 6) tự chuyển lên.
-  it('hồ sơ phiên bản 4 chuyển lên phiên bản 5: giữ mọi thứ, chưa phá đảo, chưa lưu đồ', () => {
+  it('hồ sơ phiên bản 4 chuyển lên bản mới: giữ mọi thứ, chưa phá đảo, chưa lưu đồ; món thuê đổi vàng', () => {
     const v4 = {
       version: 4,
       gold: 7,
@@ -109,19 +107,19 @@ describe('đọc / ghi hồ sơ', () => {
       rentals: { 1: 2 },
     };
     const { store, data } = memoryStore({ [PROFILE_KEY]: JSON.stringify(v4) });
+    const kept = without(v4, 'rentals');
+    // F20: món thuê còn hạn (cấp cửa hàng — Hiếm) đổi 4 vàng như món thừa cấp Hiếm.
     expect(readProfile(store)).toEqual({
-      ...v4,
+      ...kept,
       version: PROFILE_VERSION,
-      rentalTiers: {},
-      weaponLevels: {},
+      gold: 11,
       clearedAll: false,
       loadout: null,
     });
     expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
   });
 
-  // F19 PR C: phiên bản 7 thêm cấp nâng của từng vũ khí. Bản 6 tự chuyển lên, chưa nâng vũ khí nào.
-  it('hồ sơ phiên bản 6 chuyển lên phiên bản 7: giữ mọi thứ, chưa nâng vũ khí nào', () => {
+  it('hồ sơ phiên bản 6 chuyển lên bản mới: giữ mọi thứ, món có hạn đổi vàng theo cấp của nó', () => {
     const v6 = {
       version: 6,
       gold: 30,
@@ -135,13 +133,13 @@ describe('đọc / ghi hồ sơ', () => {
       loadout: null,
     };
     const { store, data } = memoryStore({ [PROFILE_KEY]: JSON.stringify(v6) });
-    expect(readProfile(store)).toEqual({ ...v6, version: 7, weaponLevels: {} });
+    const kept = without(v6, 'rentals', 'rentalTiers');
+    // Món có hạn cấp Tốt còn 7 trận: đổi 2 vàng.
+    expect(readProfile(store)).toEqual({ ...kept, version: PROFILE_VERSION, gold: 32 });
     expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
   });
 
-  // F19 PR B: phiên bản 6 thêm cấp của món có hạn (món rơi có hạn có cấp riêng). Bản 5 tự chuyển lên: món thuê
-  // cũ chưa ghi cấp — luật rơi đồ coi là cấp cửa hàng (Hiếm), nên không mất gì.
-  it('hồ sơ phiên bản 5 chuyển lên phiên bản 6: giữ mọi thứ, món thuê cũ chưa ghi cấp', () => {
+  it('hồ sơ phiên bản 5 chuyển lên bản mới: giữ mọi thứ, món thuê cũ (cấp Hiếm) đổi vàng', () => {
     const v5 = {
       version: 5,
       gold: 12,
@@ -154,13 +152,38 @@ describe('đọc / ghi hồ sơ', () => {
       loadout: { weapons: ['Rìu', 'Giáo', 'Cung'], skill: 'iceRain' },
     };
     const { store, data } = memoryStore({ [PROFILE_KEY]: JSON.stringify(v5) });
-    expect(readProfile(store)).toEqual({
-      ...v5,
-      version: PROFILE_VERSION,
-      rentalTiers: {},
-      weaponLevels: {},
-    });
+    const kept = without(v5, 'rentals');
+    expect(readProfile(store)).toEqual({ ...kept, version: PROFILE_VERSION, gold: 16 });
     expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
+  });
+
+  // F20 (chủ dự án duyệt 07/11/2026): bản 8 bỏ món có hạn và cấp nâng từng vũ khí — người chơi không mất gì: món có
+  // hạn còn hạn đổi vàng theo bảng đổi món thừa (1 / 2 / 4 / 8 / 15 / 30 theo cấp), vàng đã tiêu nâng vũ khí
+  // (15 / 30 / 60) trả lại; cấp màu vĩnh viễn giữ nguyên.
+  it('hồ sơ phiên bản 7 chuyển lên bản 8: món có hạn đổi vàng, vàng nâng vũ khí trả lại, cấp màu giữ', () => {
+    const v7 = {
+      version: 7,
+      gold: 10,
+      unlockedLevel: 12,
+      upgrades: { hp: 3 },
+      weaponTiers: { 0: 1, 2: 3 },
+      lootPity: { dryRareKills: 1 },
+      rentals: { 0: 3, 1: 0, 5: 2 },
+      rentalTiers: { 0: 4, 1: 5 },
+      weaponLevels: { 0: 2, 4: 3 },
+      clearedAll: false,
+      loadout: { weapons: ['Kiếm', 'Giáo', 'Cung'], skill: 'iceRain' },
+    };
+    const { store, data } = memoryStore({ [PROFILE_KEY]: JSON.stringify(v7) });
+    const kept = without(v7, 'rentals', 'rentalTiers', 'weaponLevels');
+    // Món có hạn: Kiếm Huyền thoại còn 3 trận → 15; Giáo hết hạn → 0; món 5 không ghi cấp (thuê) → Hiếm 4.
+    // Nâng vũ khí: Kiếm 2 cấp → 15 + 30; món 4 đủ 3 cấp → 15 + 30 + 60. Tổng 10 + 19 + 150 = 179.
+    expect(readProfile(store)).toEqual({ ...kept, version: 8, gold: 179 });
+    expect(data.get(PROFILE_BACKUP_KEY)).toBeUndefined();
+  });
+
+  it('phiên bản hiện tại là 8', () => {
+    expect(PROFILE_VERSION).toBe(8);
   });
 
   it('lưu đồ đang mang rồi đọc lại ra y hệt (kể cả không mang skill)', () => {
@@ -313,7 +336,7 @@ describe('đọc / ghi hồ sơ', () => {
       }),
     ],
     [
-      'phiên bản mới hơn game',
+      'phiên bản 6 thiếu cấp món có hạn',
       JSON.stringify({
         version: 6,
         gold: 9,
@@ -321,6 +344,22 @@ describe('đọc / ghi hồ sơ', () => {
         upgrades: {},
         weaponTiers: {},
         lootPity: {},
+        rentals: {},
+        clearedAll: false,
+        loadout: null,
+      }),
+    ],
+    [
+      'phiên bản mới hơn game',
+      JSON.stringify({
+        version: 9,
+        gold: 9,
+        unlockedLevel: 4,
+        upgrades: {},
+        weaponTiers: {},
+        lootPity: {},
+        clearedAll: false,
+        loadout: null,
       }),
     ],
   ])('dữ liệu lạ (%s): cất bản sao để còn cứu, chơi tiếp bằng hồ sơ trống', (_name, raw) => {
@@ -378,26 +417,6 @@ describe('cộng kết quả trận vào hồ sơ', () => {
         20,
       ),
     ).toEqual(profile({ gold: 9, ...loot }));
-  });
-
-  it('đợt 6: trận có kết quả món thuê thì ghi số trận còn lại mới', () => {
-    expect(
-      applyBattleResult(
-        profile({ rentals: { 0: 5, 2: 1 } }),
-        { level: 0, won: false, gold: 0, rentals: { 0: 4 } },
-        7,
-      ),
-    ).toEqual(profile({ rentals: { 0: 4 } }));
-  });
-
-  it('F19: kết quả món có hạn ghi cả cấp của món có hạn', () => {
-    expect(
-      applyBattleResult(
-        profile({ rentals: { 0: 5 }, rentalTiers: { 0: 2 } }),
-        { level: 0, won: false, gold: 0, rentals: { 0: 4, 1: 10 }, rentalTiers: { 0: 2, 1: 4 } },
-        7,
-      ),
-    ).toEqual(profile({ rentals: { 0: 4, 1: 10 }, rentalTiers: { 0: 2, 1: 4 } }));
   });
 
   it('trận không có kết quả rơi đồ: giữ nguyên đồ và bảo hiểm', () => {
@@ -478,15 +497,6 @@ describe('cộng kết quả trận chơi lại', () => {
     expect(next.weaponTiers).toEqual({ 0: 1 });
     expect(next.lootPity).toEqual({ dryRareKills: 2 });
     expect(next.unlockedLevel).toBe(5);
-  });
-
-  it('chơi lại vẫn trừ món thuê mang vào trận', () => {
-    const next = applyBattleResult(
-      profile({ ...p, rentals: { 2: 3 } }),
-      { level: 2, won: false, gold: 0, rentals: { 2: 2 } },
-      20,
-    );
-    expect(next.rentals).toEqual({ 2: 2 });
   });
 
   it('thắng màn cuối lần đầu thì phá đảo và nhận vàng; chơi lại màn cuối sau đó không nhận vàng', () => {

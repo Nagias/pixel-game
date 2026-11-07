@@ -10,7 +10,6 @@ import {
   type SkillConfig,
   type SkillKind,
   type WeaponConfig,
-  type WeaponRentals,
   type WeaponSlot,
   type WeaponTiers,
 } from './battleTypes';
@@ -24,18 +23,13 @@ export function allWeapons(config: BattleConfig): number[] {
 export interface WeaponProgress {
   /** Số màn đã thắng tính từ màn 1 (màn đếm từ 0 nhỏ hơn số này là đã qua). */
   readonly clearedLevels: number;
-  /** Cấp vĩnh viễn đã rơi của từng vũ khí (khóa = chỉ số vũ khí). */
+  /** Cấp đã có của từng vũ khí (khóa = chỉ số vũ khí) — đồ rơi hoặc lên cấp bằng vàng. */
   readonly tiers: WeaponTiers;
-  /** Món thuê / món rơi có hạn: số trận còn dùng (khóa = chỉ số vũ khí). */
-  readonly rentals: WeaponRentals;
 }
-
-const positive = (value: number | undefined) =>
-  value !== undefined && Number.isInteger(value) && value > 0;
 
 /**
  * F19: các vũ khí người chơi đang có, theo thứ tự cấu hình: món không có mốc mở khóa, món đã thắng màn mốc,
- * và món đã có ở dạng rơi vĩnh viễn hoặc còn hạn dùng.
+ * và món đã có cấp (đồ rơi — kể cả món Thường của vũ khí chưa mở khóa).
  */
 export function ownedWeapons(config: BattleConfig, progress: WeaponProgress): number[] {
   return config.weapons.flatMap((weapon, index) => {
@@ -43,7 +37,7 @@ export function ownedWeapons(config: BattleConfig, progress: WeaponProgress): nu
     // F19 PR B: món rơi vĩnh viễn ghi cả cấp 0 (món Thường của vũ khí chưa mở khóa).
     const tier = progress.tiers[index];
     const permanent = tier !== undefined && Number.isInteger(tier) && tier >= 0;
-    return unlocked || permanent || positive(progress.rentals[index]) ? [index] : [];
+    return unlocked || permanent ? [index] : [];
   });
 }
 
@@ -163,7 +157,8 @@ export function describeWeapon(weapon: WeaponConfig, loot?: LootConfig): string 
       : []),
     ...(weapon.damage > 1 ? [`sát thương ${weapon.damage}`] : []),
   ];
-  const tier = weapon.tier ? loot?.tiers[weapon.tier]?.name : undefined;
+  // F20: có bảng cấp thì luôn ghi tên cấp, kể cả cấp Thường.
+  const tier = loot?.tiers[weapon.tier ?? 0]?.name;
   return `${weapon.name}${tier ? ` ${tier}` : ''}: ${parts.join(', ')}`;
 }
 

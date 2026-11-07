@@ -1,4 +1,4 @@
-// F18 đợt E: bố cục màn Nâng cấp và Cửa hàng dạng thẻ (học ảnh 2, 3 Micro RPG): lưới 2×2 thẻ, nút mua trong
+// F18 đợt E: bố cục màn Nâng cấp dạng thẻ (học ảnh 2, 3 Micro RPG): lưới 2×2 thẻ, nút mua trong
 // thẻ, thanh nút dưới (thay nút "XONG" của đợt 4). Khung 360×640. Phép tính tọa độ thuần, không Phaser.
 import type { Rect } from './battleLayout';
 import { navTapAt, type NavTarget } from './navLayout';
@@ -33,7 +33,7 @@ export function upgradeTapAt(x: number, y: number, count: number): UpgradeTap | 
   return target ? { kind: 'nav', target } : null;
 }
 
-// ---------- F19: thẻ nhỏ 3 cột (Cửa hàng 7 món) ----------
+// ---------- F19: thẻ nhỏ 3 cột (thẻ chọn "Vũ khí" của màn Nâng cấp — 7 món) ----------
 
 const SMALL_COLUMNS = [18, 130, 242] as const;
 const SMALL_CARD = { width: 100, height: 148 } as const;

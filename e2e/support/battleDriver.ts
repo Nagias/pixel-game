@@ -4,7 +4,6 @@
 import type {
   BattleSnapshot,
   MapSnapshot,
-  ShopSnapshot,
   UpgradeSnapshot,
   WeaponsSnapshot,
 } from '../../src/features/battle';
@@ -56,9 +55,6 @@ interface StoredProfile {
   readonly unlockedLevel: number;
   readonly weaponTiers: Record<string, number>;
   readonly lootPity: Record<string, number>;
-  readonly rentals: Record<string, number>;
-  readonly rentalTiers: Record<string, number>;
-  readonly weaponLevels: Record<string, number>;
   readonly clearedAll: boolean;
   readonly loadout: { readonly weapons: readonly string[]; readonly skill: string | null } | null;
 }
@@ -84,9 +80,6 @@ export class BattleDriver extends GameDriver {
     upgrades?: Record<string, number>;
     weaponTiers?: Record<string, number>;
     lootPity?: Record<string, number>;
-    rentals?: Record<string, number>;
-    rentalTiers?: Record<string, number>;
-    weaponLevels?: Record<string, number>;
     clearedAll?: boolean;
     loadout?: { weapons: string[]; skill: string | null } | null;
   }): Promise<void> {
@@ -97,9 +90,6 @@ export class BattleDriver extends GameDriver {
       upgrades: {},
       weaponTiers: {},
       lootPity: {},
-      rentals: {},
-      rentalTiers: {},
-      weaponLevels: {},
       clearedAll: false,
       loadout: null,
       ...patch,
@@ -142,41 +132,18 @@ export class BattleDriver extends GameDriver {
     return this.upgradeSnapshot();
   }
 
-  /** F19: thẻ chọn "Vũ khí" của màn Nâng cấp — chạm nút mua của vũ khí `weaponIndex`. */
-  async buyWeaponUpgrade(weaponIndex: number): Promise<void> {
+  /** F20: thẻ chọn "Vũ khí" của màn Nâng cấp — chạm nút lên cấp (bằng vàng) của vũ khí `weaponIndex`. */
+  async buyTierUp(weaponIndex: number): Promise<void> {
     const index = (await this.upgradeSnapshot()).weapons.indexOf(weaponIndex);
     if (index === -1) throw new Error(`Chưa có vũ khí số ${weaponIndex}`);
     await this.tapAt(...center(smallBuyRect(index)));
     await this.advance(FRAME_MS * 2);
   }
 
-  /** Màn Nâng cấp / Cửa hàng (F18 đợt E: không còn "XONG") — chạm CHƠI ở thanh dưới, về bảng trước trận. */
+  /** Màn Nâng cấp (F18 đợt E: không còn "XONG") — chạm CHƠI ở thanh dưới, về bảng trước trận. */
   async closeUpgrade(): Promise<void> {
     await this.tapAt(...center(navButtonRect('play')));
     await this.waitSceneSwitch();
-  }
-
-  shopSnapshot(): Promise<ShopSnapshot> {
-    return this.snapshotOf<ShopSnapshot>('shop');
-  }
-
-  /** Đợt 6: từ Bản đồ chạm nút Cửa hàng ở thanh dưới, chờ màn Cửa hàng mở và nhận chạm. */
-  async openShop(): Promise<ShopSnapshot> {
-    await this.goToNav('shop');
-    for (let attempt = 0; attempt < 20; attempt++) {
-      const snapshot = await this.shopSnapshot();
-      if (snapshot.canTap) return snapshot;
-      await this.advance(SCENE_SWITCH_MS);
-    }
-    throw new Error('Màn Cửa hàng không nhận chạm sau 2 giây');
-  }
-
-  /** Đợt 6: màn Cửa hàng — chạm nút mua của vũ khí `weaponIndex` (F19: thẻ nhỏ, chỉ món đang bày). */
-  async buyFromShop(weaponIndex: number): Promise<void> {
-    const index = (await this.shopSnapshot()).weapons.indexOf(weaponIndex);
-    if (index === -1) throw new Error(`Cửa hàng không bày vũ khí số ${weaponIndex}`);
-    const rect = smallBuyRect(index);
-    await this.tapAt(rect.x + rect.width / 2, rect.y + rect.height / 2);
   }
 
   /** Đợt 3: hồ sơ đang lưu trong trình duyệt (null nếu chưa có). */

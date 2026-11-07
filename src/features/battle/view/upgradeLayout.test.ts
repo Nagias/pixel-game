@@ -92,9 +92,9 @@ describe('bố cục thẻ nhỏ (Cửa hàng 7 món)', () => {
     const [a, b] = cards;
     if (!a || !b) throw new Error('thiếu thẻ');
     expect(smallCardTapAt((a.x + a.width + b.x) / 2, a.y + a.height - 20, 7)).toBeNull();
-    expect(smallCardTapAt(...mid(navButtonRect('shop')), 7)).toEqual({
+    expect(smallCardTapAt(...mid(navButtonRect('weapons')), 7)).toEqual({
       kind: 'nav',
-      target: 'shop',
+      target: 'weapons',
     });
   });
 });

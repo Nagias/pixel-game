@@ -27,25 +27,17 @@ import {
   selectWeapon,
   willAttack,
 } from '../logic/battle';
-import {
-  BATTLE_CONFIG,
-  CHAPTERS,
-  LOOT_CONFIG,
-  SHOP_CONFIG,
-  UPGRADE_CONFIG,
-  WEAPON_UPGRADE_CONFIG,
-} from '../logic/battleConfig';
+import { BATTLE_CONFIG, CHAPTERS, LOOT_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
 import { chapterOf } from '../logic/chapters';
 import {
   applyDrop,
   lootAfterBattle,
+  permanentTierOf,
   readPity,
   withWeaponTiers,
   type DropOutcome,
-  type Inventory,
 } from '../logic/loot';
-import { effectiveTiers, rentalsAfterBattle } from '../logic/shop';
-import { withUpgrades, withWeaponLevels } from '../logic/upgrades';
+import { withUpgrades } from '../logic/upgrades';
 import type {
   BattleConfig,
   BattleState,
@@ -232,15 +224,10 @@ export class BattleScene extends Scene {
   /** Màn chuẩn bị gửi màn + bộ đồ. Không có (chỉ khi mở thẳng scene này) thì màn 1, bộ mặc định. */
   init(data: Partial<BattleSceneData>): void {
     const profile = loadProfile();
-    // Đợt 6: món thuê ở cửa hàng còn hạn thì dùng cấp của cửa hàng.
-    this.config = withWeaponLevels(
-      withWeaponTiers(
-        withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
-        effectiveTiers(profile.weaponTiers, profile.rentals, profile.rentalTiers, SHOP_CONFIG),
-        LOOT_CONFIG,
-      ),
-      profile.weaponLevels,
-      WEAPON_UPGRADE_CONFIG,
+    this.config = withWeaponTiers(
+      withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
+      profile.weaponTiers,
+      LOOT_CONFIG,
     );
     this.level = data.level ?? 0;
     this.loadout = data.loadout ?? defaultLoadout(this.config);
@@ -1033,19 +1020,17 @@ export class BattleScene extends Scene {
   /**
    * Đợt 3: cộng trận vào hồ sơ (vàng — thắng hay thua đều giữ; thắng thì mở khóa màn kế), lưu lại, và
    * hiện số vàng. Đợt 5: hạ quái hiếm thì tung rơi đồ (luật ở logic/loot.ts), lưu cấp vũ khí + bảo hiểm,
-   * hiện món rơi. F19: món rơi theo loài, vĩnh viễn hoặc có hạn; món thừa đổi vàng (applyDrop). Gọi đúng một
-   * lần mỗi trận (lúc hiện màn kết quả). Không lưu được thì vẫn chơi tiếp.
+   * hiện món rơi. F19: món rơi theo loài; món thừa đổi vàng (applyDrop). F20: món rơi luôn vĩnh viễn. Gọi đúng
+   * một lần mỗi trận (lúc hiện màn kết quả). Không lưu được thì vẫn chơi tiếp.
    */
   private saveRewards(state: BattleState): void {
     const before = loadProfile();
-    // Đợt 6: món có hạn mang vào trận này bớt 1 trận (thắng hay thua) — trừ trước khi nhận món mới rơi.
-    const used = rentalsAfterBattle(before, state.loadout);
     if (this.replay) {
-      // F18 đợt B: chơi lại chỉ trừ món thuê (luật ở profile.applyBattleResult); không tung rơi đồ.
+      // F18 đợt B: chơi lại không nhận vàng, không tung rơi đồ (luật ở profile.applyBattleResult).
       const saved = saveProfile(
         applyBattleResult(
           before,
-          { level: state.level, won: state.phase === 'won', gold: state.gold, ...used },
+          { level: state.level, won: state.phase === 'won', gold: state.gold },
           this.config.levels.length,
         ),
       );
@@ -1053,7 +1038,7 @@ export class BattleScene extends Scene {
       this.resultGold.setText(
         saved ? 'Chơi lại: không nhận vàng' : 'Chơi lại: không nhận vàng (không lưu được)',
       );
-      this.showDrop(state, null, null, 0);
+      this.showDrop(state, null, null, 0, false);
       return;
     }
     const { drop, pity } = lootAfterBattle(
@@ -1063,21 +1048,17 @@ export class BattleScene extends Scene {
       LOOT_CONFIG,
     );
     this.drop = drop;
-    let inventory: Inventory = { tiers: before.weaponTiers, ...used };
+    let tiers = before.weaponTiers;
     let outcome: DropOutcome | null = null;
     let salvage = 0;
+    let isNew = false;
     if (drop) {
       // F19: vũ khí chưa mở khóa theo màn thì món Thường rơi ra vẫn nhận (không phải món thừa).
       const weapon = BATTLE_CONFIG.weapons[drop.weapon];
       const cleared = clearedLevelCount(before, this.config.levels.length);
       const unlocked = weapon ? isUnlocked(weapon, cleared) : true;
-      ({ inventory, outcome, salvage } = applyDrop(
-        inventory,
-        drop,
-        LOOT_CONFIG,
-        SHOP_CONFIG.tier,
-        unlocked,
-      ));
+      isNew = !unlocked && permanentTierOf(tiers, drop.weapon) === undefined;
+      ({ tiers, outcome, salvage } = applyDrop(tiers, drop, LOOT_CONFIG, unlocked));
     }
     const gold = state.gold + salvage;
     const profile = applyBattleResult(
@@ -1086,11 +1067,7 @@ export class BattleScene extends Scene {
         level: state.level,
         won: state.phase === 'won',
         gold,
-        loot: state.rareKilled
-          ? { weaponTiers: inventory.tiers, lootPity: { ...pity } }
-          : undefined,
-        rentals: inventory.rentals,
-        rentalTiers: inventory.rentalTiers,
+        loot: state.rareKilled ? { weaponTiers: tiers, lootPity: { ...pity } } : undefined,
       },
       this.config.levels.length,
     );
@@ -1098,18 +1075,19 @@ export class BattleScene extends Scene {
     this.resultGold.setText(
       saved ? `+${gold} vàng · tổng ${profile.gold}` : `+${gold} vàng (không lưu được)`,
     );
-    this.showDrop(state, drop, outcome, salvage);
+    this.showDrop(state, drop, outcome, salvage, isNew);
   }
 
   /**
-   * Đợt 5: dòng báo rơi đồ — tên món tô màu cấp. F19: ghi dạng món (vĩnh viễn / số trận); món thừa ghi "đã có" và
-   * số vàng đổi được.
+   * Đợt 5: dòng báo rơi đồ — tên món tô màu cấp. F20: món rơi luôn vĩnh viễn — ghi "lên cấp" (hoặc "vũ khí mới" khi
+   * chưa có vũ khí đó); món thừa ghi "đã có" và số vàng đổi được.
    */
   private showDrop(
     state: BattleState,
     drop: Drop | null,
     outcome: DropOutcome | null,
     salvage: number,
+    isNew: boolean,
   ): void {
     this.resultLoot.setText('').setColor(PALETTE.white).setStroke(PALETTE.ink, 4);
     if (!state.rareKilled || this.replay) return;
@@ -1119,12 +1097,8 @@ export class BattleScene extends Scene {
     }
     const weapon = BATTLE_CONFIG.weapons[drop.weapon]?.name ?? '';
     const tier = LOOT_CONFIG.tiers[drop.tier]?.name ?? '';
-    const form = {
-      permanent: 'vĩnh viễn!',
-      rental: `${drop.battles ?? 0} trận!`,
-      extended: `thêm ${drop.battles ?? 0} trận!`,
-      salvaged: `đã có · +${salvage} vàng`,
-    }[outcome];
+    const form =
+      outcome === 'salvaged' ? `đã có · +${salvage} vàng` : isNew ? 'vũ khí mới!' : 'lên cấp!';
     this.resultLoot.setText(`Rơi: ${weapon} ${tier} · ${form}`);
     styleTierText(this.resultLoot, drop.tier);
   }

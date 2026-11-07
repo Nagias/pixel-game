@@ -218,3 +218,13 @@ Chủ dự án duyệt cả 8 mục ("Duyệt hết"). Kế hoạch và cách ki
 - [x] PR D — trùm Người Cây: chỉ mất máu từ con thứ 2 trong combo, gọi 2 Yêu tinh mỗi 3 lượt
 - [x] PR E — Nấm nổ, Pháp sư yêu tinh, Tổ nhện, Rùa gai; sinh lại màn 13–19 (màn 8–12, 20 giữ nguyên)
 - [x] Kiểm chứng cuối: `npm run check` trên main, chơi tay cả luồng từ hồ sơ mới (04/11/2026, xem FEATURE_MAP F19)
+
+## F20 — Gom luật vũ khí, sửa trùm màn 20, skill thành phần thưởng (07/11/2026)
+
+Chủ dự án duyệt cả 3 mục ("Duyệt hết"). Kế hoạch và cách kiểm chứng: `docs/plans/2026-11-07-gom-luat-vu-khi.md`.
+
+- [x] PR A — bảng cấp mới (dài / rộng / sát thương), cấp màu là cấp duy nhất, lên Tốt / Hiếm bằng vàng, đồ rơi
+      luôn vĩnh viễn, bỏ đồ có hạn và Cửa hàng, hồ sơ bản 8
+- [ ] PR B — trùm gọi Yêu tinh khi quanh nó hết quái, chỉnh màn 10, 20
+- [ ] PR C — skill mở sau trùm màn 10 (Mưa băng), Cầu lửa khi phá đảo, chỉnh màn 3–10
+- [ ] Kiểm chứng cuối: `npm run check` trên main, chơi tay cả luồng từ hồ sơ mới

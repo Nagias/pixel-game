@@ -220,21 +220,6 @@ const luck: PixelSprite = [
   '............',
 ];
 
-const bag: PixelSprite = [
-  '....PPPP....',
-  '...PP..PP...',
-  '..PPPPPPPP..',
-  '.P33333334P.',
-  'P3333333334P',
-  'P333BBA3334P',
-  'P33BBBBA334P',
-  'P333BBA3334P',
-  'P3333333344P',
-  '.P44444444P.',
-  '..PPPPPPPP..',
-  '............',
-];
-
 const up: PixelSprite = [
   '.....PP.....',
   '....PCCP....',
@@ -266,7 +251,6 @@ export const UI_SPRITES = {
   crit,
   heal,
   luck,
-  bag,
   up,
 } as const;
 

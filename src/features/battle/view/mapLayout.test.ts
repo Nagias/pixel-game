@@ -63,8 +63,8 @@ describe('nút màn trên bản đồ', () => {
     const a = center(levelNodeRect(0));
     const b = center(levelNodeRect(1));
     expect(mapTapAt((a.x + b.x) / 2, a.y)).toBeNull();
-    const shop = center(navButtonRect('shop'));
-    expect(mapTapAt(shop.x, shop.y)).toEqual({ kind: 'nav', target: 'shop' });
+    const weapons = center(navButtonRect('weapons'));
+    expect(mapTapAt(weapons.x, weapons.y)).toEqual({ kind: 'nav', target: 'weapons' });
   });
 });
 

@@ -146,10 +146,14 @@ export interface RareConfig {
   readonly goldMultiplier: number;
 }
 
-/** Đợt 5: một cấp màu vũ khí — chỉ cộng chỉ số so với vũ khí gốc; `dropRate` là tỉ lệ cấp khi rơi đồ. */
+/**
+ * Đợt 5: một cấp màu vũ khí — chỉ cộng chỉ số so với vũ khí gốc; `dropRate` là tỉ lệ cấp khi rơi đồ. F20: cấp nào
+ * cũng thấy khác bằng mắt — `reachBonus` vòng dài thêm (tầm gần ra ngoài, tầm vừa / xa vào trong), `widthBonus`
+ * lát rộng thêm (số chẵn: mỗi bên một nửa), `damageBonus` sát thương thêm.
+ */
 export interface WeaponTier {
   readonly name: string;
-  readonly critBonus: number;
+  readonly reachBonus: number;
   readonly widthBonus: number;
   readonly damageBonus: number;
   readonly dropRate: number;
@@ -165,9 +169,6 @@ export interface LootConfig {
   readonly highTier: number;
   readonly highPity: number;
   readonly tiers: readonly WeaponTier[];
-  /** F19: xác suất món rơi là vĩnh viễn; còn lại là món có hạn dùng `rentalBattles` trận. */
-  readonly permanentChance: number;
-  readonly rentalBattles: number;
   /** F19: vàng đổi được từ món rơi thừa (không mạnh hơn đồ đang có), theo cấp của món — mỗi cấp một số. */
   readonly salvageGold: readonly number[];
 }
@@ -180,27 +181,14 @@ export interface LootPity {
   readonly dropsSinceHighTier: number;
 }
 
-/** Đợt 5: một món rơi — vũ khí (chỉ số trong config.weapons) ở cấp nào. F19: `battles` = món có hạn. */
+/** Đợt 5: một món rơi — vũ khí (chỉ số trong config.weapons) ở cấp nào. F20: món rơi luôn vĩnh viễn. */
 export interface Drop {
   readonly weapon: number;
   readonly tier: number;
-  /** F19: món có hạn dùng ngần này trận (chỉ trừ trận có mang). Không có = vĩnh viễn. */
-  readonly battles?: number;
 }
 
 /** Đợt 5: cấp cao nhất đã có của từng vũ khí (khóa = chỉ số vũ khí) — dữ liệu hồ sơ, có thể lạ. */
 export type WeaponTiers = Readonly<Record<string, number>>;
-
-/** Đợt 6: món thuê ở cửa hàng — số trận còn dùng được của từng vũ khí (khóa = chỉ số vũ khí). */
-export type WeaponRentals = Readonly<Record<string, number>>;
-
-/** Đợt 6: cửa hàng bán các vũ khí `weapons` ở cấp `tier`, giá `price` vàng, dùng được `battles` trận. */
-export interface ShopConfig {
-  readonly weapons: readonly number[];
-  readonly tier: number;
-  readonly price: number;
-  readonly battles: number;
-}
 
 export interface HeroConfig {
   /** F04: máu ban đầu (và tối đa) của nhân vật. */
@@ -243,17 +231,12 @@ export type UpgradeConfig = Readonly<Record<UpgradeKind, UpgradeStat>>;
 export type UpgradeLevels = Readonly<Record<string, number>>;
 
 /**
- * F19: nâng cấp từng vũ khí bằng vàng — mỗi cấp cộng `critPerLevel` chí mạng; từ cấp `damageAtLevel` thêm 1 sát
- * thương; `costs` là giá từng cấp (số phần tử = cấp tối đa).
+ * F20: lên cấp màu vũ khí bằng vàng — `costs[i]` là giá lên cấp i + 1 (số phần tử = cấp cao nhất mua được; cấp cao
+ * hơn chỉ có từ quái hiếm).
  */
-export interface WeaponUpgradeConfig {
-  readonly critPerLevel: number;
-  readonly damageAtLevel: number;
+export interface TierUpConfig {
   readonly costs: readonly number[];
 }
-
-/** F19: cấp đã nâng của từng vũ khí (khóa = chỉ số vũ khí) — dữ liệu hồ sơ, có thể lạ. */
-export type WeaponLevels = Readonly<Record<string, number>>;
 
 /**
  * Bot đo mục tiêu độ khó của màn (tên kiểu chơi trong scripts/simCore.ts). "Ngắm chuẩn" chém đúng chỗ tốt

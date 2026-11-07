@@ -1,15 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { BATTLE_CONFIG, UPGRADE_CONFIG, WEAPON_UPGRADE_CONFIG } from './battleConfig';
-import type { BattleConfig, UpgradeConfig, WeaponUpgradeConfig } from './battleTypes';
+import { BATTLE_CONFIG, LOOT_CONFIG, TIER_UP_CONFIG, UPGRADE_CONFIG } from './battleConfig';
+import type { BattleConfig, TierUpConfig, UpgradeConfig } from './battleTypes';
 import {
+  buyTierUp,
   buyUpgrade,
-  buyWeaponUpgrade,
+  tierUpCost,
   upgradeCost,
+  validateTierUpConfig,
   validateUpgradeConfig,
-  validateWeaponUpgradeConfig,
-  weaponUpgradeCost,
   withUpgrades,
-  withWeaponLevels,
 } from './upgrades';
 
 // Đợt 4 kế hoạch sau B6 (chủ dự án duyệt 27/10/2026 — "agent đề xuất"): nâng cấp bằng vàng — máu tối đa,
@@ -98,76 +97,55 @@ describe('cấu hình nâng cấp sai bị từ chối', () => {
   });
 });
 
-// F19 PR C (chủ dự án duyệt 03/11/2026, mục 6): nâng cấp từng vũ khí bằng vàng — 3 cấp, mỗi cấp +5% chí mạng,
-// cấp 3 thêm +1 sát thương, giá 15 / 30 / 60. Chỉ nâng vũ khí đang có. Như nâng cấp nhân vật: chỉ đổi con số
-// của trận (withWeaponLevels trả cấu hình mới), không đổi luật.
+// F20 (chủ dự án duyệt 07/11/2026): lên cấp màu vũ khí bằng vàng — lên Tốt 35, lên Hiếm 70 (tổng 105 = tổng giá
+// nâng vũ khí F19 đã duyệt). Sử thi trở lên chỉ có từ quái hiếm. Cấp màu là cấp duy nhất, luôn vĩnh viễn.
 
-const UP: WeaponUpgradeConfig = { critPerLevel: 0.05, damageAtLevel: 3, costs: [15, 30, 60] };
+const UP: TierUpConfig = { costs: [35, 70] };
 
-const WEAPON_BASE: BattleConfig = {
-  ...BATTLE_CONFIG,
-  weapons: BATTLE_CONFIG.weapons.map((w) => ({ ...w, critChance: 0.1, damage: 1 })),
-};
-
-describe('nâng cấp từng vũ khí — hiệu lực lên trận', () => {
-  it('bảng thật đúng bản chủ dự án duyệt', () => {
-    expect(WEAPON_UPGRADE_CONFIG).toEqual(UP);
-    expect(() => validateWeaponUpgradeConfig(WEAPON_UPGRADE_CONFIG, BATTLE_CONFIG)).not.toThrow();
-  });
-
-  it('chưa nâng gì: cấu hình y nguyên (cùng đối tượng)', () => {
-    expect(withWeaponLevels(WEAPON_BASE, {}, UP)).toBe(WEAPON_BASE);
-  });
-
-  it('mỗi cấp +5% chí mạng; cấp 3 thêm +1 sát thương; chỉ vũ khí được nâng đổi', () => {
-    const up = withWeaponLevels(WEAPON_BASE, { 0: 2, 1: 3 }, UP);
-    expect(up.weapons[0]?.critChance).toBeCloseTo(0.2);
-    expect(up.weapons[0]?.damage).toBe(1);
-    expect(up.weapons[1]?.critChance).toBeCloseTo(0.25);
-    expect(up.weapons[1]?.damage).toBe(2);
-    expect(up.weapons[2]).toEqual(WEAPON_BASE.weapons[2]);
-  });
-
-  it('dữ liệu hồ sơ lạ: vượt tối đa tính tối đa; âm, lẻ, vũ khí không có thì bỏ qua', () => {
-    const up = withWeaponLevels(WEAPON_BASE, { 0: 9, 1: -1, 2: 1.5, 99: 2 }, UP);
-    expect(up.weapons[0]?.damage).toBe(2);
-    expect(up.weapons.slice(1)).toEqual(WEAPON_BASE.weapons.slice(1));
-  });
-
-  it('bảng sai bị từ chối: chí mạng ở cấp tối đa vượt 100%, giá âm, cấp thêm sát thương ngoài [1, số cấp]', () => {
-    expect(() => validateWeaponUpgradeConfig({ ...UP, critPerLevel: 0.5 }, WEAPON_BASE)).toThrow(
-      RangeError,
-    );
-    expect(() => validateWeaponUpgradeConfig({ ...UP, costs: [15, -1] }, WEAPON_BASE)).toThrow(
-      RangeError,
-    );
-    expect(() => validateWeaponUpgradeConfig({ ...UP, damageAtLevel: 4 }, WEAPON_BASE)).toThrow(
-      RangeError,
-    );
-  });
-});
-
-describe('nâng cấp từng vũ khí — mua', () => {
+describe('lên cấp vũ khí bằng vàng', () => {
   const owned = [0, 1, 2];
 
-  it('giá theo cấp kế: 15, 30, 60, tối đa thì null', () => {
-    expect(weaponUpgradeCost({}, 0, UP)).toBe(15);
-    expect(weaponUpgradeCost({ 0: 2 }, 0, UP)).toBe(60);
-    expect(weaponUpgradeCost({ 0: 3 }, 0, UP)).toBeNull();
+  it('bảng thật đúng bản chủ dự án duyệt: lên Tốt 35, lên Hiếm 70', () => {
+    expect(TIER_UP_CONFIG).toEqual(UP);
+    expect(() => validateTierUpConfig(TIER_UP_CONFIG, LOOT_CONFIG)).not.toThrow();
+  });
+
+  it('giá lên cấp kế: Thường 35, Tốt 70; từ Hiếm trở lên không mua được (null)', () => {
+    expect(tierUpCost({}, 0, UP)).toBe(35);
+    expect(tierUpCost({ 0: 1 }, 0, UP)).toBe(70);
+    expect(tierUpCost({ 0: 2 }, 0, UP)).toBeNull();
+    expect(tierUpCost({ 0: 5 }, 0, UP)).toBeNull();
+  });
+
+  it('dữ liệu hồ sơ lạ (âm, lẻ) tính như cấp Thường', () => {
+    expect(tierUpCost({ 0: -1 }, 0, UP)).toBe(35);
+    expect(tierUpCost({ 0: 1.5 }, 0, UP)).toBe(35);
   });
 
   it('mua: trừ đúng giá, vũ khí lên 1 cấp, vũ khí khác giữ nguyên', () => {
-    expect(buyWeaponUpgrade({ gold: 50, weaponLevels: { 1: 1 } }, 0, owned, UP)).toEqual({
-      gold: 35,
-      weaponLevels: { 0: 1, 1: 1 },
+    expect(buyTierUp({ gold: 100, weaponTiers: { 1: 2 } }, 0, owned, UP)).toEqual({
+      gold: 65,
+      weaponTiers: { 0: 1, 1: 2 },
+    });
+    expect(buyTierUp({ gold: 70, weaponTiers: { 0: 1 } }, 0, owned, UP)).toEqual({
+      gold: 0,
+      weaponTiers: { 0: 2 },
     });
   });
 
-  it.each<[string, Parameters<typeof buyWeaponUpgrade>]>([
-    ['thiếu vàng', [{ gold: 14, weaponLevels: {} }, 0, owned, UP]],
-    ['đã tối đa', [{ gold: 999, weaponLevels: { 0: 3 } }, 0, owned, UP]],
-    ['vũ khí chưa có', [{ gold: 999, weaponLevels: {} }, 5, owned, UP]],
+  it.each<[string, Parameters<typeof buyTierUp>]>([
+    ['thiếu vàng', [{ gold: 34, weaponTiers: {} }, 0, owned, UP]],
+    ['đã tới Hiếm', [{ gold: 999, weaponTiers: { 0: 2 } }, 0, owned, UP]],
+    ['vũ khí chưa có', [{ gold: 999, weaponTiers: {} }, 5, owned, UP]],
   ])('không mua được (%s): từ chối, không trừ gì', (_, args) => {
-    expect(() => buyWeaponUpgrade(...args)).toThrow(RangeError);
+    expect(() => buyTierUp(...args)).toThrow(RangeError);
+  });
+
+  it.each<[string, TierUpConfig]>([
+    ['không có giá nào', { costs: [] }],
+    ['giá âm', { costs: [35, -1] }],
+    ['mua tới cấp không có trong bảng', { costs: [1, 2, 3, 4, 5, 6] }],
+  ])('bảng sai bị từ chối: %s', (_, tierUp) => {
+    expect(() => validateTierUpConfig(tierUp, LOOT_CONFIG)).toThrow(RangeError);
   });
 });

@@ -13,13 +13,7 @@ import {
   withSavedLoadout,
   type SavedLoadout,
 } from '../../profile';
-import {
-  BATTLE_CONFIG,
-  LOOT_CONFIG,
-  SHOP_CONFIG,
-  UPGRADE_CONFIG,
-  WEAPON_UPGRADE_CONFIG,
-} from '../logic/battleConfig';
+import { BATTLE_CONFIG, LOOT_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
 import type { Loadout, SkillKind } from '../logic/battleTypes';
 import {
   chooseSkill,
@@ -34,8 +28,7 @@ import {
   toSavedLoadout,
 } from '../logic/loadout';
 import { withWeaponTiers } from '../logic/loot';
-import { effectiveTiers } from '../logic/shop';
-import { withUpgrades, withWeaponLevels } from '../logic/upgrades';
+import { withUpgrades } from '../logic/upgrades';
 import type { MapSceneData } from './MapScene';
 import { MAP_GOLD_PILL } from './mapLayout';
 import { goFromNav } from './cardScreen';
@@ -88,7 +81,6 @@ export class WeaponsScene extends Scene {
   private config = BATTLE_CONFIG;
   private returnTo: MapSceneData = {};
   private gold = 0;
-  private rentals: Readonly<Record<string, number>> = {};
   private loadout: Loadout = { weapons: [] };
   private cards: WeaponsCard[] = [];
   /** Hình vẽ theo bộ đồ đang mang — xóa và vẽ lại mỗi lần đổi. */
@@ -103,24 +95,18 @@ export class WeaponsScene extends Scene {
 
   init(data: Partial<WeaponsSceneData>): void {
     const profile = loadProfile();
-    this.config = withWeaponLevels(
-      withWeaponTiers(
-        withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
-        effectiveTiers(profile.weaponTiers, profile.rentals, profile.rentalTiers, SHOP_CONFIG),
-        LOOT_CONFIG,
-      ),
-      profile.weaponLevels,
-      WEAPON_UPGRADE_CONFIG,
+    this.config = withWeaponTiers(
+      withUpgrades(BATTLE_CONFIG, profile.upgrades, UPGRADE_CONFIG),
+      profile.weaponTiers,
+      LOOT_CONFIG,
     );
     this.returnTo = data.returnTo ?? {};
     this.gold = profile.gold;
-    this.rentals = profile.rentals;
     const session = this.registry.get(SESSION_LOADOUT) as SavedLoadout | undefined;
-    // F19: chỉ các món đang có (mở khóa theo màn, hoặc có ở dạng rơi / thuê).
+    // F19: chỉ các món đang có (mở khóa theo màn, hoặc có đồ rơi).
     const owned = ownedWeapons(this.config, {
       clearedLevels: clearedLevelCount(profile, this.config.levels.length),
       tiers: profile.weaponTiers,
-      rentals: profile.rentals,
     });
     this.loadout =
       fromSavedLoadout(session ?? profile.loadout, this.config, owned) ??
@@ -324,7 +310,7 @@ export class WeaponsScene extends Scene {
     });
   }
 
-  /** Thẻ vũ khí: viền xanh lá khi đang mang, vạch màu cấp, hình, tên, cấp/tầm hoặc số trận thuê còn lại. */
+  /** Thẻ vũ khí: viền xanh lá khi đang mang, vạch màu cấp, hình, tên, tên cấp (F20: luôn ghi, kể cả "Thường"), tầm. */
   private drawCard(
     rect: { x: number; y: number; width: number; height: number },
     weaponIndex: number,
@@ -344,49 +330,44 @@ export class WeaponsScene extends Scene {
         .fillRect(rect.x + 6, rect.y + 6, rect.width - 12, 4)
         .setDepth(DEPTH.ui),
     );
-    // F19: món có hạn thêm dòng "n trận" dưới tên cấp — hình và chữ dời lên cho đủ ba dòng.
-    const rental = this.rentals[String(weaponIndex)] ?? 0;
-    const timed = rental > 0;
+    // Ba dòng chữ dưới hình: tên, tên cấp (tô màu cấp), tầm ("gần", "2 phía"…).
     const cx = rect.x + rect.width / 2;
     const icon = WEAPON_ICON[weapon.name];
     if (icon) {
       add(
         this.add
-          .image(cx, rect.y + (timed ? 26 : 32), this.uiKeys[icon])
+          .image(cx, rect.y + 24, this.uiKeys[icon])
           .setScale(3)
           .setDepth(DEPTH.ui),
       );
     }
     add(
       this.add
-        .text(cx, rect.y + (timed ? 53 : 64), weapon.name, { ...TEXT, fontSize: '13px' })
+        .text(cx, rect.y + 50, weapon.name, { ...TEXT, fontSize: '13px' })
         .setOrigin(0.5)
         .setDepth(DEPTH.ui),
     );
     const sub = add(
       this.add
-        .text(
-          cx,
-          rect.y + (timed ? 68 : 80),
-          tier > 0 ? (LOOT_CONFIG.tiers[tier]?.name ?? '') : weapon.rangeLabel,
-          { ...TEXT, fontSize: '11px', color: PALETTE.yellow, strokeThickness: 3 },
-        )
+        .text(cx, rect.y + 64, LOOT_CONFIG.tiers[tier]?.name ?? '', {
+          ...TEXT,
+          fontSize: '11px',
+          strokeThickness: 3,
+        })
         .setOrigin(0.5)
         .setDepth(DEPTH.ui),
     );
-    if (tier > 0) styleTierText(sub, tier);
-    if (timed) {
-      add(
-        this.add
-          .text(cx, rect.y + 82, `${rental} trận`, {
-            ...TEXT,
-            fontSize: '10px',
-            color: PALETTE.mist,
-            strokeThickness: 3,
-          })
-          .setOrigin(0.5)
-          .setDepth(DEPTH.ui),
-      );
-    }
+    styleTierText(sub, tier);
+    add(
+      this.add
+        .text(cx, rect.y + 77, weapon.rangeLabel, {
+          ...TEXT,
+          fontSize: '10px',
+          color: PALETTE.mist,
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5)
+        .setDepth(DEPTH.ui),
+    );
   }
 }

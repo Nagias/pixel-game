@@ -1,6 +1,6 @@
 // Luật hồ sơ người chơi (đợt 3): đọc/ghi an toàn, cộng kết quả trận, chọn màn mở đầu. Hàm thuần — kho
 // lưu (localStorage) được truyền vào, không đụng trình duyệt.
-import { PROFILE_BACKUP_KEY, PROFILE_KEY, PROFILE_VERSION } from './profileConfig';
+import { LEGACY_REFUND, PROFILE_BACKUP_KEY, PROFILE_KEY, PROFILE_VERSION } from './profileConfig';
 import type {
   BattleResult,
   KeyValueStore,
@@ -17,9 +17,6 @@ export function emptyProfile(): Profile {
     upgrades: {},
     weaponTiers: {},
     lootPity: {},
-    rentals: {},
-    rentalTiers: {},
-    weaponLevels: {},
     clearedAll: false,
     loadout: null,
   };
@@ -52,24 +49,46 @@ function parseProfile(raw: string): Profile | null {
   } = data as Record<string, unknown>;
   if (!isCount(gold) || !isCount(unlockedLevel)) return null;
   // Bước chuyển từ phiên bản cũ: 1 → 2 thêm cấp nâng cấp (chưa nâng gì); 2 → 3 thêm đồ rơi (chưa có gì);
-  // 3 → 4 thêm món thuê (chưa thuê gì); 4 → 5 thêm đã phá đảo (chưa) và đồ đang mang (chưa lưu); 5 → 6 thêm
-  // cấp của món có hạn (chưa ghi — món thuê cũ là cấp cửa hàng); 6 → 7 thêm cấp nâng từng vũ khí (chưa nâng).
+  // 4 → 5 thêm đã phá đảo (chưa) và đồ đang mang (chưa lưu). F20: bản 4–7 có món có hạn (4+), cấp món có hạn (6+),
+  // cấp nâng vũ khí (7) — bản 8 bỏ hết, đổi ra vàng (`legacyGold`).
   if (version === 1) return { ...emptyProfile(), gold, unlockedLevel };
   if (!isLevels(upgrades)) return null;
   if (version === 2) return { ...emptyProfile(), gold, unlockedLevel, upgrades };
   if (!isLevels(weaponTiers) || !isLevels(lootPity)) return null;
-  const loot = { weaponTiers, lootPity };
-  if (version === 3) return { ...emptyProfile(), gold, unlockedLevel, upgrades, ...loot };
-  if (!isLevels(rentals)) return null;
-  if (version === 4) return { ...emptyProfile(), gold, unlockedLevel, upgrades, ...loot, rentals };
+  const base = { ...emptyProfile(), gold, unlockedLevel, upgrades, weaponTiers, lootPity };
+  if (version === 3) return base;
+  const timed = isLevels(rentals) ? rentals : null;
+  if (version !== PROFILE_VERSION && !timed) return null;
+  const refund = (tiers: Levels, levels: Levels) => gold + legacyGold(timed ?? {}, tiers, levels);
+  if (version === 4) return { ...base, gold: refund({}, {}) };
   if (typeof clearedAll !== 'boolean') return null;
   if (loadout !== null && !isSavedLoadout(loadout)) return null;
-  const rest = { gold, unlockedLevel, upgrades, ...loot, rentals, clearedAll, loadout };
-  if (version === 5) return { ...emptyProfile(), ...rest };
+  const rest = { ...base, clearedAll, loadout };
+  if (version === PROFILE_VERSION) return rest;
+  if (version === 5) return { ...rest, gold: refund({}, {}) };
   if (!isLevels(rentalTiers)) return null;
-  if (version === 6) return { ...emptyProfile(), ...rest, rentalTiers };
-  if (version !== PROFILE_VERSION || !isLevels(weaponLevels)) return null;
-  return { version, ...rest, rentalTiers, weaponLevels };
+  if (version === 6) return { ...rest, gold: refund(rentalTiers, {}) };
+  if (version !== 7 || !isLevels(weaponLevels)) return null;
+  return { ...rest, gold: refund(rentalTiers, weaponLevels) };
+}
+
+type Levels = Readonly<Record<string, number>>;
+
+/**
+ * F20 (bản 8): vàng đổi từ đồ cũ đã bỏ — mỗi món có hạn còn hạn đổi theo cấp của nó (không ghi cấp = món thuê cửa
+ * hàng), cộng vàng đã tiêu nâng từng vũ khí. Số liệu đóng băng ở `LEGACY_REFUND`.
+ */
+function legacyGold(rentals: Levels, rentalTiers: Levels, weaponLevels: Levels): number {
+  let total = 0;
+  for (const [weapon, battles] of Object.entries(rentals)) {
+    if (battles <= 0) continue;
+    const tier = rentalTiers[weapon] ?? LEGACY_REFUND.shopTier;
+    total += LEGACY_REFUND.rentalGold[tier] ?? 0;
+  }
+  for (const level of Object.values(weaponLevels)) {
+    total += LEGACY_REFUND.weaponUpgradeCosts.slice(0, level).reduce((sum, cost) => sum + cost, 0);
+  }
+  return total;
 }
 
 const isSavedLoadout = (value: unknown): value is SavedLoadout => {
@@ -149,18 +168,14 @@ export function isReplay(profile: Profile, level: number, levelCount: number): b
 /**
  * Cộng một trận vào hồ sơ: vàng nhặt được luôn được giữ (thắng hay thua — agent đề xuất, chủ dự án duyệt
  * 27/10/2026); thắng thì mở khóa màn kế (không vượt màn cuối, không làm tụt màn đã mở). F18: chơi lại màn đã
- * qua chỉ trừ món thuê — không vàng, không đồ rơi, không đổi màn đã mở; thắng màn cuối lần đầu là phá đảo.
+ * qua — không vàng, không đồ rơi, không đổi màn đã mở; thắng màn cuối lần đầu là phá đảo.
  */
 export function applyBattleResult(
   profile: Profile,
   result: BattleResult,
   levelCount: number,
 ): Profile {
-  const rentals = {
-    ...(result.rentals ? { rentals: result.rentals } : {}),
-    ...(result.rentalTiers ? { rentalTiers: result.rentalTiers } : {}),
-  };
-  if (isReplay(profile, result.level, levelCount)) return { ...profile, ...rentals };
+  if (isReplay(profile, result.level, levelCount)) return profile;
   const next = result.won ? Math.min(result.level + 1, levelCount - 1) : 0;
   return {
     ...profile,
@@ -168,7 +183,6 @@ export function applyBattleResult(
     unlockedLevel: Math.max(profile.unlockedLevel, next),
     clearedAll: profile.clearedAll || (result.won && result.level === levelCount - 1),
     ...result.loot,
-    ...rentals,
   };
 }
 

@@ -3,12 +3,14 @@
 import {
   UPGRADE_KINDS,
   type BattleConfig,
+  type LootConfig,
+  type TierUpConfig,
   type UpgradeConfig,
   type UpgradeKind,
   type UpgradeLevels,
-  type WeaponLevels,
-  type WeaponUpgradeConfig,
+  type WeaponTiers,
 } from './battleTypes';
+import { permanentTierOf } from './loot';
 
 /** Cấp hiện có của một chỉ số: số nguyên ≥ 0, không vượt cấp tối đa (dữ liệu hồ sơ có thể lạ). */
 function levelOf(levels: UpgradeLevels, kind: UpgradeKind, upgrades: UpgradeConfig): number {
@@ -98,95 +100,60 @@ export function buyUpgrade(wallet: Wallet, kind: UpgradeKind, upgrades: UpgradeC
   };
 }
 
-// ---------- F19: nâng cấp từng vũ khí ----------
+// ---------- F20: lên cấp màu vũ khí bằng vàng ----------
 
-/** Cấp đã nâng của vũ khí `weapon`: số nguyên ≥ 0, không vượt cấp tối đa (dữ liệu hồ sơ có thể lạ). */
-function weaponLevelOf(levels: WeaponLevels, weapon: number, upgrade: WeaponUpgradeConfig): number {
-  const raw = levels[weapon] ?? 0;
-  const level = Number.isInteger(raw) && raw > 0 ? raw : 0;
-  return Math.min(level, upgrade.costs.length);
-}
-
-/** Chặn bảng nâng cấp vũ khí sai ngay khi dùng. */
-export function validateWeaponUpgradeConfig(
-  upgrade: WeaponUpgradeConfig,
-  config: BattleConfig,
-): void {
+/** Chặn bảng lên cấp sai ngay khi dùng: có giá, giá là số nguyên ≥ 0, cấp mua được phải có trong bảng cấp. */
+export function validateTierUpConfig(tierUp: TierUpConfig, loot: LootConfig): void {
   const problems: string[] = [];
-  const { critPerLevel, damageAtLevel, costs } = upgrade;
-  if (costs.length === 0) problems.push('phải có ít nhất 1 cấp');
+  const { costs } = tierUp;
+  if (costs.length === 0) problems.push('phải có ít nhất 1 giá');
   if (!costs.every((cost) => Number.isInteger(cost) && cost >= 0)) {
     problems.push('giá phải là số nguyên ≥ 0');
   }
-  const strongest = Math.max(0, ...config.weapons.map((w) => w.critChance ?? 0));
-  if (!(critPerLevel >= 0 && strongest + critPerLevel * costs.length <= 1)) {
-    problems.push('chí mạng ở cấp tối đa phải trong [0, 1]');
-  }
-  if (!Number.isInteger(damageAtLevel) || damageAtLevel < 1 || damageAtLevel > costs.length) {
-    problems.push(`cấp thêm sát thương phải trong [1, ${costs.length}]`);
+  if (costs.length >= loot.tiers.length) {
+    problems.push(
+      `chỉ có ${loot.tiers.length} cấp — mua được tối đa tới cấp ${loot.tiers.length - 1}`,
+    );
   }
   if (problems.length > 0) {
-    throw new RangeError(`Bảng nâng cấp vũ khí sai: ${problems.join('; ')}`);
+    throw new RangeError(`Bảng lên cấp vũ khí sai: ${problems.join('; ')}`);
   }
 }
 
-/** Cấu hình trận sau khi cộng cấp nâng của từng vũ khí: chí mạng mỗi cấp, +1 sát thương từ cấp `damageAtLevel`. */
-export function withWeaponLevels(
-  config: BattleConfig,
-  levels: WeaponLevels,
-  upgrade: WeaponUpgradeConfig,
-): BattleConfig {
-  validateWeaponUpgradeConfig(upgrade, config);
-  if (config.weapons.every((_, index) => weaponLevelOf(levels, index, upgrade) === 0))
-    return config;
-  return {
-    ...config,
-    weapons: config.weapons.map((weapon, index) => {
-      const level = weaponLevelOf(levels, index, upgrade);
-      if (level === 0) return weapon;
-      return {
-        ...weapon,
-        critChance: (weapon.critChance ?? 0) + upgrade.critPerLevel * level,
-        damage: weapon.damage + (level >= upgrade.damageAtLevel ? 1 : 0),
-      };
-    }),
-  };
-}
-
-/** Giá vàng của cấp kế tiếp của vũ khí `weapon`; null nếu đã tối đa. */
-export function weaponUpgradeCost(
-  levels: WeaponLevels,
+/** Giá vàng lên cấp kế của vũ khí `weapon`; null nếu cấp đang có không còn mua được bằng vàng. */
+export function tierUpCost(
+  tiers: WeaponTiers,
   weapon: number,
-  upgrade: WeaponUpgradeConfig,
+  tierUp: TierUpConfig,
 ): number | null {
-  return upgrade.costs[weaponLevelOf(levels, weapon, upgrade)] ?? null;
+  return tierUp.costs[permanentTierOf(tiers, weapon) ?? 0] ?? null;
 }
 
-/** Ví khi nâng vũ khí: vàng và cấp đã nâng của từng vũ khí (phần của hồ sơ). */
-export interface WeaponWallet {
+/** Ví khi lên cấp vũ khí: vàng và cấp của từng vũ khí (phần của hồ sơ). */
+export interface TierWallet {
   readonly gold: number;
-  readonly weaponLevels: WeaponLevels;
+  readonly weaponTiers: WeaponTiers;
 }
 
 /**
- * Nâng vũ khí `weapon` lên 1 cấp: trừ đúng giá. Vũ khí chưa có (`owned`), đã tối đa hoặc thiếu vàng thì từ chối
- * (không trừ gì).
+ * Lên vũ khí `weapon` một cấp bằng vàng: trừ đúng giá. Vũ khí chưa có (`owned`), đã tới cấp cao nhất mua được,
+ * hoặc thiếu vàng thì từ chối (không trừ gì).
  */
-export function buyWeaponUpgrade(
-  wallet: WeaponWallet,
+export function buyTierUp(
+  wallet: TierWallet,
   weapon: number,
   owned: readonly number[],
-  upgrade: WeaponUpgradeConfig,
-): WeaponWallet {
+  tierUp: TierUpConfig,
+): TierWallet {
   if (!owned.includes(weapon)) throw new RangeError(`Chưa có vũ khí số ${weapon}`);
-  const cost = weaponUpgradeCost(wallet.weaponLevels, weapon, upgrade);
-  if (cost === null) throw new RangeError('Vũ khí đã nâng tối đa');
+  const cost = tierUpCost(wallet.weaponTiers, weapon, tierUp);
+  if (cost === null) throw new RangeError('Cấp cao hơn chỉ có từ quái hiếm');
   if (wallet.gold < cost) throw new RangeError(`Thiếu vàng: cần ${cost}, có ${wallet.gold}`);
   return {
     gold: wallet.gold - cost,
-    weaponLevels: {
-      ...wallet.weaponLevels,
-      [weapon]: weaponLevelOf(wallet.weaponLevels, weapon, upgrade) + 1,
+    weaponTiers: {
+      ...wallet.weaponTiers,
+      [weapon]: (permanentTierOf(wallet.weaponTiers, weapon) ?? 0) + 1,
     },
   };
 }
