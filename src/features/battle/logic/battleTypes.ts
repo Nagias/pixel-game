@@ -62,6 +62,8 @@ export interface SkillConfig {
   readonly freezeTurns: number;
   /** Số nhát chém để nạp đầy skill. */
   readonly chargeTurns: number;
+  /** F20: phần thưởng phá đảo — chỉ chọn được khi đã thắng màn cuối (chủ dự án duyệt 07/11/2026). */
+  readonly afterClear?: boolean;
 }
 
 /** F06: các loại quái. Thêm loại mới = thêm tên ở đây + con số trong battleConfig.ts + hình. */

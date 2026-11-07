@@ -203,6 +203,28 @@ describe('B6 — skill mang vào trận', () => {
     });
   });
 
+  // F20 PR C (chủ dự án duyệt 07/11/2026, mục 3): skill là phần thưởng — Cầu lửa (`afterClear`) chỉ chọn được khi đã
+  // phá đảo; bộ đồ đã lưu mang Cầu lửa mà chưa phá đảo thì về skill đầu tiên.
+  it('F20: skill "mở khi phá đảo" chỉ có trong danh sách khi đã phá đảo', () => {
+    const config = {
+      ...CONFIG,
+      skills: { ...CONFIG.skills, fireball: { ...CONFIG.skills.fireball, afterClear: true } },
+    };
+    expect(skillOptions(config)).toEqual(['iceRain']);
+    expect(skillOptions(config, false)).toEqual(['iceRain']);
+    expect(skillOptions(config, true)).toEqual(['iceRain', 'fireball']);
+  });
+
+  it('F20: bộ đồ mang skill chưa mở (chưa phá đảo) thì về skill đầu tiên; đã phá đảo thì giữ', () => {
+    const config = {
+      ...CONFIG,
+      skills: { ...CONFIG.skills, fireball: { ...CONFIG.skills.fireball, afterClear: true } },
+    };
+    const saved = { weapons: [0, 1, 2], skill: 'fireball' as const };
+    expect(loadoutForLevel(saved, 0, config)).toEqual({ weapons: [0, 1, 2], skill: 'iceRain' });
+    expect(loadoutForLevel(saved, 0, config, true)).toEqual(saved);
+  });
+
   it('mô tả skill sinh từ con số cấu hình', () => {
     expect(describeSkill(CONFIG.skills.iceRain)).toBe(
       'Băng thử: mọi quái mất 1 máu, đứng im 1 lượt; nạp 2 nhát',

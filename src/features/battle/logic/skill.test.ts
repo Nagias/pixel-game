@@ -342,6 +342,15 @@ describe('mang skill vào trận và cấu hình sai (B6)', () => {
     expect(() => createBattle(1, config, 0)).toThrow(RangeError);
   });
 
+  // F20 PR C (chủ dự án duyệt 07/11/2026, mục 3): màn 1–10 chỉ dùng vũ khí; hạ trùm màn 10 thì có Mưa băng (dùng từ
+  // màn 11); Cầu lửa để dành — mở khi phá đảo.
+  it('F20: skill mở từ màn 11 (sau trùm màn 10); Cầu lửa chỉ mở khi phá đảo', () => {
+    expect(BATTLE_CONFIG.skillUnlockLevel).toBe(10);
+    expect(BATTLE_CONFIG.levels[BATTLE_CONFIG.skillUnlockLevel - 1]?.monsters).toContain('treant');
+    expect(BATTLE_CONFIG.skills.iceRain.afterClear).toBeUndefined();
+    expect(BATTLE_CONFIG.skills.fireball.afterClear).toBe(true);
+  });
+
   it('cấu hình thật: mở được mọi màn; từ màn mở skill mang được mọi skill', () => {
     BATTLE_CONFIG.levels.forEach((_, level) => {
       const base = defaultLoadout(BATTLE_CONFIG);

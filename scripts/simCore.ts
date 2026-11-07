@@ -23,7 +23,12 @@ import type {
   SkillKind,
   TargetPlayer,
 } from '../src/features/battle/logic/battleTypes';
-import { allLoadouts, allWeapons, defaultLoadout } from '../src/features/battle/logic/loadout';
+import {
+  allLoadouts,
+  allWeapons,
+  defaultLoadout,
+  skillOptions,
+} from '../src/features/battle/logic/loadout';
 import { UPGRADE_CONFIG } from '../src/features/battle/logic/battleConfig';
 import { withUpgrades } from '../src/features/battle/logic/upgrades';
 
@@ -168,12 +173,13 @@ export function loadoutsForLevel(level: number, config: BattleConfig): Loadout[]
 
 /**
  * Đợt 0: các bộ đồ phải đạt mục tiêu độ khó của màn — vũ khí mặc định (Kiếm + Giáo + Cung), với
- * TỪNG skill nếu màn đã mở skill (để không skill nào làm màn dễ/khó hẳn).
+ * TỪNG skill nếu màn đã mở skill (để không skill nào làm màn dễ/khó hẳn). F20: chỉ skill chọn được trước khi phá đảo
+ * (Cầu lửa là phần thưởng phá đảo — không tính vào độ khó).
  */
 export function targetLoadouts(level: number, config: BattleConfig): Loadout[] {
   const weapons = defaultLoadout(config).weapons;
   if (level < config.skillUnlockLevel) return [{ weapons }];
-  return (Object.keys(config.skills) as SkillKind[]).map((skill) => ({ weapons, skill }));
+  return skillOptions(config).map((skill) => ({ weapons, skill }));
 }
 
 /** Đọc `--games N` từ dòng lệnh (số ván mỗi màn mỗi bộ đồ); không có thì dùng `fallback`. */

@@ -16,7 +16,8 @@ import type { LevelSpec } from './levelGenCore';
 const NOVICE_LEVELS = 16;
 const WINS = [87, 80, 95, 92, 69, 95, 95, 81, 81, 45, 33, 28, 65, 25, 35, 21, 79, 76, 74, 72];
 /** Màn 1–16 thêm lượt (28/10/2026): số lượt thử tối đa phải bao được số lượt hiện có (+4 để còn chỗ dò). */
-const NOVICE_TURN_MAX = [27, 29, 20, 23, 23, 21, 20, 20, 17, 17, 16, 16, 15, 15, 17, 18];
+// F20 PR C: màn 3–9 không còn skill — cho thử tới 26 lượt.
+const NOVICE_TURN_MAX = [27, 29, 26, 26, 26, 26, 26, 26, 26, 17, 16, 16, 15, 15, 17, 18];
 const playerOf = (level: number): TargetPlayer =>
   level < NOVICE_LEVELS ? 'Người mới' : 'Ngắm chuẩn';
 const target = (level: number): Difficulty => {
@@ -66,7 +67,7 @@ const THEME: Shape[] = [
   {
     opening: [
       { kind: 'slimeKing', counts: [1] },
-      { kind: 'slime', counts: [2, 3, 4, 5] },
+      { kind: 'slime', counts: [0, 1, 2, 3, 4, 5] },
     ],
     spread: [2, 3, 4],
     quest: { kind: 'slimeKing', counts: [1] },
@@ -74,19 +75,19 @@ const THEME: Shape[] = [
   },
   {
     splitOpposite: true,
-    opening: [{ kind: 'slime', counts: [8, 10] }],
+    opening: [{ kind: 'slime', counts: [4, 6, 8, 10] }],
     spread: [3, 4],
-    quest: { kind: 'slime', counts: [7, 8, 9, 10] },
+    quest: { kind: 'slime', counts: [4, 5, 6, 7, 8, 9, 10] },
     turns: [4, 13],
   },
   {
     opening: [
-      { kind: 'slime', counts: [6, 7, 8] },
+      { kind: 'slime', counts: [2, 3, 4, 5, 6, 7, 8] },
       { kind: 'slimeCannon', counts: [1] },
     ],
     spread: [4, 5],
     waves: [
-      { kind: 'slime', counts: [1, 2] },
+      { kind: 'slime', counts: [0, 1, 2] },
       { kind: 'slimeCannon', counts: [1] },
     ],
     nextWaveAt: [2],
@@ -96,12 +97,12 @@ const THEME: Shape[] = [
   {
     opening: [
       { kind: 'slimeCharger', counts: [1] },
-      { kind: 'slime', counts: [3, 4, 5] },
+      { kind: 'slime', counts: [1, 2, 3, 4, 5] },
     ],
     spread: [3, 4, 5],
     waves: [
       { kind: 'slimeCharger', counts: [1] },
-      { kind: 'slime', counts: [1, 2, 3] },
+      { kind: 'slime', counts: [0, 1, 2, 3] },
     ],
     nextWaveAt: [1, 2, 3],
     quest: { kind: 'slimeCharger', counts: [2] },
@@ -110,11 +111,11 @@ const THEME: Shape[] = [
   {
     opening: [
       { kind: 'slimeGhost', counts: [1] },
-      { kind: 'slime', counts: [4, 5] },
+      { kind: 'slime', counts: [1, 2, 3, 4, 5] },
     ],
     spread: [4],
     waves: [
-      { kind: 'slimeMini', counts: [3] },
+      { kind: 'slimeMini', counts: [0, 1, 2, 3] },
       { kind: 'slimeGhost', counts: [1] },
     ],
     nextWaveAt: [1, 2],
@@ -124,28 +125,28 @@ const THEME: Shape[] = [
   // 8: Yêu tinh — lính rừng, cứng hơn slime.
   {
     opening: [
-      { kind: 'goblin', counts: [2, 3] },
-      { kind: 'slime', counts: [3, 4] },
+      { kind: 'goblin', counts: [1, 2, 3] },
+      { kind: 'slime', counts: [1, 2, 3, 4] },
     ],
     spread: [3, 4],
     waves: [
       { kind: 'goblin', counts: [1, 2] },
-      { kind: 'slime', counts: [2] },
+      { kind: 'slime', counts: [0, 1, 2] },
     ],
     nextWaveAt: [1, 2],
-    quest: { kind: 'goblin', counts: [3, 4] },
+    quest: { kind: 'goblin', counts: [2, 3, 4] },
     turns: [7, 15],
   },
   // 9: Sói rừng — lao 2 vòng.
   {
     opening: [
       { kind: 'wolf', counts: [1, 2] },
-      { kind: 'goblin', counts: [2, 3] },
+      { kind: 'goblin', counts: [0, 1, 2, 3] },
     ],
     spread: [4],
     waves: [
       { kind: 'wolf', counts: [1] },
-      { kind: 'goblin', counts: [1, 2] },
+      { kind: 'goblin', counts: [0, 1, 2] },
     ],
     nextWaveAt: [1, 2],
     quest: { kind: 'wolf', counts: [2, 3] },

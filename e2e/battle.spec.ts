@@ -22,6 +22,7 @@ import {
   weaponButtonRects,
 } from '../src/features/battle/view/battleLayout';
 import { levelNodeRect, PREBATTLE_LAYOUT } from '../src/features/battle/view/mapLayout';
+import { PROFILE_KEY } from '../src/features/profile/logic/profileConfig';
 import { seedRng } from '../src/shared/random';
 import { BattleDriver, bestMove, hitIds, lookaheadTurn, missMove } from './support/battleDriver';
 
@@ -762,35 +763,47 @@ test('Đợt D (F18): màn Vũ khí chỉ có thẻ skill từ màn mở skill',
   expect((await game.openWeapons()).cards.some((c) => c.kind === 'skill')).toBe(false);
   await game.openPrebattle(SEED, BATTLE_CONFIG.skillUnlockLevel + 1);
   const weapons = await game.openWeapons();
+  // F20: chưa phá đảo thì chỉ có Mưa băng (Cầu lửa là phần thưởng phá đảo).
   expect(weapons.cards.filter((c) => c.kind === 'skill')).toEqual([
     { kind: 'skill', skill: 'iceRain' },
-    { kind: 'skill', skill: 'fireball' },
   ]);
   await game.advance(50);
   await page.screenshot({ path: test.info().outputPath('40-man-vu-khi.png') });
 });
 
-test('B6: màn chuẩn bị từ màn 3 có hàng skill (Mưa băng chọn sẵn), chọn Cầu lửa thì mang Cầu lửa vào trận', async ({
+test('F20: skill là phần thưởng — màn 1–10 không có hàng skill; màn 11 chỉ có Mưa băng; đã phá đảo thì chọn được Cầu lửa và mang vào trận', async ({
   page,
 }) => {
   const game = new BattleDriver(page);
-  // Màn 1–2 chưa có skill.
+  // Màn 1 chưa có skill.
   await game.openPrebattle(SEED);
   expect(await game.waitPrebattleReady()).toMatchObject({
     skills: [],
     loadout: { weapons: [0, 1, 2] },
   });
-
   const unlock = BATTLE_CONFIG.skillUnlockLevel + 1;
+  expect(unlock).toBe(11);
+  // Màn 11 (hồ sơ đã qua 10 màn): hạ trùm màn 10 rồi — có Mưa băng, chọn sẵn; chưa phá đảo nên chưa có Cầu lửa.
   await game.openPrebattle(SEED, unlock);
-  const prep = await game.waitPrebattleReady();
-  expect(prep).toMatchObject({
+  expect(await game.waitPrebattleReady()).toMatchObject({
     level: unlock - 1,
-    skills: ['iceRain', 'fireball'],
+    skills: ['iceRain'],
     loadout: { weapons: [0, 1, 2], skill: 'iceRain' },
   });
+  await game.advance(300);
   await page.screenshot({ path: test.info().outputPath('15-chuan-bi-skill.png') });
+  // Màn 10 (trùm): chưa có skill.
+  await game.openPrebattle(SEED, unlock - 1);
+  expect((await game.waitPrebattleReady()).skills).toEqual([]);
 
+  // Đã phá đảo: có thêm Cầu lửa, chọn được và mang vào trận.
+  await page.evaluate((key) => {
+    const raw = window.localStorage.getItem(key);
+    if (raw)
+      window.localStorage.setItem(key, JSON.stringify({ ...JSON.parse(raw), clearedAll: true }));
+  }, PROFILE_KEY);
+  await game.openPrebattle(SEED, unlock);
+  expect((await game.waitPrebattleReady()).skills).toEqual(['iceRain', 'fireball']);
   await game.chooseSkill('fireball');
   expect((await game.waitPrebattleReady()).loadout.skill).toBe('fireball');
   await game.startBattle();
@@ -844,39 +857,46 @@ test('B6: skill nạp theo nhát chém, đầy thì bấm — mọi quái mất 
   expect(next.monsters.every((m) => m.frozenTurns === undefined)).toBe(true);
 });
 
-test('B6: màn chuẩn bị nhớ skill đã chọn qua các màn chưa có skill — phá đảo bằng Cầu lửa, lên lại màn 3 vẫn chọn Cầu lửa', async ({
+test('F20: phá đảo (bằng Mưa băng) thì mở Cầu lửa; chọn Cầu lửa ở màn 11, sang màn chưa có skill rồi về màn 11 vẫn chọn Cầu lửa', async ({
   page,
 }) => {
-  test.setTimeout(FULL_RUN_TIMEOUT_MS); // chơi màn cuối rồi màn 1, 2 qua màn chuẩn bị
+  test.setTimeout(FULL_RUN_TIMEOUT_MS); // chơi màn cuối rồi màn 1 qua màn chuẩn bị
   const game = new BattleDriver(page);
   await game.seedProfile({
     unlockedLevel: BATTLE_CONFIG.levels.length - 1,
     upgrades: FULL_RUN_UPGRADES,
   });
   await game.openPrebattle(FULL_RUN_SEED, BATTLE_CONFIG.levels.length);
-  await game.chooseSkill('fireball');
+  // Chưa phá đảo: màn cuối chỉ có Mưa băng.
+  expect(await game.waitPrebattleReady()).toMatchObject({
+    skills: ['iceRain'],
+    loadout: { skill: 'iceRain' },
+  });
   await game.startBattle();
   await playBestUntilOver(game, undefined, FULL_RUN_SEED);
   expect(isGameCleared((await game.snapshot()).battle, BATTLE_CONFIG)).toBe(true);
+  expect(await game.storedProfile()).toMatchObject({ clearedAll: true });
 
-  // Phá đảo → màn 1, 2 chưa có skill.
-  for (let level = 0; level < BATTLE_CONFIG.skillUnlockLevel; level++) {
-    await continueFromResult(game);
-    const { battle } = await game.snapshot();
-    expect(battle.level).toBe(level);
-    expect(battle.loadout.skill).toBeUndefined();
-    await playBestUntilOver(game, undefined, FULL_RUN_SEED);
-    expect((await game.snapshot()).battle.phase).toBe('won');
-  }
+  // Phá đảo → chơi lại từ màn 1 (chưa có skill).
+  await continueFromResult(game);
+  const { battle } = await game.snapshot();
+  expect(battle.level).toBe(0);
+  expect(battle.loadout.skill).toBeUndefined();
 
-  await game.advance(RESULT_SCREEN_WAIT_MS);
-  await game.tap();
-  await game.waitSceneSwitch();
-  const prep = await game.waitPrebattleReady();
-  expect(prep).toMatchObject({
-    level: BATTLE_CONFIG.skillUnlockLevel,
-    loadout: { skill: 'fireball' },
-  });
+  // Màn 11 giờ có Cầu lửa; chọn Cầu lửa.
+  const unlock = BATTLE_CONFIG.skillUnlockLevel + 1;
+  await game.openPrebattle(FULL_RUN_SEED, unlock);
+  expect((await game.waitPrebattleReady()).skills).toEqual(['iceRain', 'fireball']);
+  await game.chooseSkill('fireball');
+  expect((await game.waitPrebattleReady()).loadout.skill).toBe('fireball');
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('18-cau-lua-mo.png') });
+
+  // Sang màn 2 (chưa có skill) rồi về màn 11: vẫn chọn Cầu lửa.
+  await game.openPrebattle(FULL_RUN_SEED, 2);
+  expect((await game.waitPrebattleReady()).loadout.skill).toBeUndefined();
+  await game.openPrebattle(FULL_RUN_SEED, unlock);
+  expect((await game.waitPrebattleReady()).loadout.skill).toBe('fireball');
 });
 
 /**

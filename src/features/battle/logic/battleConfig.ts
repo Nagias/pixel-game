@@ -295,9 +295,11 @@ export const BATTLE_CONFIG: BattleConfig = {
     iceRain: { name: 'Mưa băng', damage: 1, freezeTurns: 1, chargeTurns: 3 },
     // Đợt 0: nạp 5 → 6 nhát (`npm run tune` 27/10/2026): với người chơi trung bình, Cầu lửa nạp 5 thắng
     // màn 4 hơn Mưa băng 6–9% — chỉnh quái của màn không đưa được cả hai skill vào dung sai.
-    fireball: { name: 'Cầu lửa', damage: 2, freezeTurns: 0, chargeTurns: 6 },
+    // F20 (chủ dự án duyệt 07/11/2026): Cầu lửa để dành làm phần thưởng — mở khi phá đảo.
+    fireball: { name: 'Cầu lửa', damage: 2, freezeTurns: 0, chargeTurns: 6, afterClear: true },
   },
-  skillUnlockLevel: 2,
+  // F20 (chủ dự án duyệt 07/11/2026): màn 1–10 chỉ dùng vũ khí; hạ trùm màn 10 thì có Mưa băng, dùng từ màn 11.
+  skillUnlockLevel: 10,
   // Đợt 5 (chủ dự án duyệt 27/10/2026, lượt duyệt chung mục 1b): từ màn 3, 15% số trận có một quái hiếm.
   rare: { fromLevel: 2, chance: 0.15, hpMultiplier: 2, goldMultiplier: 3 },
   // Đợt 7 — chủ đề Rừng rậm, 20 màn (chủ dự án duyệt 27/10/2026): độ khó răng cưa — màn 1 ~98% giảm dần tới
