@@ -12,7 +12,6 @@ import {
 import {
   BATTLE_CONFIG,
   LOOT_CONFIG,
-  SHOP_CONFIG,
   UPGRADE_CONFIG,
 } from '../src/features/battle/logic/battleConfig';
 import { lootAfterBattle } from '../src/features/battle/logic/loot';
@@ -921,9 +920,8 @@ test('Đợt 5: quái hiếm sáng lên, máu ×2; hạ nó thì (bảo hiểm) 
   const drop = end.drop;
   if (!drop) throw new Error('Bảo hiểm phải làm rơi đồ');
   expect(drop.tier).toBeGreaterThanOrEqual(LOOT_CONFIG.highTier);
-  // F19: đúng vũ khí của loài; món bảo hiểm cấp cao luôn vĩnh viễn.
+  // F19: đúng vũ khí của loài.
   expect(BATTLE_CONFIG.weapons[drop.weapon]?.name).toBe(BATTLE_CONFIG.monsterKinds[rare.kind].drop);
-  expect(drop.battles).toBeUndefined();
   await game.advance(300);
   await page.screenshot({ path: test.info().outputPath('28-roi-do.png') });
   expect(await game.storedProfile()).toMatchObject({
@@ -955,42 +953,6 @@ test('Đợt 5: vũ khí có cấp màu — màn chuẩn bị và thanh vũ khí
   await game.startBattle();
   await game.advance(LEVEL_DRAWN_MS);
   await page.screenshot({ path: test.info().outputPath('31-thanh-vu-khi-cap.png') });
-});
-
-test('Đợt 6: cửa hàng — mua Giáo Hiếm 25 vàng (mua thêm thì cộng dồn), thiếu vàng không mua được; màn chuẩn bị ghi số trận còn dùng; mang vào trận thì trừ 1 trận', async ({
-  page,
-}) => {
-  const game = new BattleDriver(page);
-  await game.seedProfile({ gold: 60, unlockedLevel: 2 });
-  await game.openPrebattle(SEED, 3);
-  expect(await game.openShop()).toMatchObject({ gold: 60, rentals: {} });
-
-  const spear = 1;
-  await game.buyFromShop(spear);
-  expect(await game.shopSnapshot()).toMatchObject({ gold: 35, rentals: { [spear]: 5 } });
-  await game.buyFromShop(spear);
-  expect(await game.shopSnapshot()).toMatchObject({ gold: 10, rentals: { [spear]: 10 } });
-  // Còn 10 vàng: mua Kiếm (25) không được, không trừ gì.
-  await game.buyFromShop(0);
-  expect(await game.shopSnapshot()).toMatchObject({ gold: 10, rentals: { [spear]: 10 } });
-  await game.advance(300);
-  await page.screenshot({ path: test.info().outputPath('32-cua-hang.png') });
-  expect(await game.storedProfile()).toMatchObject({ gold: 10, rentals: { [spear]: 10 } });
-
-  // Chạm CHƠI về bảng trước trận: Giáo dùng cấp Hiếm.
-  await game.closeUpgrade();
-  const prep = await game.waitPrebattleReady();
-  expect(prep.tiers[spear]).toBe(SHOP_CONFIG.tier);
-  await game.advance(300);
-  await page.screenshot({ path: test.info().outputPath('33-mon-thue.png') });
-
-  // Vào trận: Giáo cộng chỉ số cấp Hiếm; hết trận trừ 1 trận.
-  await game.startBattle();
-  const { config } = await game.snapshot();
-  expect(config.weapons[spear]?.tier).toBe(SHOP_CONFIG.tier);
-  await playBestUntilOver(game);
-  expect((await game.snapshot()).battle.phase).toBe('won');
-  expect((await game.storedProfile())?.rentals).toEqual({ [spear]: 9 });
 });
 
 test('F19: vũ khí mới — đã qua màn 14 thì màn Vũ khí có Búa, Lưỡi hái (chưa có Nỏ); mang Lưỡi hái chém thì quái ở mép bị kéo vào lát giữa', async ({
@@ -1048,51 +1010,48 @@ test('F19: vũ khí mới — đã qua màn 14 thì màn Vũ khí có Búa, Lư�
 
 /**
  * F19: seed 143 ở màn 17 — quái hiếm là Yêu tinh, bot "Nhìn trước" hạ được rồi thắng; bảo hiểm chắc rơi
- * (không ép cấp cao) ra Kiếm Tốt có hạn 10 trận (script dò tạm 03/11/2026, `.cache/f19-rare-seed.ts`).
+ * (không ép cấp cao) ra Kiếm Tốt (script dò tạm 03/11/2026, `.cache/f19-rare-seed.ts`).
  */
-const TIMED_DROP_SEED = 143;
+const UPGRADE_DROP_SEED = 143;
 
-test('F19: quái hiếm rơi đúng vũ khí của loài; món có hạn ghi số trận ở màn kết quả và màn Vũ khí, chưa bị trừ trận vừa đánh', async ({
+test('F20: quái hiếm rơi đúng vũ khí của loài; món cao hơn cấp đang có thì vũ khí lên cấp vĩnh viễn — màn Vũ khí ghi cấp mới', async ({
   page,
 }) => {
   test.slow();
   const game = new BattleDriver(page);
-  // Đã hụt 3 lần liền: lần này chắc rơi; không ép cấp cao nên dạng món tung theo tỉ lệ 30% / 70%.
+  // Đã hụt 3 lần liền: lần này chắc rơi; không ép cấp cao.
   const pity = { dryRareKills: 3, dropsSinceHighTier: 0 };
   await game.seedProfile({
     unlockedLevel: RARE_LEVEL - 1,
     upgrades: FULL_RUN_UPGRADES,
     lootPity: pity,
   });
-  await game.openPrebattle(TIMED_DROP_SEED, RARE_LEVEL);
+  await game.openPrebattle(UPGRADE_DROP_SEED, RARE_LEVEL);
   await game.startBattle();
   const rare = (await game.snapshot()).battle.monsters.find((m) => m.rare);
   if (!rare) throw new Error('Thiếu quái hiếm');
-  await playBestUntilOver(game, undefined, TIMED_DROP_SEED);
+  await playBestUntilOver(game, undefined, UPGRADE_DROP_SEED);
   const end = await game.snapshot();
   expect(end.battle).toMatchObject({ phase: 'won', rareKilled: rare.kind });
   const drop = end.drop;
   expect(drop).toEqual(lootAfterBattle(end.battle, pity, FULL_RUN_CONFIG, LOOT_CONFIG).drop);
-  if (!drop?.battles) throw new Error('Seed này phải rơi món có hạn');
+  if (!drop || drop.tier < 1) throw new Error('Seed này phải rơi món trên cấp Thường');
   expect(BATTLE_CONFIG.weapons[drop.weapon]?.name).toBe(BATTLE_CONFIG.monsterKinds[rare.kind].drop);
   await game.advance(300);
-  await page.screenshot({ path: test.info().outputPath('43-roi-mon-co-han.png') });
-  // Món có hạn mới đủ 10 trận (trận vừa đánh trừ trước khi nhận món), ghi cấp riêng; không thành vĩnh viễn.
+  await page.screenshot({ path: test.info().outputPath('43-roi-len-cap.png') });
+  // F20: món rơi luôn vĩnh viễn — ghi thẳng cấp của vũ khí, không có số trận.
   const stored = await game.storedProfile();
-  expect(stored).toMatchObject({
-    rentals: { [drop.weapon]: drop.battles },
-    rentalTiers: { [drop.weapon]: drop.tier },
-  });
-  expect(stored?.weaponTiers[drop.weapon]).toBeUndefined();
+  expect(stored?.weaponTiers).toEqual({ [drop.weapon]: drop.tier });
+  expect(stored).not.toHaveProperty('rentals');
 
-  // Màn Vũ khí: thẻ món đó mang cấp của món có hạn.
+  // Màn Vũ khí: thẻ món đó mang cấp mới.
   await game.advance(RESULT_SCREEN_WAIT_MS);
   await game.tap();
   await game.waitSceneSwitch();
   const weapons = await game.openWeapons();
   expect(weapons.tiers[drop.weapon]).toBe(drop.tier);
   await game.advance(300);
-  await page.screenshot({ path: test.info().outputPath('44-the-mon-co-han.png') });
+  await page.screenshot({ path: test.info().outputPath('44-the-cap-moi.png') });
 });
 
 test('F19: món rơi không mạnh hơn đồ đang có thì đổi vàng — màn kết quả ghi "đã có", vàng cộng thêm', async ({
@@ -1122,11 +1081,10 @@ test('F19: món rơi không mạnh hơn đồ đang có thì đổi vàng — m�
   expect(await game.storedProfile()).toMatchObject({
     gold: end.battle.gold + salvage,
     weaponTiers: {},
-    rentals: {},
   });
 });
 
-test('F19: nâng cấp từng vũ khí — thẻ chọn "Vũ khí" ở màn Nâng cấp, mua đủ 3 cấp Kiếm (15 + 30 + 60 vàng), vào trận Kiếm +1 sát thương, +15% chí mạng', async ({
+test('F20: lên cấp vũ khí bằng vàng — thẻ chọn "Vũ khí": Kiếm Thường → Tốt (35) → Hiếm (70), từ Hiếm hết mua bằng vàng; vào trận Kiếm dài thêm 1 vòng, rộng thêm 2 lát', async ({
   page,
 }) => {
   const game = new BattleDriver(page);
@@ -1134,31 +1092,38 @@ test('F19: nâng cấp từng vũ khí — thẻ chọn "Vũ khí" ở màn Nân
   await game.openPrebattle(SEED, 3);
   await game.openUpgrade();
   const tab = await game.openUpgradeTab('weapons');
-  expect(tab).toMatchObject({ tab: 'weapons', weapons: [0, 1, 2, 3], weaponLevels: {} });
+  expect(tab).toMatchObject({ tab: 'weapons', weapons: [0, 1, 2, 3], weaponTiers: {} });
   await game.advance(300);
-  await page.screenshot({ path: test.info().outputPath('46-nang-vu-khi.png') });
+  await page.screenshot({ path: test.info().outputPath('46-len-cap-vu-khi.png') });
 
-  for (const gold of [95, 65, 5]) {
-    await game.buyWeaponUpgrade(0);
-    expect(await game.upgradeSnapshot()).toMatchObject({ gold });
-  }
-  // Đã tối đa: chạm nữa không trừ gì.
-  await game.buyWeaponUpgrade(0);
-  expect(await game.upgradeSnapshot()).toMatchObject({ gold: 5, weaponLevels: { 0: 3 } });
-  // Thiếu vàng (Giáo cấp 1 cần 15): không mua được.
-  await game.buyWeaponUpgrade(1);
-  expect(await game.upgradeSnapshot()).toMatchObject({ gold: 5, weaponLevels: { 0: 3 } });
+  await game.buyTierUp(0);
+  expect(await game.upgradeSnapshot()).toMatchObject({ gold: 75, weaponTiers: { 0: 1 } });
+  await game.buyTierUp(0);
+  expect(await game.upgradeSnapshot()).toMatchObject({ gold: 5, weaponTiers: { 0: 2 } });
+  // Từ Hiếm không mua bằng vàng được nữa (cấp cao hơn chỉ rơi từ quái hiếm): chạm chỗ nút cũ không gì.
+  await game.buyTierUp(0);
+  expect(await game.upgradeSnapshot()).toMatchObject({ gold: 5, weaponTiers: { 0: 2 } });
+  // Thiếu vàng (Giáo lên Tốt cần 35): không mua được.
+  await game.buyTierUp(1);
+  expect(await game.upgradeSnapshot()).toMatchObject({ gold: 5, weaponTiers: { 0: 2 } });
   await game.advance(300);
-  await page.screenshot({ path: test.info().outputPath('47-kiem-toi-da.png') });
-  expect(await game.storedProfile()).toMatchObject({ gold: 5, weaponLevels: { 0: 3 } });
+  await page.screenshot({ path: test.info().outputPath('47-kiem-hiem.png') });
+  expect(await game.storedProfile()).toMatchObject({ gold: 5, weaponTiers: { 0: 2 } });
 
   await game.closeUpgrade();
+  const prep = await game.waitPrebattleReady();
+  expect(prep.tiers[0]).toBe(2);
   await game.startBattle();
   const { config } = await game.snapshot();
   const base = BATTLE_CONFIG.weapons[0];
-  expect(config.weapons[0]?.damage).toBe((base?.damage ?? 0) + 1);
-  expect(config.weapons[0]?.critChance).toBeCloseTo((base?.critChance ?? 0) + 0.15);
+  expect(config.weapons[0]).toMatchObject({
+    maxRing: (base?.maxRing ?? 0) + 1,
+    widthSectors: (base?.widthSectors ?? 0) + 2,
+    damage: base?.damage,
+  });
   expect(config.weapons[1]).toEqual(BATTLE_CONFIG.weapons[1]);
+  await game.advance(LEVEL_DRAWN_MS);
+  await page.screenshot({ path: test.info().outputPath('47b-kiem-hiem-trong-tran.png') });
 });
 
 test('F19: trùm Người Cây — bắn trúng mình nó thì bị vỏ cứng chặn (không mất máu); hết lượt thứ 3 nó gọi Yêu tinh ra sát bên', async ({

@@ -169,6 +169,10 @@ describe('B4 — đồ mang vào trận', () => {
         LOOT_CONFIG,
       ),
     ).toBe('Gậy Huyền thoại: vòng 0–1, rộng 5 lát, không đẩy, chí mạng 25%, sát thương 2');
+    // F20: có bảng cấp thì luôn ghi tên cấp, kể cả cấp Thường.
+    expect(describeWeapon(weapon('Gậy', 'mid'), LOOT_CONFIG)).toBe(
+      'Gậy Thường: vòng 0–1, rộng 3 lát, không đẩy',
+    );
   });
 });
 

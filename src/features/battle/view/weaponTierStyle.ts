@@ -14,10 +14,10 @@ export function tierColor(tier: number): PaletteColor {
   return TIER_COLORS[Math.min(Math.max(tier, 0), TIER_COLORS.length - 1)] ?? 'white';
 }
 
-/** Màu cấp quá tối trên nền xanh đậm — đổi viền chữ sang trắng mới đọc được. */
-const DARK_TIER_COLORS: readonly PaletteColor[] = ['plum', 'red'];
+/** Màu cấp quá tối (hoặc cùng tông xanh) trên nền xanh đậm — đổi viền chữ sang trắng mới đọc được. */
+const DARK_TIER_COLORS: readonly PaletteColor[] = ['blue', 'plum', 'red'];
 
-/** Tô chữ theo màu cấp; màu tối (tím, đỏ) đổi viền sang trắng mới đọc được trên nền xanh đậm. */
+/** Tô chữ theo màu cấp; màu tối (xanh dương, tím, đỏ) đổi viền sang trắng mới đọc được trên nền xanh đậm. */
 export function styleTierText(text: GameObjects.Text, tier: number): void {
   const color = tierColor(tier);
   text

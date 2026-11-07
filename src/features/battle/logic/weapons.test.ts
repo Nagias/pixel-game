@@ -207,8 +207,8 @@ describe('cấu hình vũ khí mới bị từ chối khi sai', () => {
   });
 });
 
-describe('vũ khí đang có (mở khóa theo màn, hoặc có đồ rơi / món thuê)', () => {
-  const none = { clearedLevels: 0, tiers: {}, rentals: {} };
+describe('vũ khí đang có (mở khóa theo màn, hoặc có đồ rơi)', () => {
+  const none = { clearedLevels: 0, tiers: {} };
 
   it('người chơi mới: chỉ có các món không có mốc mở khóa', () => {
     expect(ownedWeapons(CONFIG, none)).toEqual([0, 1, 2, 5]);
@@ -220,10 +220,9 @@ describe('vũ khí đang có (mở khóa theo màn, hoặc có đồ rơi / món
     expect(ownedWeapons(CONFIG, { ...none, clearedLevels: 3 })).toEqual([0, 1, 2, 3, 4, 5]);
   });
 
-  it('chưa tới mốc mà có đồ rơi vĩnh viễn hoặc món thuê còn hạn thì vẫn có', () => {
+  it('chưa tới mốc mà có đồ rơi thì vẫn có', () => {
     expect(ownedWeapons(CONFIG, { ...none, tiers: { [SCYTHE_I]: 1 } })).toContain(SCYTHE_I);
-    expect(ownedWeapons(CONFIG, { ...none, rentals: { [SCYTHE_I]: 2 } })).toContain(SCYTHE_I);
-    expect(ownedWeapons(CONFIG, { ...none, rentals: { [SCYTHE_I]: 0 } })).not.toContain(SCYTHE_I);
+    expect(ownedWeapons(CONFIG, { ...none, tiers: { [SCYTHE_I]: -1 } })).not.toContain(SCYTHE_I);
     // F19 PR B: món Thường rơi vĩnh viễn của vũ khí chưa mở khóa ghi cấp 0 — vẫn là có.
     expect(ownedWeapons(CONFIG, { ...none, tiers: { [SCYTHE_I]: 0 } })).toContain(SCYTHE_I);
   });

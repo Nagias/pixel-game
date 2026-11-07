@@ -1,4 +1,4 @@
-// F18 đợt D: vẽ thanh nút dưới cùng (Cửa hàng · Vũ khí · CHƠI · Nâng cấp) cho Bản đồ, Vũ khí, Nâng cấp, Cửa hàng.
+// F18 đợt D: vẽ thanh nút dưới cùng (Vũ khí · CHƠI · Nâng cấp — F20 bỏ Cửa hàng) cho Bản đồ, Vũ khí, Nâng cấp.
 // Chỉ vẽ — vị trí ở navLayout.ts, chạm do từng scene xử lý.
 import type { Scene } from 'phaser';
 import { colorNumber, PALETTE } from '../../../shared/palette';
@@ -7,12 +7,11 @@ import { drawPanel } from './uiKit';
 import type { UiSprite } from './uiSprites';
 
 const LABEL: Record<NavTarget, string> = {
-  shop: 'Cửa hàng',
   weapons: 'Vũ khí',
   play: 'CHƠI',
   upgrade: 'Nâng cấp',
 };
-const ICON: Partial<Record<NavTarget, UiSprite>> = { shop: 'bag', weapons: 'sword', upgrade: 'up' };
+const ICON: Partial<Record<NavTarget, UiSprite>> = { weapons: 'sword', upgrade: 'up' };
 
 /** `active`: nút của màn đang mở (nền tối, như Micro RPG); `uiKeys`: texture biểu tượng đã nạp. */
 export function drawNavBar(

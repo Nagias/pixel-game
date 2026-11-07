@@ -1,4 +1,4 @@
-// F18 đợt E: phần dùng chung của màn Nâng cấp và Cửa hàng dạng thẻ (học ảnh 2, 3 Micro RPG): nền, ô vàng,
+// F18 đợt E: phần dùng chung của màn dạng thẻ (Nâng cấp — học ảnh 2, 3 Micro RPG): nền, ô vàng,
 // băng rôn tên màn, dòng báo, thanh nút dưới, nút mua; và cách đi theo thanh nút dưới. Chỉ vẽ và chuyển scene.
 import type { GameObjects, Scene } from 'phaser';
 import { colorNumber, PALETTE } from '../../../shared/palette';

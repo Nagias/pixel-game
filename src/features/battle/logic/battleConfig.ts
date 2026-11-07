@@ -4,9 +4,8 @@ import type {
   BattleConfig,
   Difficulty,
   LootConfig,
-  ShopConfig,
+  TierUpConfig,
   UpgradeConfig,
-  WeaponUpgradeConfig,
 } from './battleTypes';
 import type { Chapter } from './chapters';
 
@@ -561,21 +560,19 @@ export const UPGRADE_CONFIG: UpgradeConfig = {
 };
 
 /**
- * F19 (chủ dự án duyệt 03/11/2026, mục 6): nâng cấp từng vũ khí đang có — 3 cấp, mỗi cấp +5% chí mạng, cấp 3 thêm
- * +1 sát thương, giá 15 / 30 / 60 vàng. Không tính vào nâng cấp dự kiến khi đo độ khó (như cấp màu đồ rơi).
+ * F20 (chủ dự án duyệt 07/11/2026): lên cấp màu vũ khí bằng vàng ở màn Nâng cấp — lên Tốt 35, lên Hiếm 70 (tổng 105
+ * = tổng giá nâng vũ khí F19 đã duyệt). Sử thi trở lên chỉ có từ quái hiếm. Không tính vào đo độ khó (như cấp màu).
  */
-export const WEAPON_UPGRADE_CONFIG: WeaponUpgradeConfig = {
-  critPerLevel: 0.05,
-  damageAtLevel: 3,
-  costs: [15, 30, 60],
+export const TIER_UP_CONFIG: TierUpConfig = {
+  costs: [35, 70],
 };
 
 /**
  * Đợt 5 (chủ dự án duyệt 27/10/2026, lượt duyệt chung mục 1b): hạ quái hiếm thì 50% rơi một vũ khí; 6 cấp màu
  * chỉ cộng chỉ số. Bảo hiểm: hụt 3 lần liền thì lần thứ 4 chắc rơi; 29 món liền dưới Sử thi thì món thứ 30 chắc
  * từ Sử thi trở lên. F19 (chủ dự án duyệt 03/11/2026, mục 1, 2, 6): loại vũ khí theo loài quái (`drop` ở
- * `monsterKinds`); 30% vĩnh viễn, 70% có hạn 10 trận (món bảo hiểm cấp cao luôn vĩnh viễn); món thừa đổi vàng
- * theo cấp (agent chọn: dưới giá một cấp nâng cấp nhân với cấp — không thành nguồn vàng chính).
+ * `monsterKinds`); món thừa đổi vàng theo cấp (agent chọn: dưới giá một cấp nâng cấp nhân với cấp — không thành
+ * nguồn vàng chính). F20 (chủ dự án duyệt 07/11/2026): món rơi luôn vĩnh viễn (bỏ món có hạn).
  */
 export const LOOT_CONFIG: LootConfig = {
   dropChance: 0.5,
@@ -583,30 +580,15 @@ export const LOOT_CONFIG: LootConfig = {
   highTier: 3,
   highPity: 30,
   tiers: [
-    { name: 'Thường', critBonus: 0, widthBonus: 0, damageBonus: 0, dropRate: 0.4 },
-    { name: 'Tốt', critBonus: 0.05, widthBonus: 0, damageBonus: 0, dropRate: 0.28 },
-    { name: 'Hiếm', critBonus: 0.1, widthBonus: 0, damageBonus: 0, dropRate: 0.17 },
-    { name: 'Sử thi', critBonus: 0.1, widthBonus: 2, damageBonus: 0, dropRate: 0.1 },
-    { name: 'Huyền thoại', critBonus: 0.15, widthBonus: 2, damageBonus: 1, dropRate: 0.04 },
-    { name: 'Thần', critBonus: 0.2, widthBonus: 2, damageBonus: 1, dropRate: 0.01 },
+    // F20 (chủ dự án duyệt 07/11/2026): cấp nào cũng thấy khác — cộng dồn dài / rộng / sát thương.
+    { name: 'Thường', reachBonus: 0, widthBonus: 0, damageBonus: 0, dropRate: 0.4 },
+    { name: 'Tốt', reachBonus: 1, widthBonus: 0, damageBonus: 0, dropRate: 0.28 },
+    { name: 'Hiếm', reachBonus: 1, widthBonus: 2, damageBonus: 0, dropRate: 0.17 },
+    { name: 'Sử thi', reachBonus: 1, widthBonus: 4, damageBonus: 0, dropRate: 0.1 },
+    { name: 'Huyền thoại', reachBonus: 1, widthBonus: 4, damageBonus: 1, dropRate: 0.04 },
+    { name: 'Thần', reachBonus: 1, widthBonus: 4, damageBonus: 2, dropRate: 0.01 },
   ],
-  permanentChance: 0.3,
-  rentalBattles: 10,
   salvageGold: [1, 2, 4, 8, 15, 30],
-};
-
-/**
- * Đợt 6 (chủ dự án duyệt 27/10/2026, lượt duyệt chung mục 1b): cửa hàng bán cố định Kiếm, Rìu, Giáo, Cung
- * cấp Hiếm (chỉ số trong LOOT_CONFIG.tiers), 25 vàng mỗi món, dùng 5 trận (thắng hay thua đều trừ — agent
- * chọn: chỉ trừ trận có mang món đó). Nút xem quảng cáo để giai đoạn D.
- */
-// F19 (chủ dự án duyệt 03/11/2026, mục 3): bán thêm Búa, Lưỡi hái, Nỏ cấp Hiếm, cùng giá và hạn. Cửa hàng chỉ
-// bày món người chơi đã có (agent chọn: không bán món chưa gặp).
-export const SHOP_CONFIG: ShopConfig = {
-  weapons: [0, 3, 1, 2, 4, 5, 6],
-  tier: 2,
-  price: 25,
-  battles: 5,
 };
 
 /**

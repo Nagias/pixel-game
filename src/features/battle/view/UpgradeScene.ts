@@ -1,31 +1,27 @@
 // Đợt 4: màn Nâng cấp — VỎ hiển thị. F18 đợt E: dạng thẻ (học ảnh 2 Micro RPG) — mỗi chỉ số một thẻ: hình,
 // tên, cấp, hiệu lực hiện tại → cấp kế, nút mua có đồng xu. Mở từ thanh nút dưới, đi tiếp cũng bằng thanh đó.
-// F19 PR C: hai thẻ chọn "Nhân vật" (4 chỉ số) / "Vũ khí" (nâng từng vũ khí đang có, lưới thẻ nhỏ).
+// F19 PR C: hai thẻ chọn "Nhân vật" (4 chỉ số) / "Vũ khí" (lưới thẻ nhỏ). F20: thẻ "Vũ khí" lên cấp màu bằng vàng.
 // Luật giá / giới hạn / hiệu lực nằm ở logic/upgrades.ts; scene chỉ vẽ, chuyển cú chạm thành lệnh mua và lưu.
 import { Scene, Scenes, type GameObjects, type Input } from 'phaser';
 import { registerPixelSprites } from '../../../app/pixelSprites';
 import { setSnapshotProvider } from '../../../app/testBridge';
 import { colorNumber, PALETTE } from '../../../shared/palette';
 import { clearedLevelCount, loadProfile, saveProfile, type Profile } from '../../profile';
-import { BATTLE_CONFIG, UPGRADE_CONFIG, WEAPON_UPGRADE_CONFIG } from '../logic/battleConfig';
+import { BATTLE_CONFIG, LOOT_CONFIG, TIER_UP_CONFIG, UPGRADE_CONFIG } from '../logic/battleConfig';
 import {
   UPGRADE_KINDS,
   type UpgradeKind,
   type UpgradeLevels,
-  type WeaponLevels,
+  type WeaponTiers,
 } from '../logic/battleTypes';
 import { ownedWeapons } from '../logic/loadout';
-import {
-  buyUpgrade,
-  buyWeaponUpgrade,
-  upgradeCost,
-  weaponUpgradeCost,
-  withUpgrades,
-} from '../logic/upgrades';
+import { permanentTierOf, tierGain } from '../logic/loot';
+import { buyTierUp, buyUpgrade, tierUpCost, upgradeCost, withUpgrades } from '../logic/upgrades';
 import { CARD_TEXT, drawBuyButton, drawCardFrame, drawCardScreen, goFromNav } from './cardScreen';
 import type { MapSceneData } from './MapScene';
 import { drawPanel } from './uiKit';
 import { UI_SPRITES, UPGRADE_ICON, WEAPON_ICON, type UiSprite } from './uiSprites';
+import { styleTierText } from './weaponTierStyle';
 import {
   buyButtonRect,
   cardRect,
@@ -43,8 +39,8 @@ export interface UpgradeSnapshot {
   readonly upgrades: UpgradeLevels;
   /** F19: thẻ chọn đang mở. */
   readonly tab: UpgradeTab;
-  /** F19: cấp đã nâng của từng vũ khí. */
-  readonly weaponLevels: WeaponLevels;
+  /** F20: cấp màu của từng vũ khí (lên bằng vàng ở thẻ chọn "Vũ khí"). */
+  readonly weaponTiers: WeaponTiers;
   /** F19: các vũ khí đang có — thứ tự thẻ ở thẻ chọn "Vũ khí". */
   readonly weapons: readonly number[];
   /** Màn đã hiện đủ lâu để nhận chạm (chống chạm nhầm nối từ màn trước). */
@@ -71,8 +67,16 @@ interface UpgradeCard extends BuyParts {
 
 interface WeaponCard extends BuyParts {
   readonly weapon: number;
-  readonly level: GameObjects.Text;
+  /** Tên cấp đang có, tô màu cấp. */
+  readonly tier: GameObjects.Text;
+  /** Phần tăng ở cấp kế (mua bằng vàng), hoặc cấp cao hơn rơi từ loài nào. */
   readonly gain: GameObjects.Text;
+}
+
+/** F20: tên loài quái hiếm rơi ra vũ khí `weapon` (bảng rơi theo loài, F19). */
+function dropSource(weapon: number): string {
+  const name = BATTLE_CONFIG.weapons[weapon]?.name;
+  return Object.values(BATTLE_CONFIG.monsterKinds).find((kind) => kind.drop === name)?.name ?? '';
 }
 
 /** Giá trị hiệu lực của chỉ số ở các cấp `levels` (tên chỉ số đã ghi ở dòng trên, chỉ cần con số). */
@@ -103,7 +107,7 @@ export class UpgradeScene extends Scene {
   private returnTo: MapSceneData = {};
   private profile!: Profile;
   private tab: UpgradeTab = 'character';
-  /** F19: vũ khí đang có (mở khóa theo màn / rơi / thuê) — chỉ nâng được các món này. */
+  /** F19: vũ khí đang có (mở khóa theo màn / đồ rơi) — chỉ lên cấp được các món này. */
   private weapons: number[] = [];
   private cards: UpgradeCard[] = [];
   private weaponCards: WeaponCard[] = [];
@@ -126,7 +130,6 @@ export class UpgradeScene extends Scene {
     this.weapons = ownedWeapons(BATTLE_CONFIG, {
       clearedLevels: clearedLevelCount(this.profile, BATTLE_CONFIG.levels.length),
       tiers: this.profile.weaponTiers,
-      rentals: this.profile.rentals,
     });
   }
 
@@ -187,12 +190,14 @@ export class UpgradeScene extends Scene {
     this.save({ ...this.profile, ...buyUpgrade(this.profile, kind, UPGRADE_CONFIG) });
   }
 
-  /** F19: nâng vũ khí một cấp nếu được (như buy). */
+  /** F20: lên vũ khí một cấp màu bằng vàng nếu được (như buy). */
   private buyWeapon(weapon: number): void {
-    const cost = weaponUpgradeCost(this.profile.weaponLevels, weapon, WEAPON_UPGRADE_CONFIG);
+    const cost = tierUpCost(this.profile.weaponTiers, weapon, TIER_UP_CONFIG);
     if (cost === null || cost > this.profile.gold) return;
-    const wallet = buyWeaponUpgrade(this.profile, weapon, this.weapons, WEAPON_UPGRADE_CONFIG);
-    this.save({ ...this.profile, ...wallet });
+    this.save({
+      ...this.profile,
+      ...buyTierUp(this.profile, weapon, this.weapons, TIER_UP_CONFIG),
+    });
   }
 
   private save(next: Profile): void {
@@ -211,7 +216,7 @@ export class UpgradeScene extends Scene {
       gold: this.profile.gold,
       upgrades: this.profile.upgrades,
       tab: this.tab,
-      weaponLevels: this.profile.weaponLevels,
+      weaponTiers: this.profile.weaponTiers,
       weapons: this.weapons,
       canTap: this.canTap(),
     };
@@ -319,7 +324,7 @@ export class UpgradeScene extends Scene {
     this.cards.push({ kind, level, effect, ...this.createBuyParts(buyButtonRect(index)) });
   }
 
-  /** F19: thẻ nhỏ của một vũ khí: hình, tên, cấp, phần tăng ở cấp kế, nút mua. */
+  /** F19: thẻ nhỏ của một vũ khí: hình, tên, cấp màu (F20), phần tăng ở cấp kế, nút mua. */
   private createWeaponCard(weapon: number, index: number): void {
     const card = smallCardRect(index);
     const cx = card.x + card.width / 2;
@@ -340,9 +345,9 @@ export class UpgradeScene extends Scene {
         .setOrigin(0.5)
         .setDepth(5),
     );
-    const level = this.keep(
+    const tier = this.keep(
       this.add
-        .text(cx, card.y + 67, '', { ...CARD_TEXT, fontSize: '11px', color: PALETTE.yellow })
+        .text(cx, card.y + 67, '', { ...CARD_TEXT, fontSize: '11px', strokeThickness: 3 })
         .setOrigin(0.5)
         .setDepth(5),
     );
@@ -359,12 +364,12 @@ export class UpgradeScene extends Scene {
         .setOrigin(0.5)
         .setDepth(5),
     );
-    this.weaponCards.push({ weapon, level, gain, ...this.createBuyParts(smallBuyRect(index)) });
+    this.weaponCards.push({ weapon, tier, gain, ...this.createBuyParts(smallBuyRect(index)) });
   }
 
   /** Vẽ lại theo hồ sơ hiện tại: vàng, cấp, hiệu lực / phần tăng ở cấp kế, nút mua sáng/tối. */
   private sync(): void {
-    const { gold, upgrades, weaponLevels } = this.profile;
+    const { gold, upgrades, weaponTiers } = this.profile;
     this.gold.set(String(gold));
     this.cards.forEach((card, index) => {
       const max = UPGRADE_CONFIG[card.kind].costs.length;
@@ -380,16 +385,28 @@ export class UpgradeScene extends Scene {
       );
       this.syncBuy(card, buyButtonRect(index), cost);
     });
-    const { costs, critPerLevel, damageAtLevel } = WEAPON_UPGRADE_CONFIG;
     this.weaponCards.forEach((card, index) => {
-      const level = Math.min(weaponLevels[card.weapon] ?? 0, costs.length);
-      const cost = weaponUpgradeCost(weaponLevels, card.weapon, WEAPON_UPGRADE_CONFIG);
-      card.level.setText(`Cấp ${level}/${costs.length}`);
-      const crit = `+${Math.round(critPerLevel * 100)}% chí mạng`;
-      card.gain.setText(
-        cost === null ? 'Tối đa' : level + 1 === damageAtLevel ? `${crit}\n+1 sát thương` : crit,
-      );
-      this.syncBuy(card, smallBuyRect(index), cost);
+      const top = LOOT_CONFIG.tiers.length - 1;
+      const tier = Math.min(permanentTierOf(weaponTiers, card.weapon) ?? 0, top);
+      const cost = tierUpCost(weaponTiers, card.weapon, TIER_UP_CONFIG);
+      styleTierText(card.tier.setText(LOOT_CONFIG.tiers[tier]?.name ?? ''), tier);
+      const rect = smallBuyRect(index);
+      if (cost !== null) {
+        // Mua được: cấp kế và phần tăng của nó, nút mua.
+        const next = LOOT_CONFIG.tiers[tier + 1]?.name ?? '';
+        card.gain.setText(`Lên ${next}:\n${tierGain(tier + 1, LOOT_CONFIG)}`).setY(rect.y - 12);
+        this.syncBuy(card, rect, cost);
+        return;
+      }
+      // Cấp cao hơn không mua bằng vàng được: ẩn nút mua, ghi nơi có cấp cao hơn.
+      card.buy.clear();
+      card.coin.setVisible(false);
+      card.price.setText('');
+      card.gain
+        .setText(
+          tier >= top ? 'Cấp cao nhất' : `Cấp cao hơn\nchỉ rơi từ\n${dropSource(card.weapon)}`,
+        )
+        .setY(rect.y + rect.height / 2 - 8);
     });
   }
 
