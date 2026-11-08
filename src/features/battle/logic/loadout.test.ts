@@ -178,7 +178,7 @@ describe('B4 — đồ mang vào trận', () => {
 
 describe('B6 — skill mang vào trận', () => {
   it('danh sách skill theo thứ tự cấu hình; màn mở skill theo cấu hình', () => {
-    expect(skillOptions(CONFIG)).toEqual(['iceRain', 'fireball']);
+    expect(skillOptions(CONFIG, 0)).toEqual(['iceRain', 'fireball']);
     expect(isSkillUnlocked(0, { ...CONFIG, skillUnlockLevel: 1 })).toBe(false);
     expect(isSkillUnlocked(1, { ...CONFIG, skillUnlockLevel: 1 })).toBe(true);
   });
@@ -203,26 +203,25 @@ describe('B6 — skill mang vào trận', () => {
     });
   });
 
-  // F20 PR C (chủ dự án duyệt 07/11/2026, mục 3): skill là phần thưởng — Cầu lửa (`afterClear`) chỉ chọn được khi đã
-  // phá đảo; bộ đồ đã lưu mang Cầu lửa mà chưa phá đảo thì về skill đầu tiên.
-  it('F20: skill "mở khi phá đảo" chỉ có trong danh sách khi đã phá đảo', () => {
-    const config = {
-      ...CONFIG,
-      skills: { ...CONFIG.skills, fireball: { ...CONFIG.skills.fireball, afterClear: true } },
-    };
-    expect(skillOptions(config)).toEqual(['iceRain']);
-    expect(skillOptions(config, false)).toEqual(['iceRain']);
-    expect(skillOptions(config, true)).toEqual(['iceRain', 'fireball']);
+  // F20 PR C (chủ dự án chọn 07/11/2026): mỗi skill là phần thưởng một trận trùm — skill có màn mở riêng (`unlockLevel`,
+  // không ghi = màn mở skill chung); bộ đồ mang skill chưa mở ở màn đó thì về skill đầu tiên.
+  const REWARD = {
+    ...CONFIG,
+    skillUnlockLevel: 1,
+    skills: { ...CONFIG.skills, fireball: { ...CONFIG.skills.fireball, unlockLevel: 3 } },
+  };
+
+  it('F20: skill có màn mở riêng chỉ có trong danh sách từ màn đó', () => {
+    expect(skillOptions(REWARD, 0)).toEqual([]);
+    expect(skillOptions(REWARD, 1)).toEqual(['iceRain']);
+    expect(skillOptions(REWARD, 2)).toEqual(['iceRain']);
+    expect(skillOptions(REWARD, 3)).toEqual(['iceRain', 'fireball']);
   });
 
-  it('F20: bộ đồ mang skill chưa mở (chưa phá đảo) thì về skill đầu tiên; đã phá đảo thì giữ', () => {
-    const config = {
-      ...CONFIG,
-      skills: { ...CONFIG.skills, fireball: { ...CONFIG.skills.fireball, afterClear: true } },
-    };
+  it('F20: bộ đồ mang skill chưa mở ở màn này thì về skill đầu tiên; màn đã mở thì giữ', () => {
     const saved = { weapons: [0, 1, 2], skill: 'fireball' as const };
-    expect(loadoutForLevel(saved, 0, config)).toEqual({ weapons: [0, 1, 2], skill: 'iceRain' });
-    expect(loadoutForLevel(saved, 0, config, true)).toEqual(saved);
+    expect(loadoutForLevel(saved, 2, REWARD)).toEqual({ weapons: [0, 1, 2], skill: 'iceRain' });
+    expect(loadoutForLevel(saved, 3, REWARD)).toEqual(saved);
   });
 
   it('mô tả skill sinh từ con số cấu hình', () => {

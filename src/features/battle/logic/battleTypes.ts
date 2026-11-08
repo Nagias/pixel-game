@@ -62,8 +62,11 @@ export interface SkillConfig {
   readonly freezeTurns: number;
   /** Số nhát chém để nạp đầy skill. */
   readonly chargeTurns: number;
-  /** F20: phần thưởng phá đảo — chỉ chọn được khi đã thắng màn cuối (chủ dự án duyệt 07/11/2026). */
-  readonly afterClear?: boolean;
+  /**
+   * F20: màn đầu tiên (đếm từ 0) mang được skill này — phần thưởng hạ trùm (chủ dự án chọn 07/11/2026). Không ghi = màn
+   * mở skill chung (`skillUnlockLevel`).
+   */
+  readonly unlockLevel?: number;
 }
 
 /** F06: các loại quái. Thêm loại mới = thêm tên ở đây + con số trong battleConfig.ts + hình. */
@@ -298,7 +301,7 @@ export interface BattleConfig {
   /** B6: hệ số sát thương của nhát chí mạng. */
   readonly critMultiplier: number;
   readonly skills: Readonly<Record<SkillKind, SkillConfig>>;
-  /** B6: màn đầu tiên (đếm từ 0) được mang skill vào trận. */
+  /** B6: màn đầu tiên (đếm từ 0) được mang skill vào trận (F20: skill có `unlockLevel` riêng thì mở muộn hơn). */
   readonly skillUnlockLevel: number;
   /** Đợt 5: quái hiếm. Không có = không bao giờ có quái hiếm. */
   readonly rare?: RareConfig;

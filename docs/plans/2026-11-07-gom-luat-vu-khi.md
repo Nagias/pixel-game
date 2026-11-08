@@ -62,6 +62,12 @@ mở khi phá đảo (thắng màn 20). Chỉnh lại màn 3–10 (không còn s
 
 **Agent chọn:** chơi lại màn 1–10 sau khi có skill vẫn không mang skill (giữ đúng màn đã thiết kế).
 
+**Đổi khi làm — chủ dự án chọn ngày 07/11/2026 ("Thưởng ở màn 3 và 10"):** đo bằng mô phỏng thấy bản trên không
+làm được: không có Mưa băng, người mới bị đánh gục ở màn 3–9 (màn 4: 92% → 27%), muốn về mục tiêu phải rút gần hết
+quái mà màn 4, 5, 9 vẫn không đạt; thêm 8 máu cho nhân vật không cứu được; màn 11–20 lại dễ đi (đo lại chỉ với Mưa
+băng). Hướng chốt: **mỗi skill là phần thưởng một trận trùm** — hạ Slime Vua (màn 3) có Mưa băng, dùng từ màn 4; hạ
+Người Cây (màn 10) có Cầu lửa, dùng từ màn 11. Màn 1–3 chỉ dùng vũ khí. Chỉnh màn 3–6, 8, 9; màn 7, 10–20 giữ.
+
 ## 3. Thứ tự làm và cách kiểm chứng
 
 | PR  | Nội dung | Vì sao thứ tự này                                                          |

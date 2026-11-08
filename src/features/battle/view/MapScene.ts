@@ -101,8 +101,6 @@ const TEXT = {
 export class MapScene extends Scene {
   private config = BATTLE_CONFIG;
   private gold = 0;
-  /** F20: đã phá đảo — mở Cầu lửa (phần thưởng). */
-  private clearedAll = false;
   private statuses: LevelStatus[] = [];
   /** Màn đang tới (nút có hiệp sĩ; nút CHƠI mở bảng màn này). */
   private current = 0;
@@ -131,7 +129,6 @@ export class MapScene extends Scene {
     );
     const count = Math.min(this.config.levels.length, LEVEL_COUNT_ON_MAP);
     this.gold = profile.gold;
-    this.clearedAll = profile.clearedAll;
     this.statuses = Array.from({ length: count }, (_, level) => levelStatus(profile, level, count));
     this.current = startLevel(profile, null, count);
     this.replayOf = (level) => isReplay(profile, level, count);
@@ -213,9 +210,7 @@ export class MapScene extends Scene {
               monsterKinds: levelMonsterKinds(level, this.config),
               loadout: this.loadoutFor(level),
               tiers: this.config.weapons.map((w) => w.tier ?? 0),
-              skills: isSkillUnlocked(level, this.config)
-                ? skillOptions(this.config, this.clearedAll)
-                : [],
+              skills: isSkillUnlocked(level, this.config) ? skillOptions(this.config, level) : [],
             },
       canTap: this.canTap(),
     };
@@ -223,7 +218,7 @@ export class MapScene extends Scene {
 
   /** Bộ đồ mang vào màn `level`: đồ đã lưu; màn chưa mở skill thì bỏ skill, màn đã mở mà chưa chọn thì skill đầu. */
   private loadoutFor(level: number): Loadout {
-    return loadoutForLevel(this.savedLoadout, level, this.config, this.clearedAll);
+    return loadoutForLevel(this.savedLoadout, level, this.config);
   }
 
   private handleTap(x: number, y: number): void {

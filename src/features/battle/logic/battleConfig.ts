@@ -295,11 +295,11 @@ export const BATTLE_CONFIG: BattleConfig = {
     iceRain: { name: 'Mưa băng', damage: 1, freezeTurns: 1, chargeTurns: 3 },
     // Đợt 0: nạp 5 → 6 nhát (`npm run tune` 27/10/2026): với người chơi trung bình, Cầu lửa nạp 5 thắng
     // màn 4 hơn Mưa băng 6–9% — chỉnh quái của màn không đưa được cả hai skill vào dung sai.
-    // F20 (chủ dự án duyệt 07/11/2026): Cầu lửa để dành làm phần thưởng — mở khi phá đảo.
-    fireball: { name: 'Cầu lửa', damage: 2, freezeTurns: 0, chargeTurns: 6, afterClear: true },
+    // F20 (chủ dự án chọn 07/11/2026): Cầu lửa là phần thưởng hạ trùm Người Cây (màn 10) — dùng từ màn 11.
+    fireball: { name: 'Cầu lửa', damage: 2, freezeTurns: 0, chargeTurns: 6, unlockLevel: 10 },
   },
-  // F20 (chủ dự án duyệt 07/11/2026): màn 1–10 chỉ dùng vũ khí; hạ trùm màn 10 thì có Mưa băng, dùng từ màn 11.
-  skillUnlockLevel: 10,
+  // F20 (chủ dự án chọn 07/11/2026): màn 1–3 chỉ dùng vũ khí; hạ trùm Slime Vua (màn 3) thì có Mưa băng, dùng từ màn 4.
+  skillUnlockLevel: 3,
   // Đợt 5 (chủ dự án duyệt 27/10/2026, lượt duyệt chung mục 1b): từ màn 3, 15% số trận có một quái hiếm.
   rare: { fromLevel: 2, chance: 0.15, hpMultiplier: 2, goldMultiplier: 3 },
   // Đợt 7 — chủ đề Rừng rậm, 20 màn (chủ dự án duyệt 27/10/2026): độ khó răng cưa — màn 1 ~98% giảm dần tới
@@ -336,49 +336,62 @@ export const BATTLE_CONFIG: BattleConfig = {
       target: { winRate: 0.8, spareTurns: 14.75 },
       targetPlayer: 'Người mới',
     },
-    // Màn 3: trùm nhỏ Slime Vua (B1) — nhiệm vụ hạ trùm.
+    // Màn 3: trùm nhỏ Slime Vua (B1) — nhiệm vụ hạ trùm. F20 PR C: không còn skill (Mưa băng là phần thưởng hạ trùm này) —
+    // người mới chỉ đạt mục tiêu khi Vua đứng một mình (thêm 1 Slime: dưới 87%); dò tay 300 ván.
     {
-      monsters: ['slimeKing', 'slime', 'slime', 'slime', 'slime'],
-      spread: 3,
+      monsters: ['slimeKing'],
+      spread: 4,
       quest: { kind: 'slimeKing', count: 1 },
-      turnLimit: 16,
-      target: { winRate: 0.95, spareTurns: 8.75 },
+      turnLimit: 24,
+      target: { winRate: 0.95, spareTurns: 10.5 },
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 1 },
     },
-    // Màn 4: slime tới từ hai phía (B2) — đất của Rìu. Script dò tạm (27/10/2026) chọn trong bản mô tả bộ số
-    // nằm giữa màn 3 và màn 5 theo luật thứ tự đã duyệt (ít lượt dư / thắng ít hơn màn 3, hơn màn 5).
+    // Màn 4: slime tới từ hai phía (B2) — đất của Rìu. F20 PR C: chỉ có Mưa băng — dò tay (300 ván): 11 Slime, hạ 5,
+    // 9 lượt (10 lượt thì thắng 100% bất kể số Slime); bot ngắm chuẩn dư nhiều lượt hơn màn 5 (quan hệ đã duyệt).
     {
-      monsters: ['slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slime'],
+      monsters: [
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+        'slime',
+      ],
       spread: 4,
       splitOpposite: true,
-      quest: { kind: 'slime', count: 8 },
-      turnLimit: 19,
-      target: { winRate: 0.92, spareTurns: 9.25 },
+      quest: { kind: 'slime', count: 5 },
+      turnLimit: 9,
+      target: { winRate: 0.92, spareTurns: 2.75 },
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 1, crit: 1 },
     },
-    // Màn 5: Slime Pháo bắn xa (B3) — hạ 2 Pháo.
+    // Màn 5: giới thiệu Slime Pháo. F20 PR C: chỉ có Mưa băng — sinh lại.
     {
       monsters: ['slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slime', 'slimeCannon'],
       spread: 4,
-      waves: [['slime', 'slimeCannon']],
+      waves: [['slime', 'slime', 'slimeCannon']],
       nextWaveAt: 2,
       quest: { kind: 'slimeCannon', count: 2 },
-      turnLimit: 19,
-      target: { winRate: 0.69, spareTurns: 8 },
+      turnLimit: 12,
+      target: { winRate: 0.69, spareTurns: 1.75 },
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 1, crit: 1 },
     },
-    // Màn 6: giới thiệu Slime Lao (F12).
+    // Màn 6: giới thiệu Slime Lao. F20 PR C: chỉ có Mưa băng — sinh lại.
     {
-      monsters: ['slimeCharger', 'slime', 'slime', 'slime', 'slime', 'slime'],
+      monsters: ['slimeCharger', 'slime', 'slime', 'slime'],
       spread: 4,
       waves: [['slimeCharger', 'slime', 'slime', 'slime']],
-      nextWaveAt: 1,
+      nextWaveAt: 2,
       quest: { kind: 'slimeCharger', count: 2 },
-      turnLimit: 17,
-      target: { winRate: 0.95, spareTurns: 5.75 },
+      turnLimit: 12,
+      target: { winRate: 0.95, spareTurns: 3.75 },
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
     },
@@ -394,26 +407,26 @@ export const BATTLE_CONFIG: BattleConfig = {
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
     },
-    // Màn 8: giới thiệu Yêu tinh — lính rừng, cứng hơn slime.
+    // Màn 8: giới thiệu Yêu tinh — lính rừng, cứng hơn slime. F20 PR C: chỉ có Mưa băng — sinh lại.
     {
-      monsters: ['goblin', 'goblin', 'slime', 'slime', 'slime'],
+      monsters: ['goblin', 'goblin', 'goblin', 'slime', 'slime', 'slime'],
       spread: 3,
       waves: [['goblin', 'goblin', 'slime', 'slime']],
-      nextWaveAt: 2,
+      nextWaveAt: 1,
       quest: { kind: 'goblin', count: 4 },
-      turnLimit: 16,
-      target: { winRate: 0.81, spareTurns: 3.5 },
+      turnLimit: 14,
+      target: { winRate: 0.81, spareTurns: 2.5 },
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 1, crit: 1, heal: 1 },
     },
-    // Màn 9: giới thiệu Sói rừng — lao 2 vòng.
+    // Màn 9: giới thiệu Sói rừng — lao 2 vòng. F20 PR C: chỉ có Mưa băng — sinh lại.
     {
       monsters: ['wolf', 'wolf', 'goblin', 'goblin'],
       spread: 4,
       waves: [['wolf', 'goblin', 'goblin']],
-      nextWaveAt: 2,
+      nextWaveAt: 1,
       quest: { kind: 'wolf', count: 3 },
-      turnLimit: 13,
+      turnLimit: 14,
       target: { winRate: 0.81, spareTurns: 2.5 },
       targetPlayer: 'Người mới',
       assumedUpgrades: { hp: 1, crit: 1, heal: 1 },

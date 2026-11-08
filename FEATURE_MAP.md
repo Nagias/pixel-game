@@ -1345,6 +1345,41 @@ không tính, bị đóng băng không gọi, cấu hình sai, trùm yếu máu 
 quái khỏe hơn. `balance.test.ts` 23/23. E2E chơi liền đổi seed 6 → 4 (seed 6 thua màn 10 với 10 lượt; seed 4 nhỏ nhất
 thắng đủ cả hai ván).
 
+### PR C — Skill là phần thưởng hạ trùm
+
+**Vì sao:** chủ dự án (07/11/2026): "ngay từ đầu có skill luôn thì không cần thiết".
+
+**Người chơi thấy và làm gì:** màn 1–3 chỉ dùng vũ khí (bảng trước trận ghi "Skill: mở từ màn 4"). Hạ trùm Slime Vua
+(màn 3) thì từ màn 4 có Mưa băng (chọn sẵn). Hạ trùm Người Cây (màn 10) thì từ màn 11 có thêm Cầu lửa để chọn. Đã chọn
+Cầu lửa mà sang màn chưa mở Cầu lửa thì mang Mưa băng — về màn 11 trở đi lại mang Cầu lửa.
+
+**Luật** (nguồn sự thật: `logic/loadout.ts` `skillOptions` / `skillUnlockLevelOf` / `loadoutForLevel`,
+`logic/battle.ts` `createBattle` + test): `skillUnlockLevel` 2 → 3 (màn 4); skill có `unlockLevel` riêng (Cầu lửa
+10 = màn 11), phải ≥ màn mở skill chung; mang skill chưa mở ở màn đó vào trận thì bị từ chối. Đo độ khó chỉ với các
+skill đã mở ở màn đó (`targetLoadouts`).
+
+**Khác kế hoạch** (chủ dự án chọn 07/11/2026): bản duyệt đầu là Mưa băng từ màn 11, Cầu lửa khi phá đảo — đo thấy
+không làm được (màn 3–9 người mới bị đánh gục, phải rút gần hết quái mà màn 4, 5, 9 vẫn không đạt; màn 11–20 lại dễ đi).
+
+**Màn chỉnh lại** (bot "Người mới", 500 ván trong `balance.test.ts`, 23/23 đạt):
+
+| Màn | Trước                                                       | Sau                                           | Vì sao                                                   |
+| --- | ----------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------- |
+| 3   | Vua + 4 Slime, 16 lượt                                      | Vua một mình, 24 lượt                         | không còn skill; thêm 1 Slime là dưới 87% (mục tiêu 95%) |
+| 4   | 8 Slime hai phía, hạ 8, 19 lượt                             | 11 Slime hai phía, hạ 5, 9 lượt               | chỉ còn Mưa băng nên dễ đi (100%); 10 lượt luôn 100%     |
+| 5   | 7 Slime + Pháo, đợt Slime + Pháo, 19 lượt                   | 7 Slime + Pháo, đợt 2 Slime + Pháo, 12 lượt   | chỉ còn Mưa băng nên dễ đi; bộ sinh màn                  |
+| 6   | Lao + 5 Slime, đợt Lao + 3 Slime, 17 lượt                   | Lao + 3 Slime, đợt Lao + 3 Slime, 12 lượt     | như trên                                                 |
+| 8   | 2 Yêu tinh + 3 Slime, đợt 2 Yêu tinh 2 Slime, hạ 4, 16 lượt | 3 Yêu tinh + 3 Slime, cùng đợt, hạ 4, 14 lượt | như trên                                                 |
+| 9   | 2 Sói + 2 Yêu tinh, đợt Sói 2 Yêu tinh, hạ 3, 13 lượt       | như cũ, 14 lượt                               | như trên (đổi số lượt cho đúng mục tiêu)                 |
+
+Màn 7, 10–20 đo lại vẫn đạt, giữ nguyên. Quan hệ "màn 5 khó hơn màn 4" (bot ngắm chuẩn ít lượt dư hơn) giữ được nhờ chọn
+màn 4 hạ 5 thay vì hạ 7. E2E chơi liền vẫn seed 4 (dò lại: thắng đủ cả hai ván).
+
+**Kiểm chứng tự động:** unit — danh sách skill theo màn, bộ đồ mang skill chưa mở thì về skill đầu, mang skill chưa mở
+vào trận bị từ chối, cấu hình sai (skill mở trước màn chung), bảng thật. E2E — màn 1 và 3 không có hàng skill, màn 4 chỉ
+Mưa băng, màn 11 có Cầu lửa và mang vào trận; phá đảo bằng Cầu lửa, chơi lại màn 1–3 không skill, màn 4 mang Mưa băng,
+màn 11 vẫn Cầu lửa.
+
 ## Hàng chờ (thứ tự do chủ dự án chốt — chưa duyệt)
 
 Đã làm hết kế hoạch sau B6 (`docs/plans/2026-10-27-ke-hoach-sau-b6.md`). Chủ dự án chốt 03/11/2026: làm sâu

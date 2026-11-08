@@ -4,7 +4,7 @@
 // bằng createBattle(seed, config, màn). B6: castSkill đánh cả sân giữa hai nhát chém, không tốn lượt.
 import { nextFloat, nextInt, seedRng, type RngState } from '../../../shared/random';
 import { aimSectors, isInZone, knockbackCell, wrapSector, zoneSectors } from './arena';
-import { defaultLoadout, validateLoadout } from './loadout';
+import { defaultLoadout, skillUnlockLevelOf, validateLoadout } from './loadout';
 import {
   PUSH_DIRECTIONS,
   type BattleConfig,
@@ -71,6 +71,12 @@ function validateBattleConfig(config: BattleConfig): void {
   }
   if (!Number.isInteger(config.skillUnlockLevel) || config.skillUnlockLevel < 0) {
     problems.push('màn mở skill phải là số nguyên ≥ 0');
+  }
+  for (const [kind, skill] of Object.entries(config.skills)) {
+    const own = skill.unlockLevel;
+    if (own !== undefined && (!Number.isInteger(own) || own < config.skillUnlockLevel)) {
+      problems.push(`skill "${kind}": màn mở riêng phải là số nguyên ≥ màn mở skill chung`);
+    }
   }
   for (const [kind, rule] of Object.entries(monsterKinds)) {
     const label = `quái "${kind}"`;
@@ -298,9 +304,9 @@ export function createBattle(
 ): BattleState {
   validateBattleConfig(config);
   validateLoadout(loadout, config);
-  if (loadout.skill !== undefined && level < config.skillUnlockLevel) {
+  if (loadout.skill !== undefined && level < skillUnlockLevelOf(loadout.skill, config)) {
     throw new RangeError(
-      `Màn ${level + 1} chưa được mang skill (mở từ màn ${config.skillUnlockLevel + 1})`,
+      `Màn ${level + 1} chưa được mang skill này (mở từ màn ${skillUnlockLevelOf(loadout.skill, config) + 1})`,
     );
   }
   const levelConfig = levelAt(level, config);
