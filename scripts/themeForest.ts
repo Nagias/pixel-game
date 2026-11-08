@@ -16,7 +16,8 @@ import type { LevelSpec } from './levelGenCore';
 const NOVICE_LEVELS = 16;
 const WINS = [87, 80, 95, 92, 69, 95, 95, 81, 81, 45, 33, 28, 65, 25, 35, 21, 79, 76, 74, 72];
 /** Màn 1–16 thêm lượt (28/10/2026): số lượt thử tối đa phải bao được số lượt hiện có (+4 để còn chỗ dò). */
-const NOVICE_TURN_MAX = [27, 29, 20, 23, 23, 21, 20, 20, 17, 17, 16, 16, 15, 15, 17, 18];
+// F20 PR C: màn 3 không còn skill (Mưa băng mở từ màn 4) — cho thử tới 26 lượt.
+const NOVICE_TURN_MAX = [27, 29, 26, 23, 23, 21, 20, 20, 17, 17, 16, 16, 15, 15, 17, 18];
 const playerOf = (level: number): TargetPlayer =>
   level < NOVICE_LEVELS ? 'Người mới' : 'Ngắm chuẩn';
 const target = (level: number): Difficulty => {
@@ -66,7 +67,8 @@ const THEME: Shape[] = [
   {
     opening: [
       { kind: 'slimeKing', counts: [1] },
-      { kind: 'slime', counts: [2, 3, 4, 5] },
+      // F20 PR C: không còn skill — cho phép ít Slime đi kèm hơn.
+      { kind: 'slime', counts: [1, 2, 3, 4, 5] },
     ],
     spread: [2, 3, 4],
     quest: { kind: 'slimeKing', counts: [1] },

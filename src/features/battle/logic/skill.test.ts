@@ -18,7 +18,7 @@ import type {
   SkillConfig,
   WeaponConfig,
 } from './battleTypes';
-import { defaultLoadout } from './loadout';
+import { defaultLoadout, skillOptions } from './loadout';
 
 // B6 (chủ dự án duyệt 27/10/2026): skill bấm đánh cả sân, nạp theo nhát chém, không tốn lượt; Mưa băng
 // đóng băng 1 lượt; máu nhân vật, hồi máu khi nhát trúng ≥ 3 con, chí mạng ×2.
@@ -338,16 +338,40 @@ describe('mang skill vào trận và cấu hình sai (B6)', () => {
     ['hồi máu khi trúng 0 con', { ...CONFIG, hero: { ...CONFIG.hero, healMinHits: 0 } }],
     ['hồi máu âm', { ...CONFIG, hero: { ...CONFIG.hero, healAmount: -1 } }],
     ['màn mở skill âm', { ...CONFIG, skillUnlockLevel: -1 }],
+    [
+      'skill mở trước màn mở skill chung',
+      {
+        ...CONFIG,
+        skills: { ...CONFIG.skills, fireball: { ...CONFIG.skills.fireball, unlockLevel: 0 } },
+      },
+    ],
   ])('từ chối cấu hình: %s', (_label, config) => {
     expect(() => createBattle(1, config, 0)).toThrow(RangeError);
   });
 
-  it('cấu hình thật: mở được mọi màn; từ màn mở skill mang được mọi skill', () => {
+  // F20 PR C (chủ dự án chọn 07/11/2026): mỗi skill là phần thưởng một trận trùm — hạ Slime Vua (màn 3) có Mưa băng,
+  // dùng từ màn 4; hạ Người Cây (màn 10) có Cầu lửa, dùng từ màn 11. Màn 1–3 chỉ dùng vũ khí.
+  it('F20: Mưa băng mở từ màn 4 (sau trùm màn 3), Cầu lửa từ màn 11 (sau trùm màn 10)', () => {
+    expect(BATTLE_CONFIG.skillUnlockLevel).toBe(3);
+    expect(BATTLE_CONFIG.levels[2]?.monsters).toContain('slimeKing');
+    expect(BATTLE_CONFIG.skills.iceRain.unlockLevel).toBeUndefined();
+    expect(BATTLE_CONFIG.skills.fireball.unlockLevel).toBe(10);
+    expect(BATTLE_CONFIG.levels[9]?.monsters).toContain('treant');
+  });
+
+  it('F20: mang skill chưa mở ở màn đó vào trận thì bị từ chối', () => {
+    const base = defaultLoadout(BATTLE_CONFIG);
+    expect(() => createBattle(1, BATTLE_CONFIG, 9, { ...base, skill: 'fireball' })).toThrow(
+      RangeError,
+    );
+    expect(() => createBattle(1, BATTLE_CONFIG, 10, { ...base, skill: 'fireball' })).not.toThrow();
+  });
+
+  it('cấu hình thật: mở được mọi màn; mang được mọi skill đã mở ở màn đó', () => {
     BATTLE_CONFIG.levels.forEach((_, level) => {
       const base = defaultLoadout(BATTLE_CONFIG);
       expect(() => createBattle(1, BATTLE_CONFIG, level, base)).not.toThrow();
-      if (level < BATTLE_CONFIG.skillUnlockLevel) return;
-      for (const skill of ['iceRain', 'fireball'] as const) {
+      for (const skill of skillOptions(BATTLE_CONFIG, level)) {
         expect(() => createBattle(1, BATTLE_CONFIG, level, { ...base, skill })).not.toThrow();
       }
     });

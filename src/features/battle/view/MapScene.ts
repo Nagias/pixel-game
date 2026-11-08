@@ -210,7 +210,7 @@ export class MapScene extends Scene {
               monsterKinds: levelMonsterKinds(level, this.config),
               loadout: this.loadoutFor(level),
               tiers: this.config.weapons.map((w) => w.tier ?? 0),
-              skills: isSkillUnlocked(level, this.config) ? skillOptions(this.config) : [],
+              skills: isSkillUnlocked(level, this.config) ? skillOptions(this.config, level) : [],
             },
       canTap: this.canTap(),
     };

@@ -116,13 +116,17 @@ export class WeaponsScene extends Scene {
     const level = this.returnTo.popupLevel ?? startLevel(profile, null, count);
     this.cards = [
       ...owned.map((weapon): WeaponsCard => ({ kind: 'weapon', weapon })),
-      ...(isSkillUnlocked(level, this.config) ? skillOptions(this.config) : []).map(
+      ...(isSkillUnlocked(level, this.config) ? skillOptions(this.config, level) : []).map(
         (skill): WeaponsCard => ({ kind: 'skill', skill }),
       ),
     ];
-    if (isSkillUnlocked(level, this.config) && this.loadout.skill === undefined) {
-      const [first] = skillOptions(this.config);
-      if (first) this.loadout = chooseSkill(this.loadout, first);
+    if (isSkillUnlocked(level, this.config)) {
+      // F20: chưa chọn skill, hoặc skill đã lưu chưa mở ở màn này (Cầu lửa trước màn 11) — mang skill đầu tiên.
+      const options = skillOptions(this.config, level);
+      const [first] = options;
+      if (first && (this.loadout.skill === undefined || !options.includes(this.loadout.skill))) {
+        this.loadout = chooseSkill(this.loadout, first);
+      }
     }
   }
 

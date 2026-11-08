@@ -762,35 +762,47 @@ test('Đợt D (F18): màn Vũ khí chỉ có thẻ skill từ màn mở skill',
   expect((await game.openWeapons()).cards.some((c) => c.kind === 'skill')).toBe(false);
   await game.openPrebattle(SEED, BATTLE_CONFIG.skillUnlockLevel + 1);
   const weapons = await game.openWeapons();
+  // F20: màn 4 chỉ có Mưa băng (Cầu lửa là phần thưởng hạ trùm màn 10, dùng từ màn 11).
   expect(weapons.cards.filter((c) => c.kind === 'skill')).toEqual([
     { kind: 'skill', skill: 'iceRain' },
-    { kind: 'skill', skill: 'fireball' },
   ]);
   await game.advance(50);
   await page.screenshot({ path: test.info().outputPath('40-man-vu-khi.png') });
 });
 
-test('B6: màn chuẩn bị từ màn 3 có hàng skill (Mưa băng chọn sẵn), chọn Cầu lửa thì mang Cầu lửa vào trận', async ({
+test('F20: skill là phần thưởng hạ trùm — màn 1–3 không có hàng skill; màn 4 có Mưa băng; màn 11 có thêm Cầu lửa, chọn được và mang vào trận', async ({
   page,
 }) => {
   const game = new BattleDriver(page);
-  // Màn 1–2 chưa có skill.
+  // Màn 1 chưa có skill.
   await game.openPrebattle(SEED);
   expect(await game.waitPrebattleReady()).toMatchObject({
     skills: [],
     loadout: { weapons: [0, 1, 2] },
   });
-
-  const unlock = BATTLE_CONFIG.skillUnlockLevel + 1;
-  await game.openPrebattle(SEED, unlock);
-  const prep = await game.waitPrebattleReady();
-  expect(prep).toMatchObject({
-    level: unlock - 1,
+  const iceFrom = BATTLE_CONFIG.skillUnlockLevel + 1;
+  const fireFrom = (BATTLE_CONFIG.skills.fireball.unlockLevel ?? 0) + 1;
+  expect([iceFrom, fireFrom]).toEqual([4, 11]);
+  // Hồ sơ đã qua 10 màn: màn 11 có cả hai skill, Mưa băng chọn sẵn.
+  await game.openPrebattle(SEED, fireFrom);
+  expect(await game.waitPrebattleReady()).toMatchObject({
+    level: fireFrom - 1,
     skills: ['iceRain', 'fireball'],
     loadout: { weapons: [0, 1, 2], skill: 'iceRain' },
   });
+  // Màn 3 (trùm Slime Vua): chưa có skill. Màn 4: chỉ có Mưa băng.
+  await game.openPrebattle(SEED, iceFrom - 1);
+  expect((await game.waitPrebattleReady()).skills).toEqual([]);
+  await game.openPrebattle(SEED, iceFrom);
+  expect(await game.waitPrebattleReady()).toMatchObject({
+    skills: ['iceRain'],
+    loadout: { skill: 'iceRain' },
+  });
+  await game.advance(300);
   await page.screenshot({ path: test.info().outputPath('15-chuan-bi-skill.png') });
 
+  // Màn 11: chọn Cầu lửa, mang vào trận.
+  await game.openPrebattle(SEED, fireFrom);
   await game.chooseSkill('fireball');
   expect((await game.waitPrebattleReady()).loadout.skill).toBe('fireball');
   await game.startBattle();
@@ -844,10 +856,10 @@ test('B6: skill nạp theo nhát chém, đầy thì bấm — mọi quái mất 
   expect(next.monsters.every((m) => m.frozenTurns === undefined)).toBe(true);
 });
 
-test('B6: màn chuẩn bị nhớ skill đã chọn qua các màn chưa có skill — phá đảo bằng Cầu lửa, lên lại màn 3 vẫn chọn Cầu lửa', async ({
+test('B6/F20: màn chuẩn bị nhớ skill đã chọn — phá đảo bằng Cầu lửa, chơi lại màn 1–3 (chưa có skill), màn 4 mang Mưa băng (Cầu lửa chưa mở), màn 11 vẫn chọn Cầu lửa', async ({
   page,
 }) => {
-  test.setTimeout(FULL_RUN_TIMEOUT_MS); // chơi màn cuối rồi màn 1, 2 qua màn chuẩn bị
+  test.setTimeout(FULL_RUN_TIMEOUT_MS); // chơi màn cuối rồi màn 1–3 qua màn chuẩn bị
   const game = new BattleDriver(page);
   await game.seedProfile({
     unlockedLevel: BATTLE_CONFIG.levels.length - 1,
@@ -859,7 +871,7 @@ test('B6: màn chuẩn bị nhớ skill đã chọn qua các màn chưa có skil
   await playBestUntilOver(game, undefined, FULL_RUN_SEED);
   expect(isGameCleared((await game.snapshot()).battle, BATTLE_CONFIG)).toBe(true);
 
-  // Phá đảo → màn 1, 2 chưa có skill.
+  // Phá đảo → màn 1–3 chưa có skill.
   for (let level = 0; level < BATTLE_CONFIG.skillUnlockLevel; level++) {
     await continueFromResult(game);
     const { battle } = await game.snapshot();
@@ -869,14 +881,19 @@ test('B6: màn chuẩn bị nhớ skill đã chọn qua các màn chưa có skil
     expect((await game.snapshot()).battle.phase).toBe('won');
   }
 
+  // Màn 4: Cầu lửa chưa mở ở màn này — mang Mưa băng, nhưng không quên Cầu lửa đã chọn.
   await game.advance(RESULT_SCREEN_WAIT_MS);
   await game.tap();
   await game.waitSceneSwitch();
-  const prep = await game.waitPrebattleReady();
-  expect(prep).toMatchObject({
+  expect(await game.waitPrebattleReady()).toMatchObject({
     level: BATTLE_CONFIG.skillUnlockLevel,
-    loadout: { skill: 'fireball' },
+    skills: ['iceRain'],
+    loadout: { skill: 'iceRain' },
   });
+  await game.openPrebattle(FULL_RUN_SEED, (BATTLE_CONFIG.skills.fireball.unlockLevel ?? 0) + 1);
+  expect((await game.waitPrebattleReady()).loadout.skill).toBe('fireball');
+  await game.advance(300);
+  await page.screenshot({ path: test.info().outputPath('18-cau-lua-man-11.png') });
 });
 
 /**

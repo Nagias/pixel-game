@@ -164,9 +164,19 @@ export function describeWeapon(weapon: WeaponConfig, loot?: LootConfig): string 
 
 // ---------- B6: skill ----------
 
-/** Các skill chọn được, theo thứ tự cấu hình (skill đầu là mặc định). */
-export function skillOptions(config: BattleConfig): SkillKind[] {
-  return Object.keys(config.skills) as SkillKind[];
+/**
+ * Các skill mang được ở màn `level` (đếm từ 0), theo thứ tự cấu hình (skill đầu là mặc định). F20: mỗi skill mở từ màn
+ * `unlockLevel` của nó (không ghi = màn mở skill chung).
+ */
+export function skillOptions(config: BattleConfig, level: number): SkillKind[] {
+  return (Object.keys(config.skills) as SkillKind[]).filter(
+    (skill) => level >= skillUnlockLevelOf(skill, config),
+  );
+}
+
+/** F20: màn đầu tiên (đếm từ 0) mang được skill `skill`. */
+export function skillUnlockLevelOf(skill: SkillKind, config: BattleConfig): number {
+  return config.skills[skill].unlockLevel ?? config.skillUnlockLevel;
 }
 
 /** Màn `level` (đếm từ 0) đã được mang skill vào trận chưa. */
@@ -180,14 +190,15 @@ export function chooseSkill(loadout: Loadout, skill: SkillKind): Loadout {
 }
 
 /**
- * Bộ đồ hợp với màn `level`: màn chưa mở skill thì bỏ skill; màn đã mở mà chưa chọn skill thì mang skill
- * đầu tiên (mặc định).
+ * Bộ đồ hợp với màn `level`: màn chưa mở skill thì bỏ skill; màn đã mở mà chưa chọn skill (hoặc skill đã chọn chưa
+ * mở ở màn này — F20) thì mang skill đầu tiên (mặc định). Không đổi lựa chọn đã lưu: màn sau mở skill đó thì lại mang.
  */
 export function loadoutForLevel(loadout: Loadout, level: number, config: BattleConfig): Loadout {
   if (!isSkillUnlocked(level, config)) return { weapons: loadout.weapons };
-  if (loadout.skill !== undefined) return loadout;
-  const [first] = skillOptions(config);
-  return first === undefined ? loadout : { ...loadout, skill: first };
+  const options = skillOptions(config, level);
+  if (loadout.skill !== undefined && options.includes(loadout.skill)) return loadout;
+  const [first] = options;
+  return first === undefined ? { weapons: loadout.weapons } : { ...loadout, skill: first };
 }
 
 // ---------- F18 đợt B: đồ đang mang lưu vào hồ sơ ----------
